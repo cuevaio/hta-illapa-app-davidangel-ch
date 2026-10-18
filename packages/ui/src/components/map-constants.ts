@@ -27,6 +27,7 @@ export const PERU_INITIAL_VIEW_STATE = {
 
 export const FLEET_ROUTE_WIDTH_PX = 4;
 export const FLEET_ALTERNATIVE_DASH_WIDTH_RATIOS = [2, 2];
+export const ROUTE_REVIEW_INELIGIBLE_LINE_OPACITY_RATIO = 0.35;
 export const FLEET_ROUTE_SOURCE_PREFIX = "fleet-route-";
 export const FLEET_HAZARD_SOURCE_ID = "fleet-hazard";
 export const FLEET_HAZARD_FILL_LAYER_ID = "fleet-hazard-area";

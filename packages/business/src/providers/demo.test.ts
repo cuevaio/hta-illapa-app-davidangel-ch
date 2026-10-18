@@ -150,13 +150,35 @@ describe("simulateDemoPositions", () => {
 
 describe("demoProvider", () => {
 	it("lists the demo fleet and reports every truck at its depot", async () => {
-		expect(await demoProvider.listVehicles({})).toEqual(
+		const vehicles = await demoProvider.listVehicles({});
+		expect(
+			vehicles.map(({ externalId, name, plate }) => ({
+				externalId,
+				name,
+				plate,
+			})),
+		).toEqual(
 			DEMO_VEHICLES.map(({ externalId, name, plate }) => ({
 				externalId,
 				name,
 				plate,
 			})),
 		);
+		expect(
+			vehicles.map(({ vehicleTypeId, axleCount, grossWeightKg }) => ({
+				vehicleTypeId,
+				axleCount,
+				grossWeightKg,
+			})),
+		).toEqual([
+			{ vehicleTypeId: "t2s3", axleCount: 5, grossWeightKg: 43_000 },
+			{ vehicleTypeId: "t3s3", axleCount: 6, grossWeightKg: 48_000 },
+			{ vehicleTypeId: "t2s3", axleCount: 5, grossWeightKg: 43_000 },
+			{ vehicleTypeId: "t3s3", axleCount: 6, grossWeightKg: 48_000 },
+			{ vehicleTypeId: "t2s3", axleCount: 5, grossWeightKg: 43_000 },
+			{ vehicleTypeId: "t3s3", axleCount: 6, grossWeightKg: 48_000 },
+		]);
+
 		const positions = await demoProvider.fetchLatestPositions({});
 		expect(positions).toHaveLength(DEMO_VEHICLES.length);
 		expect(positions.map(({ lat, lng }) => ({ lat, lng }))).toEqual(

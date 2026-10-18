@@ -1,4 +1,3 @@
-import { peakRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
 import type { RouteRiskHorizon } from "@hack-the-andes-project/business/route-review/risk";
 import { cn } from "cn";
 import type { FeatureCollection, LineString } from "geojson";
@@ -29,11 +28,11 @@ import {
 	DrawerTrigger,
 } from "./drawer";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./hover-card";
-import { INCIDENT_CATEGORY_ICONS, SignalForecast } from "./icons";
 import {
 	FLEET_ALTERNATIVE_DASH_WIDTH_RATIOS,
 	FLEET_MAP_FIT_DURATION_MS,
 	FLEET_MAP_MAX_ZOOM_LEVEL,
+	ROUTE_REVIEW_INELIGIBLE_LINE_OPACITY_RATIO,
 } from "./map-constants";
 import {
 	Layer,
@@ -45,6 +44,7 @@ import {
 	Source,
 } from "./map-view";
 import { RouteReviewLegend } from "./route-review-legend";
+import { RouteReviewSignalSymbol } from "./route-review-signal-symbol";
 import { RouteReviewSignalTag } from "./route-review-signal-tag";
 import { Spinner } from "./spinner";
 
@@ -80,6 +80,9 @@ interface MapLineProperties {
 	candidateId: string;
 	color: string | undefined;
 	description: string;
+}
+interface MapRouteLineProperties extends MapLineProperties {
+	opacity: number;
 }
 interface MapHover {
 	lng: number;
@@ -117,10 +120,6 @@ function RouteReviewMapCanvas({
 		"--risk-moderate",
 		"--risk-high",
 		"--risk-critical",
-		"--risk-low-foreground",
-		"--risk-moderate-foreground",
-		"--risk-high-foreground",
-		"--risk-critical-foreground",
 	]);
 	const selected = candidates.find(
 		(candidate) => candidate.id === selectedCandidateId,
@@ -191,15 +190,10 @@ function RouteReviewMapCanvas({
 	const layers = useMemo(
 		() =>
 			["illapa", "sutran"].map((source) => {
-				const routes: FeatureCollection<LineString, MapLineProperties> = {
+				const routes: FeatureCollection<LineString, MapRouteLineProperties> = {
 					type: "FeatureCollection",
 					features: candidates
-						.filter(
-							(candidate) =>
-								candidate.source === source &&
-								(candidate.eligibility.eligible ||
-									candidate.id === selectedCandidateId),
-						)
+						.filter((candidate) => candidate.source === source)
 						.map((candidate) => ({
 							type: "Feature",
 							geometry: candidate.geometry,
@@ -211,6 +205,11 @@ function RouteReviewMapCanvas({
 											? "--foreground"
 											: "--muted-foreground"
 									],
+								opacity:
+									candidate.eligibility.eligible ||
+									candidate.id === selectedCandidateId
+										? 1
+										: ROUTE_REVIEW_INELIGIBLE_LINE_OPACITY_RATIO,
 								description: candidate.name,
 							},
 						})),
@@ -305,6 +304,7 @@ function RouteReviewMapCanvas({
 								layout={{ "line-join": "round" }}
 								paint={{
 									"line-color": ["get", "color"],
+									"line-opacity": ["get", "opacity"],
 									"line-width": lineWidthPx,
 									...(source === "sutran"
 										? { "line-dasharray": FLEET_ALTERNATIVE_DASH_WIDTH_RATIOS }
@@ -388,17 +388,6 @@ function RouteReviewMapCanvas({
 								coordinates[1] === undefined
 							)
 								return null;
-							const risk = peakRiskAssessment(
-								signalSegments.flatMap((segment) =>
-									segment.risk.filter(
-										(assessment) => assessment.horizon === horizon,
-									),
-								),
-							);
-							const Icon =
-								signal.kind === "confirmed"
-									? INCIDENT_CATEGORY_ICONS[signal.incidentCategory ?? "other"]
-									: SignalForecast;
 							return (
 								<Marker
 									key={signal.id}
@@ -409,21 +398,13 @@ function RouteReviewMapCanvas({
 										<HoverCardTrigger
 											render={<button type="button" />}
 											aria-label={`${signal.title} · ${labels.signalKind(signal.kind)} · ${signal.source} ${labels.observedAt(signal.observedAt)}`}
-											className={cn(
-												"flex size-11 items-center justify-center rounded-full border-2 border-foreground focus-visible:outline-2 focus-visible:outline-ring",
-												signal.kind === "forecast" &&
-													"border-dashed bg-card text-foreground",
-											)}
-											style={
-												signal.kind === "confirmed" && risk
-													? {
-															backgroundColor: colors[`--risk-${risk.level}`],
-															color: colors[`--risk-${risk.level}-foreground`],
-														}
-													: undefined
-											}
+											className="flex size-11 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:hover:scale-100"
 										>
-											<Icon className="size-5" />
+											<RouteReviewSignalSymbol
+												signal={signal}
+												signalSegments={signalSegments}
+												horizon={horizon}
+											/>
 										</HoverCardTrigger>
 										<HoverCardContent className="flex flex-col gap-2">
 											<RouteReviewSignalTag

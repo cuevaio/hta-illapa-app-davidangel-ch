@@ -1,59 +1,35 @@
-import type { RouteReviewInput } from "@hack-the-andes-project/api/route-review-schemas";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-
-import { routeReviewFixtureClient } from "@/fixtures/route-review/client";
+import { getRouteApi } from "@tanstack/react-router";
+import { ROUTE_REVIEW_QUERY_KEY } from "@/constants";
 import { client } from "@/utils/orpc";
+import { invalidateFleetQueries, useFleetQueries } from "./fleet-queries";
+export const routeReviewClient = client;
 
-async function evaluateRouteReview({ vehicleId, ...input }: RouteReviewInput) {
-	const review = await client.routeReview.evaluate({
-		...input,
-		vehicleAxleCount:
-			routeReviewFixtureClient.routeReview.vehicleAxleCount(vehicleId),
-	});
-	return routeReviewFixtureClient.routeReview.register({
-		...review,
-		vehicleId,
-	});
+const authRoute = getRouteApi("/_auth");
+export function useRouteReviewQueries() {
+	const { session } = authRoute.useRouteContext();
+	const scope = {
+		sessionId: session.data?.session.id,
+		organizationId: session.data?.session.activeOrganizationId,
+	};
+	const fleetQueries = useFleetQueries();
+	return {
+		vehicles: fleetQueries.vehicles,
+		plannedTrips: queryOptions({
+			queryKey: [...ROUTE_REVIEW_QUERY_KEY, "planned-trips", scope],
+			queryFn: () => routeReviewClient.trips.listPlanned(),
+		}),
+		plannedTrip: (id: string) =>
+			queryOptions({
+				queryKey: [...ROUTE_REVIEW_QUERY_KEY, "planned-trips", scope, id],
+				queryFn: () => routeReviewClient.trips.get({ id }),
+			}),
+	};
 }
 
-// Route reviews are evaluated by the API; vehicles and planned trips stay on
-// the fixture client until they have endpoints of their own.
-export const routeReviewClient = {
-	...routeReviewFixtureClient,
-	routeReview: { evaluate: evaluateRouteReview },
-	trips: {
-		...routeReviewFixtureClient.trips,
-		reevaluate: async ({ id }: { id: string }) => {
-			const trip = await routeReviewFixtureClient.trips.get({ id });
-			const review = await evaluateRouteReview({
-				originPlaceId: trip.originPlaceId,
-				destinationPlaceId: trip.destinationPlaceId,
-				vehicleId: trip.vehicleId,
-				departureAt: trip.departureAt,
-			});
-			return routeReviewFixtureClient.trips.adoptReview({ id, review });
-		},
-	},
-};
-
-const ROUTE_REVIEW_QUERY_KEY = ["route-review"] as const;
-
-export const routeReviewQueries = {
-	vehicles: queryOptions({
-		queryKey: [...ROUTE_REVIEW_QUERY_KEY, "vehicles"],
-		queryFn: () => routeReviewClient.vehicles.list(),
-	}),
-	plannedTrips: queryOptions({
-		queryKey: [...ROUTE_REVIEW_QUERY_KEY, "planned-trips"],
-		queryFn: () => routeReviewClient.trips.listPlanned(),
-	}),
-	plannedTrip: (id: string) =>
-		queryOptions({
-			queryKey: [...ROUTE_REVIEW_QUERY_KEY, "planned-trips", id],
-			queryFn: () => routeReviewClient.trips.get({ id }),
-		}),
-};
-
 export async function invalidateRouteReviewQueries(queryClient: QueryClient) {
-	await queryClient.invalidateQueries({ queryKey: ROUTE_REVIEW_QUERY_KEY });
+	await Promise.all([
+		queryClient.invalidateQueries({ queryKey: ROUTE_REVIEW_QUERY_KEY }),
+		invalidateFleetQueries(queryClient),
+	]);
 }

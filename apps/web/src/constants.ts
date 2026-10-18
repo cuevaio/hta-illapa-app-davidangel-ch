@@ -254,3 +254,5 @@ export const ENGINEERING_COUNT_FRACTION_DIGITS = 0;
 export const ENGINEERING_MAX_UNDO_STEPS_COUNT = 100;
 export const ENGINEERING_UNDO_TOAST_ID = "structure-editor-undo";
 export const ENGINEERING_SERVER_ERROR_STATUS_MIN = 500;
+
+export const ROUTE_REVIEW_QUERY_KEY: readonly string[] = ["route-review"];

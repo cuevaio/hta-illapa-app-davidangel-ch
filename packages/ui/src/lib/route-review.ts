@@ -168,7 +168,7 @@ export interface RouteReviewLabels extends RouteRecommendationLabels {
 	ruleLabel: string;
 	valid: string;
 	risk: string;
-	horizonHelp: string;
+	horizonHelp: (horizon: RouteRiskHorizon) => string;
 	viewOnMap: string;
 	mapLabel: string;
 	legend: string;
