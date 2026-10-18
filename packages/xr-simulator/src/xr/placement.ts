@@ -83,7 +83,7 @@ export function rotY([x, z]: [number, number], a: number): [number, number] {
 }
 
 /** Heading of a horizontal vector, so that heading(rotY(v, a)) = heading(v) + a. */
-const heading = (x: number, z: number) => Math.atan2(x, z);
+export const heading = (x: number, z: number) => Math.atan2(x, z);
 
 /** Maquette pose: the terrain centre sits at `center`, turned by `yaw`, at `scale`. */
 export interface MaquettePose {

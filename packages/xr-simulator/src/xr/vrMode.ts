@@ -1,3 +1,4 @@
+import type { XrViewMode } from "../state/appState";
 /**
  * VR inside one immersive session (S2): the Peru map (flight or maquette) and the simulator
  * share a single XRSession (src/xr/sharedSession.ts), so "Simular aquí" and "Volver al mapa
@@ -126,7 +127,7 @@ export function mapControls(view: VrView): Record<string, string> {
 			};
 }
 
-/** Controls card text above the right controller. */
+/** "Controles" card text over the Peru map (S15). */
 export function controlsHint(view: VrView): string {
 	return view === "vuelo"
 		? "Joystick der.: adelante / atrás según tu mirada, a los lados para desplazarte (púlsalo: turbo) · " +
@@ -136,4 +137,15 @@ export function controlsHint(view: VrView): string {
 		: "Grip (una mano): mover y girar la maqueta · Grip con las dos manos: escalarla · " +
 				"Joystick der.: girar 30° · Grip der. dos veces: maqueta delante de ti · " +
 				"A: marcar punto para «Simular aquí» · X: capas meteorológicas · Y: vuelo · B: salir de VR";
+}
+
+/** "Controles" card text in the huayco simulator (S15): the panel, the maquette and the walk. */
+export function simulatorControlsHint(mode: XrViewMode): string {
+	return mode === "maquette"
+		? "Gatillo: usar la herramienta o pulsar el panel · Grip apuntando al panel: moverlo · " +
+				"Grip (una mano): mover y girar la maqueta · Grip con las dos manos: escalarla · " +
+				"Joystick der.: girar la maqueta 30° · X, Y o joystick izq. (púlsalo): traer el panel"
+		: "Joystick adelante: teletransportarte (suelta para saltar) · Joystick a los lados: girar · " +
+				"Gatillo: usar la herramienta o pulsar el panel · Grip apuntando al panel: moverlo · " +
+				"X, Y o joystick izq. (púlsalo): traer el panel";
 }

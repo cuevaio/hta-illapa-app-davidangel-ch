@@ -33,10 +33,9 @@ import {
 	VR_METRES_PER_CSS_PX,
 } from "../ui/vr/theme";
 import {
-	CONTROLS_CARD_CSS,
 	CREDIT_CARD_CSS,
-	controlsCard,
 	creditCard,
+	VrInstructionsCard,
 } from "../ui/vr/VrInfoCards";
 import { VrPanel } from "../ui/vr/VrPanel";
 import { VrPointCard } from "../ui/vr/VrPointCard";
@@ -136,6 +135,7 @@ const weatherMenu = new VrWeatherMenu(
 	scene,
 	weatherMenuContent(snapshot, []),
 	noop,
+	noop,
 );
 weatherMenu.showAt([0, 0, 0]);
 
@@ -160,6 +160,7 @@ const panel = new VrPanel(
 		result: results,
 		backToMap: noop,
 		mapAvailable: () => true,
+		showControls: noop,
 		weather: { content: () => weatherMenuContent(snapshot, []), action: noop },
 	},
 );
@@ -198,9 +199,9 @@ const infoCard = (
 	build(ui);
 	return plane;
 };
-const controls = infoCard("controls", CONTROLS_CARD_CSS, (ui) =>
-	controlsCard(ui, theme).show(controlsHint("vuelo")),
-);
+const instructions = new VrInstructionsCard(scene, noop);
+instructions.showAt({ position: [0, 0, 0], yaw: 0 }, controlsHint("vuelo"));
+const controls = instructions.mesh;
 const credit = infoCard("credit", CREDIT_CARD_CSS, (ui) => {
 	const text = creditCard(ui, theme);
 	text.show(

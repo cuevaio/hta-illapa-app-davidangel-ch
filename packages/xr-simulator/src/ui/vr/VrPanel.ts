@@ -51,6 +51,8 @@ export interface VrPanelActions {
 		content(): WeatherMenuContent | null;
 		action(id: string): void;
 	};
+	/** «Controles»: reopens the VR controls instructions (S15); absent: no such button. */
+	showControls?: () => void;
 }
 
 /** Panel size in web CSS px (a phone-wide card); the card hugs its content from the top. */
@@ -378,6 +380,7 @@ export class VrPanel {
 		const footerSpecs = panelFooter({
 			backToMap: Boolean(actions.backToMap),
 			weather: weatherSection !== null,
+			controls: Boolean(actions.showControls),
 		}).map(
 			(a): ButtonSpec =>
 				a.id === "weather"
@@ -399,7 +402,10 @@ export class VrPanel {
 						: {
 								icon: a.icon,
 								text: a.text,
-								onClick: actions.exitXr,
+								onClick:
+									a.id === "controls"
+										? () => actions.showControls?.()
+										: actions.exitXr,
 								kind: { kind: "button", variant: "outline" },
 							},
 		);

@@ -28,8 +28,8 @@ import {
 
 /** The standalone menu over the Peru map, in web CSS px. */
 const MENU_CSS_W = 400;
-const MENU_CSS_H = 760;
-/** Its scrolling content: the menu minus the card header and spacing. */
+const MENU_CSS_H = 840;
+/** Its scrolling content: the menu minus the card header, the footer and spacing. */
 const MENU_SCROLL_CSS_H = 660;
 /** The scroll bar, wide enough to drag with the controller ray. */
 const SCROLL_BAR_CSS_PX = 12;
@@ -253,7 +253,10 @@ export function weatherScroller(
 	return scroller;
 }
 
-/** The weather menu over the Peru map in VR: its own floating card, toggled with X (S8). */
+/**
+ * The weather menu over the Peru map in VR: its own floating card, toggled with X (S8), with
+ * «Controles» in its footer to reopen the controls instructions (S15).
+ */
 export class VrWeatherMenu {
 	readonly mesh: Mesh;
 	private readonly ui: AdvancedDynamicTexture;
@@ -263,6 +266,7 @@ export class VrWeatherMenu {
 		scene: Scene,
 		initial: WeatherMenuContent,
 		onAction: (id: string) => void,
+		onControls: () => void,
 	) {
 		this.mesh = MeshBuilder.CreatePlane(
 			"peru-vr-weather",
@@ -282,10 +286,23 @@ export class VrWeatherMenu {
 			false,
 		);
 		const theme = readVrTheme();
-		const card = mayuCard(this.ui, theme, { title: "Capas meteorológicas" });
+		const card = mayuCard(this.ui, theme, {
+			title: "Capas meteorológicas",
+			footer: true,
+		});
 		this.section = new VrWeatherSection(theme, initial, onAction);
 		card.content.addControl(
 			weatherScroller(theme, this.section, `${texturePx(MENU_SCROLL_CSS_H)}px`),
+		);
+		card.footer?.addControl(
+			mayuRow([
+				mayuControl(
+					theme,
+					{ kind: "button", variant: "outline" },
+					{ icon: "help", text: "Controles" },
+					onControls,
+				).button,
+			]),
 		);
 		this.mesh.setEnabled(false);
 	}

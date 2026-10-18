@@ -21,7 +21,15 @@ import type { SolverStats } from "../solver/Solver";
 import type { AppState } from "../state/appState";
 import type { Store } from "../state/store";
 import type { WeatherMenuContent } from "../ui/sections";
+import { VrInstructionsCard } from "../ui/vr/VrInfoCards";
 import { VrPanel } from "../ui/vr/VrPanel";
+import { INSTRUCTIONS_BESIDE_PANEL_ANGLE_RAD } from "./constants";
+import {
+	INSTRUCTIONS_START,
+	type InstructionsState,
+	instructionsPose,
+	instructionsStep,
+} from "./instructions";
 import {
 	controllerYaw,
 	grabOneHand,
@@ -34,6 +42,7 @@ import {
 	rootFromPose,
 	snapTurn,
 } from "./placement";
+import { simulatorControlsHint } from "./vrMode";
 
 /** What the XR layer needs from the app. Everything else (solver, tools) stays shared. */
 export interface XrHost {
@@ -89,6 +98,9 @@ type Grab =
 export class XrController {
 	readonly pointers: XrPointerSource;
 	private panel: VrPanel | null = null;
+	/** "Controles" (S15): placed once beside the panel, dismissed with «Entendido» for the page. */
+	private instructions: VrInstructionsCard | null = null;
+	private instructionsState: InstructionsState = INSTRUCTIONS_START;
 	private clearColor: Color4;
 	private unwatch: (() => void)[] = [];
 	private inXr = false;
@@ -110,10 +122,10 @@ export class XrController {
 		private readonly xr: WebXRDefaultExperience,
 	) {
 		this.clearColor = host.scene.clearColor.clone();
-		this.pointers = new XrPointerSource(
-			xr,
-			host.store,
-			() => this.panel?.mesh ?? null,
+		this.pointers = new XrPointerSource(xr, host.store, () =>
+			[this.panel?.mesh, this.instructions?.mesh].filter((mesh): mesh is Mesh =>
+				Boolean(mesh?.isEnabled()),
+			),
 		);
 		const sm = xr.baseExperience.sessionManager;
 		sm.onXRSessionInit.add((session) => {
@@ -208,12 +220,31 @@ export class XrController {
 				back && this.mode === "immersive-vr" ? () => back() : undefined,
 			mapAvailable: () => this.host.mapAvailable?.() ?? false,
 			weather: this.host.weather,
+			showControls: () => {
+				this.instructionsState = instructionsStep(
+					this.instructionsState,
+					"reopen",
+				);
+				this.showInstructions();
+			},
 		});
+		this.instructions = new VrInstructionsCard(this.host.scene, () => {
+			this.instructionsState = instructionsStep(
+				this.instructionsState,
+				"dismiss",
+			);
+			this.instructions?.hide();
+		});
+		this.instructionsState = instructionsStep(this.instructionsState, "enter");
 		this.place(true);
+		if (this.instructionsState.shown) this.showInstructions();
 		this.unwatch.push(
 			store.watch(
 				(s) => s.xr.mode,
-				() => this.place(true),
+				(mode) => {
+					this.place(true);
+					this.instructions?.setText(simulatorControlsHint(mode));
+				},
 			),
 			store.watch(
 				(s) => s.xr.tableSize,
@@ -235,6 +266,9 @@ export class XrController {
 		this.xr.teleportation?.removeFloorMesh(this.host.terrainMesh());
 		this.panel?.dispose();
 		this.panel = null;
+		this.instructions?.dispose();
+		this.instructions = null;
+		this.instructionsState = instructionsStep(this.instructionsState, "exit");
 		this.pointers.reset();
 		this.pose = null;
 		this.grab = null;
@@ -397,6 +431,21 @@ export class XrController {
 		}
 	}
 
+	/** The controls card beside the panel, where it then stays (S15). */
+	private showInstructions(): void {
+		const cam = this.xr.baseExperience.camera;
+		const head = cam.globalPosition;
+		const gaze = cam.getDirection(Vector3.Forward());
+		this.instructions?.showAt(
+			instructionsPose(
+				[head.x, head.y, head.z],
+				[gaze.x, gaze.y, gaze.z],
+				INSTRUCTIONS_BESIDE_PANEL_ANGLE_RAD,
+			),
+			simulatorControlsHint(this.host.store.get().xr.mode),
+		);
+	}
+
 	/** Brings the panel in front of the user, facing them (X/Y or left thumbstick press). */
 	private summonPanel(): void {
 		const panel = this.panel?.mesh;
@@ -435,7 +484,8 @@ export class XrPointerSource implements PointerSource {
 	constructor(
 		xr: WebXRDefaultExperience,
 		private readonly store: Store<AppState>,
-		private readonly panel: () => Mesh | null,
+		/** The panel and the cards pressed with the ray: no tool gesture through them. */
+		private readonly panels: () => Mesh[],
 	) {
 		xr.input.onControllerAddedObservable.add((input) => {
 			this.sources.set(input.uniqueId, {
@@ -530,10 +580,8 @@ export class XrPointerSource implements PointerSource {
 	}
 
 	private hitsPanel(input: WebXRInputSource): boolean {
-		const panel = this.panel();
-		if (!panel) return false;
 		input.getWorldPointerRayToRef(this.ray);
-		return this.ray.intersectsMesh(panel).hit;
+		return this.panels().some((panel) => this.ray.intersectsMesh(panel).hit);
 	}
 
 	private emit(id: string, phase: PointerSample["phase"]): void {

@@ -38,10 +38,9 @@ import { entryActions, pointCardContent } from "../ui/sections";
 import { metresOf, readVrTheme, texturePx, type VrTheme } from "../ui/vr/theme";
 import type { MayuText } from "../ui/vr/themeGui";
 import {
-	CONTROLS_CARD_CSS,
 	CREDIT_CARD_CSS,
-	controlsCard,
 	creditCard,
+	VrInstructionsCard,
 } from "../ui/vr/VrInfoCards";
 import { VrPointCard } from "../ui/vr/VrPointCard";
 import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
@@ -51,6 +50,12 @@ import {
 	placePointCard,
 	toTableLocal,
 } from "./cardPlacement";
+import {
+	INSTRUCTIONS_START,
+	type InstructionsState,
+	instructionsPose,
+	instructionsStep,
+} from "./instructions";
 import {
 	type GrabHand,
 	mapRootFromPose,
@@ -74,8 +79,8 @@ import {
  * exaggeration of the web slider applies on top).
  */
 const STICK_DEAD_ZONE = 0.15;
-/** Gap between the right controller and the controls card above it / the attribution card below (m). */
-const HINT_LIFT_M = 0.06;
+/** Gap between the right controller and the attribution card under it (m). */
+const CREDIT_DROP_M = 0.06;
 /** Weather menu (X): distance along the gaze and shift to the left of it, beside the card (m). */
 const WEATHER_MENU_DISTANCE = 0.9;
 const WEATHER_MENU_LEFT = 0.45;
@@ -97,8 +102,9 @@ export class OverviewXr {
 	private startPending = false;
 	private snap = { armed: true };
 	private readonly buttons = new Map<string, boolean>();
-	private hint: Mesh | null = null;
-	private hintText: MayuText | null = null;
+	/** "Controles" (S15): placed once in the world, dismissed with «Entendido» for the page. */
+	private instructions: VrInstructionsCard | null = null;
+	private instructionsState: InstructionsState = INSTRUCTIONS_START;
 	/** View currently applied to the rig and the map root (follows the app's VR state). */
 	private view: VrView = "vuelo";
 	/** After a pause (the simulator had the session) the first frame only records button states. */
@@ -179,21 +185,38 @@ export class OverviewXr {
 				this.leader.setEnabled(false);
 				const weather = this.host.weatherMenu();
 				this.weatherMenu = weather
-					? new VrWeatherMenu(this.host.scene, weather, (id) =>
-							this.host.weatherAction(id),
+					? new VrWeatherMenu(
+							this.host.scene,
+							weather,
+							(id) => this.host.weatherAction(id),
+							() => this.reopenInstructions(),
 						)
 					: null;
+				this.instructions = new VrInstructionsCard(this.host.scene, () => {
+					this.instructionsState = instructionsStep(
+						this.instructionsState,
+						"dismiss",
+					);
+					this.instructions?.hide();
+				});
+				this.instructionsState = instructionsStep(
+					this.instructionsState,
+					"enter",
+				);
 				// Eye buffer height (WebGL layer); the LOD measures its screen-space error in it.
 				const layer = xr.baseExperience.sessionManager.session?.renderState
 					.baseLayer as XRWebGLLayer | undefined;
 				this.host.vrChanged(true, layer?.framebufferHeight || undefined);
 			} else if (state === WebXRState.NOT_IN_XR && this.inXr) {
 				this.inXr = false;
-				this.hint?.dispose();
-				this.hint = null;
+				this.instructions?.dispose();
+				this.instructions = null;
+				this.instructionsState = instructionsStep(
+					this.instructionsState,
+					"exit",
+				);
 				this.credit?.mesh.dispose();
 				this.credit = null;
-				this.hintText = null;
 				this.card?.dispose();
 				this.card = null;
 				this.leader?.dispose();
@@ -217,7 +240,7 @@ export class OverviewXr {
 		xr.input.onControllerAddedObservable.add((input) => {
 			if (input.inputSource.handedness === "right")
 				input.onMotionControllerInitObservable.add(() =>
-					this.attachHint(input),
+					this.attachCredit(input),
 				);
 		});
 	}
@@ -264,6 +287,7 @@ export class OverviewXr {
 		if (this.startPending) {
 			this.startPending = false;
 			this.toStartView();
+			if (this.instructionsState.shown) this.showInstructions();
 			return;
 		}
 		const left = this.controller("left");
@@ -290,7 +314,10 @@ export class OverviewXr {
 		if (wanted !== this.view) this.applyView(wanted);
 		if (left && this.pressedOnce(left, "y-button"))
 			this.link.dispatch({ type: "toggle-view" });
-		if (left && this.pressedOnce(left, "x-button")) this.toggleWeatherMenu();
+		if (left && this.pressedOnce(left, "x-button")) {
+			if (this.weatherMenu) this.toggleWeatherMenu();
+			else this.reopenInstructions();
+		}
 		// Trigger: on the card it presses the card's buttons (pointer selection), on its header it
 		// drags the card; otherwise the view decides.
 		const triggered: WebXRInputSource[] = [];
@@ -308,7 +335,7 @@ export class OverviewXr {
 					distance: cardPick.distance,
 					offset: card.mesh.position.subtract(cardPick.pickedPoint),
 				};
-			const cardHit = [this.card, this.weatherMenu].some(
+			const cardHit = [this.card, this.weatherMenu, this.instructions].some(
 				(panel) => panel?.visible && this.ray.intersectsMesh(panel.mesh).hit,
 			);
 			if (triggerUse(this.view, cardHit) === "zoom") triggered.push(c);
@@ -333,6 +360,23 @@ export class OverviewXr {
 		this.syncLeader();
 		const weather = this.weatherMenu?.visible ? this.host.weatherMenu() : null;
 		if (weather) this.weatherMenu?.update(weather);
+	}
+
+	/** The controls card at its spawn pose, beside the gaze, where it then stays (S15). */
+	private showInstructions(): void {
+		const cam = this.xr.baseExperience.camera;
+		const head = cam.position;
+		const gaze = cam.getDirection(Vector3.Forward());
+		this.instructions?.showAt(
+			instructionsPose([head.x, head.y, head.z], [gaze.x, gaze.y, gaze.z]),
+			controlsHint(this.view),
+		);
+	}
+
+	/** «Controles» in the weather menu (or X without one) brings the card back. */
+	private reopenInstructions(): void {
+		this.instructionsState = instructionsStep(this.instructionsState, "reopen");
+		this.showInstructions();
 	}
 
 	/** X: the weather menu (S8) opens beside the gaze, or closes. */
@@ -489,7 +533,7 @@ export class OverviewXr {
 		this.zoom = null;
 		this.tableGrab.reset();
 		this.card?.hide();
-		this.hintText?.show(controlsHint(view));
+		this.instructions?.setText(controlsHint(view));
 		if (view === "maqueta") {
 			// Real scale, standing at the origin: the map comes to the user, not the reverse.
 			const cam = this.xr.baseExperience.camera;
@@ -724,38 +768,10 @@ export class OverviewXr {
 		return now && !before;
 	}
 
-	/** Small controls card above the right (flying) controller, always facing the user. */
-	private attachHint(input: WebXRInputSource): void {
-		if (!this.inXr || this.hint) return;
+	/** The imagery and weather attribution under the right controller (filled by syncCredit). */
+	private attachCredit(input: WebXRInputSource): void {
+		if (!this.inXr || this.credit) return;
 		const theme = readVrTheme();
-		const plane = MeshBuilder.CreatePlane(
-			"peru-vr-hint",
-			{
-				width: metresOf(CONTROLS_CARD_CSS.width),
-				height: metresOf(CONTROLS_CARD_CSS.height),
-				sideOrientation: Mesh.DOUBLESIDE,
-			},
-			this.host.scene,
-		);
-		plane.isPickable = false;
-		plane.parent = input.grip ?? input.pointer;
-		// The card's top edge sits a hand above the controller.
-		plane.position.set(
-			0,
-			HINT_LIFT_M + metresOf(CONTROLS_CARD_CSS.height) / 2,
-			0.02,
-		);
-		plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
-		const ui = AdvancedDynamicTexture.CreateForMesh(
-			plane,
-			texturePx(CONTROLS_CARD_CSS.width),
-			texturePx(CONTROLS_CARD_CSS.height),
-			false,
-		);
-		const text = controlsCard(ui, theme);
-		text.show(controlsHint(this.view));
-		this.hint = plane;
-		this.hintText = text;
 		// Attribution card right under the controller, filled by syncCredit().
 		const label = MeshBuilder.CreatePlane(
 			"peru-vr-credit",
@@ -767,10 +783,10 @@ export class OverviewXr {
 			this.host.scene,
 		);
 		label.isPickable = false;
-		label.parent = plane.parent;
+		label.parent = input.grip ?? input.pointer;
 		label.position.set(
 			0,
-			-HINT_LIFT_M - metresOf(CREDIT_CARD_CSS.height) / 2,
+			-CREDIT_DROP_M - metresOf(CREDIT_CARD_CSS.height) / 2,
 			0.02,
 		);
 		label.billboardMode = Mesh.BILLBOARDMODE_ALL;

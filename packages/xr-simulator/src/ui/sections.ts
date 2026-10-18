@@ -248,6 +248,8 @@ export function panelFooter(s: {
 	backToMap: boolean;
 	/** The weather menu page (S8), when the simulator shows weather layers. */
 	weather?: boolean;
+	/** «Controles»: reopens the VR controls instructions (S15). */
+	controls?: boolean;
 }): CardAction[] {
 	return [
 		...(s.weather
@@ -261,6 +263,9 @@ export function panelFooter(s: {
 						text: "Volver al mapa del Perú",
 					},
 				]
+			: []),
+		...(s.controls
+			? [{ id: "controls", icon: "help" as const, text: "Controles" }]
 			: []),
 		{ id: "exit", icon: "exit", text: "Salir de VR" },
 	];

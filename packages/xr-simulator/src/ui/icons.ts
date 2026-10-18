@@ -37,6 +37,7 @@ export const ICONS = {
 		"M7 12h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 12zM13 13l-3 5h4l-2 4",
 	wind: "M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8",
 	thermo: "M10 4a2 2 0 0 1 4 0v10a4 4 0 1 1-4 0zM12 9v8",
+	help: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01",
 } as const;
 
 export type IconName = keyof typeof ICONS;
