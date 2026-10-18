@@ -3,6 +3,7 @@ import {
 	INCIDENT_CATEGORY_LABELS,
 	INCIDENT_SEVERITY_LABELS,
 	INCIDENT_SEVERITY_TEXT_CLASSES,
+	INCIDENT_SEVERITY_TONES,
 } from "@hack-the-andes-project/ui/lib/incident-constants";
 import { cn } from "@hack-the-andes-project/ui/lib/utils";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -47,7 +48,7 @@ export function IncidentMarker({ incident, onSelect }: IncidentMarkerProps) {
 				>
 					<IncidentMarkerSymbol
 						category={incident.category}
-						severity={incident.severity}
+						tone={INCIDENT_SEVERITY_TONES[incident.severity]}
 					/>
 				</HoverCardTrigger>
 				<HoverCardContent
