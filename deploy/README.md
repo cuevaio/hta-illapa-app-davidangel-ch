@@ -2,7 +2,20 @@
 
 One AWS EC2 box runs Dokploy and MySQL 8.4. Every app has a production deployment from `main` and a staging deployment from `develop`. Production uses the `illapa` database; staging uses `illapa_staging`. Both keep the `hack_the_andes_` table prefix.
 
-The intended production domains are `dash.illapa.app` and `api.illapa.app`; their DNS cutover to EC2 is still pending (issue #7). Use each environment's URLs from Dokploy until then.
+## Domains
+
+Production runs on `getillapa.com` (issue #7). Staging still uses the URLs configured in its Dokploy environment.
+
+| Host | App | Notes |
+| --- | --- | --- |
+| `dash.getillapa.com` | Dashboard (`web`) | Built with `VITE_SERVER_URL=https://api.getillapa.com` |
+| `api.getillapa.com` | Server | `illapa-compress@file` middleware; `BETTER_AUTH_URL=https://api.getillapa.com` |
+| `getillapa.com` | Marketing (`illapa`) | `www` redirects to it |
+
+- **DNS:** the zone is in Route 53, in the same AWS account as the box. Its A records point straight at the Elastic IP with no proxy in front. Let's Encrypt's HTTP-01 challenge needs that, and so does the rate limiting: it keys on the `x-real-ip` header that Traefik sets from the TCP peer (`CLIENT_IP_HEADER=x-real-ip`).
+- **Origins:** the server's `ALLOWED_ORIGINS` must list `https://dash.getillapa.com` and `https://getillapa.com`.
+- **Keep the dashboard and the API on one registrable domain.** The session cookies are `SameSite=None` and belong only to the API host. A dashboard served from another site makes them third-party cookies, and private windows drop them.
+- **Old sslip.io hosts:** the previous production dashboard and marketing hosts 302 to their `getillapa.com` hosts through Dokploy redirects. That keeps old links, such as the pitch deck's QR code, working. Their builds call `api.getillapa.com`, so they can't be served from the old host directly.
 
 ## Static sites
 
