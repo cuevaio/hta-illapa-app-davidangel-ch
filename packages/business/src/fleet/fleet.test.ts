@@ -213,6 +213,33 @@ describe("syncConnection with real Drizzle queries", () => {
 		expect(JSON.stringify(query.mock.calls)).not.toContain("secret-token");
 	});
 
+	it("backfills missing demo profile values without replacing stored profiles", async () => {
+		const encryptionKey = generateEncryptionKeyBase64();
+		const encryptedCredentials = await encryptJson(encryptionKey, {
+			provider: "demo",
+		});
+		expect(
+			await syncConnection({
+				db: await testDatabase(),
+				encryptionKey,
+				connection: { ...connection, provider: "demo", encryptedCredentials },
+				now,
+				log: createLogger(),
+			}),
+		).toMatchObject({ ok: true, vehiclesSynced: DEMO_VEHICLES.length });
+		const vehicleWrite = query.mock.calls.find(([options]) =>
+			options.sql.startsWith("insert into `hack_the_andes_vehicle`"),
+		);
+		expect(vehicleWrite?.[1]).toEqual(
+			expect.arrayContaining(["t2s3", 5, 43_000, "t3s3", 6, 48_000]),
+		);
+		for (const column of ["vehicle_type_id", "axle_count", "gross_weight_kg"]) {
+			expect(vehicleWrite?.[0].sql).toContain(
+				`coalesce(\`hack_the_andes_vehicle\`.\`${column}\`, values(\`${column}\`))`,
+			);
+		}
+	});
+
 	it("records a safe failure without exposing a provider error containing credentials", async () => {
 		const encryptionKey = generateEncryptionKeyBase64();
 		const encryptedCredentials = await encryptJson(encryptionKey, {
