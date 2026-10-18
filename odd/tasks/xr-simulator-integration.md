@@ -54,7 +54,7 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T17 | S13 | delegated (same writer) | done | 9e5c59c |
 | T18 | S14 | delegated (same writer) | done | 99e98d0, dbd06d8 |
 | T19 | S15 | delegated (same writer) | done | 10eb834 |
-| T20 | S16 | delegated (same writer) | pending | |
+| T20 | S16 | delegated (same writer) | done | e55b4ad |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -95,4 +95,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L23** (2026-10-18, user): "okye, hay otro problema en el visor VR cuando entro a la simulación me aparecen las instrucciones de como usar el joystick y se quedan pegados siguiendo el control y obstaculizando mi vision, la idea es que solo aparezca unos segundos o q aparezca más al fondo y le pueda dar en un botón de cerrar para confirmar que he entendido las instrucciones".
 - **L24** T18: viewer DOM UI restyled to Mayu in `src/pages/app.css` under `.xr-viewer` (host tokens with DESIGN.md fallbacks; old `--accent/--muted/--bg` overrides removed); badges observado=success, pronóstico=info; scene background = `background` token; huayco UI and lil-gui restyled; screenshots in scratchpad/web-ui. Parent fix dbd06d8: the overview hint used the mono face, now body (Archivo). T19: VR controls card spawns once 1.3 m away, 25° off gaze, dismissed with «Entendido», reopened from «Controles»; huayco gets its own instructions card. Checks: check-types 0, xr-simulator 390/390, ui 53/53, web 27/27, web build ok, biome clean (tracked). Open: attribution card still on the right controller (40×14 cm); structures maquette placement hint still follows the head.
 - **L25** (2026-10-18, user): "quita la card de atribución, estorba". Decision (parent, explained to the user): relocate instead of delete, because Esri requires visible attribution while its imagery is shown.
+- **L26** T20: controller attribution card removed; `VrCreditLabel` pill (label type, 80% card fill for legibility over imagery) on the table's near edge in maqueta, 1.1 m away and 28° below gaze (world-stable) in vuelo; content only when satellite/weather layers are on. Checks at e55b4ad: check-types 0, xr-simulator 398/398, ui 53/53, web build ok, biome clean (tracked).
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
