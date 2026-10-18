@@ -1,0 +1,178 @@
+.app-body { padding: 0; overflow: hidden; overscroll-behavior: none; }
+.app { position: fixed; inset: 0; max-width: none; }
+.scene-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+.hud {
+  position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; max-width: min(460px, calc(100vw - 16px));
+  background: rgba(15, 18, 22, 0.78); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.panel-host { position: absolute; top: 8px; right: 8px; max-height: calc(100vh - 16px); overflow-y: auto; }
+.panel-host .lil-gui { --width: 320px; --font-size: 12px; --input-font-size: 12px; --widget-height: 24px; }
+.app > .notice { position: absolute; bottom: 8px; left: 8px; right: 8px; max-width: 640px; z-index: 2; }
+.app-error { position: absolute; top: 16px; left: 16px; right: 16px; max-width: 640px; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+
+/* Phones and narrow tablets: panel becomes a bottom sheet, HUD shrinks. */
+@media (max-width: 700px) {
+  .panel-host {
+    top: auto; bottom: 0; left: 0; right: 0; max-height: 50vh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .panel-host .lil-gui.lil-root { width: 100% !important; --width: 100%; --widget-height: 32px; --font-size: 14px; --input-font-size: 14px; }
+  .hud { font-size: 11px; padding: 6px 8px; }
+  .app > .notice { bottom: auto; top: 120px; }
+}
+
+.toolbar {
+  position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; gap: 4px; align-items: center; padding: 4px; border-radius: 10px;
+  background: rgba(15, 18, 22, 0.85); z-index: 1;
+}
+.toolbar button { min-height: 40px; padding: 6px 12px; background: #2a3038; color: var(--text); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.toolbar button svg { width: 18px; height: 18px; flex: none; }
+.toolbar button.active { background: var(--accent); color: #111; }
+.toolbar button:disabled { opacity: 0.35; }
+.toolbar .sep { width: 1px; align-self: stretch; background: #3a414b; margin: 0 2px; }
+@media (max-width: 700px) {
+  /* Sit above the collapsed parameter sheet. */
+  .toolbar { bottom: calc(44px + env(safe-area-inset-bottom)); }
+  .toolbar button { min-height: 44px; padding: 6px 10px; }
+  /* Icons only on narrow screens; the labels stay as tooltips and accessible names. */
+  .toolbar button span { display: none; }
+}
+
+.timeline {
+  position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px); transform: translateX(-50%);
+  display: flex; gap: 4px; align-items: center; padding: 4px; border-radius: 10px;
+  background: rgba(15, 18, 22, 0.85); z-index: 1; max-width: calc(100vw - 32px);
+}
+.timeline button { min-height: 36px; padding: 4px 10px; background: #2a3038; color: var(--text); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.timeline button svg { width: 16px; height: 16px; flex: none; }
+.timeline button.active { background: #c0392b; color: #fff; }
+.timeline button:disabled { opacity: 0.35; }
+.timeline button.icon-only span { display: none; }
+.timeline [hidden] { display: none !important; }
+.timeline button span { white-space: nowrap; }
+.timeline-result { display: flex; gap: 4px; align-items: center; }
+.timeline-result[hidden] { display: none; }
+.timeline input[type='range'] { width: min(280px, 30vw); accent-color: var(--accent); }
+.timeline-time { font-size: 12px; color: var(--text); min-width: 92px; text-align: center; font-variant-numeric: tabular-nums; }
+.timeline select { min-height: 32px; background: #2a3038; color: var(--text); border: 0; border-radius: 6px; }
+@media (max-width: 700px) {
+  .timeline { bottom: calc(44px + env(safe-area-inset-bottom) + 60px); }
+  .timeline button span { display: none; }
+  .timeline-time { min-width: 0; }
+}
+
+.xr-buttons { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 1; }
+.xr-buttons button { min-height: 40px; padding: 6px 16px; background: var(--accent); color: #111; font-weight: 600; }
+@media (max-width: 700px) { .xr-buttons { top: auto; bottom: calc(100px + env(safe-area-inset-bottom)); } }
+
+.panel-hint { margin: 4px 8px 8px; font-size: 12px; line-height: 1.4; color: #9aa4b1; }
+
+/* Peru overview ("vista general"): the simulator UI is hidden while it is shown. */
+.app.overview-active > .hud, .app.overview-active > .panel-host, .app.overview-active > .toolbar,
+.app.overview-active > .timeline, .app.overview-active > .xr-buttons { display: none; }
+.peru-overlay {
+  position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; width: min(360px, calc(100vw - 16px)); z-index: 2;
+  background: rgba(15, 18, 22, 0.85); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.45;
+}
+.peru-overlay[hidden], .peru-back[hidden], .peru-overlay [hidden] { display: none; }
+.peru-overlay h2 { margin: 0 0 4px; font-size: 16px; }
+.peru-overlay p { margin: 4px 0; }
+.peru-status { color: var(--accent); }
+.peru-pick { font-variant-numeric: tabular-nums; }
+.peru-exag { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.peru-exag input { flex: 1; accent-color: var(--accent); }
+.peru-exag output { min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+.peru-actions { display: flex; gap: 6px; margin: 8px 0 4px; flex-wrap: wrap; }
+.peru-actions button { min-height: 40px; padding: 6px 14px; background: #2a3038; color: var(--text); }
+.peru-actions .peru-simulate { background: var(--accent); color: #111; font-weight: 600; }
+.peru-actions button:disabled { opacity: 0.4; }
+.peru-attribution { font-size: 11px; color: #9aa4b1; }
+.peru-lod { font-size: 11px; color: #9aa4b1; font-variant-numeric: tabular-nums; }
+.peru-mode { display: flex; gap: 0; margin: 6px 0; }
+.peru-mode button { flex: 1; min-height: 36px; padding: 4px 10px; background: #2a3038; color: var(--text); border-radius: 0; }
+.peru-mode button:first-child { border-radius: 8px 0 0 8px; }
+.peru-mode button:last-child { border-radius: 0 8px 8px 0; }
+.peru-mode button[aria-pressed="true"] { background: var(--accent); color: #111; font-weight: 600; }
+.peru-fly-hint { font-size: 12px; color: #c6ced8; }
+/* Relieve / Satélite (S7): in the overview overlay and over the simulator's map context. */
+.imagery-toggle .peru-mode button:disabled { opacity: 0.5; cursor: not-allowed; }
+.imagery-hint { font-size: 12px; color: #c6ced8; }
+.imagery-credit { font-size: 11px; color: #9aa4b1; }
+.imagery-notice { font-size: 11px; color: #ffcf70; }
+.imagery-sim {
+  position: absolute; left: 8px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px); z-index: 1;
+  width: min(300px, calc(100vw - 16px)); background: rgba(15, 18, 22, 0.85); border-radius: 10px; padding: 4px 10px;
+  font-size: 13px; line-height: 1.4;
+}
+.imagery-sim[hidden], .imagery-toggle [hidden], .app.overview-active > .imagery-sim { display: none; }
+.peru-actions .peru-vr { background: var(--accent); color: #111; font-weight: 600; }
+/* Touch fallback for "Vuelo libre": hold buttons, only on coarse pointers. */
+.peru-fly-pad { display: none; }
+@media (pointer: coarse) {
+  .peru-fly-pad:not([hidden]) {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 2;
+    display: grid; grid-template-columns: repeat(2, 56px); gap: 6px;
+  }
+  .peru-fly-pad button { min-height: 56px; background: rgba(15, 18, 22, 0.8); color: var(--text); border-radius: 10px; touch-action: none; user-select: none; -webkit-user-select: none; }
+}
+.peru-back {
+  position: absolute; left: 8px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 1;
+  min-height: 40px; padding: 6px 14px; background: rgba(15, 18, 22, 0.85); color: var(--text); border-radius: 10px;
+}
+@media (max-width: 700px) {
+  .peru-overlay { top: auto; bottom: max(8px, env(safe-area-inset-bottom)); font-size: 14px; }
+  .peru-actions button { min-height: 44px; flex: 1; }
+  .peru-back { bottom: auto; top: max(8px, env(safe-area-inset-top)); left: auto; right: 8px; }
+}
+/* Phones: above the toolbar, the timeline and the "Volver al mapa" button. */
+@media (max-width: 700px) { .imagery-sim { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px); } }
+/* Weather layers (S8): over the overview (top right) and over the simulator's map context. */
+.weather-panel {
+  position: absolute; z-index: 2; width: min(330px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto;
+  background: rgba(15, 18, 22, 0.85); border-radius: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.4;
+}
+.weather-overview { top: max(8px, env(safe-area-inset-top)); right: 8px; }
+.weather-sim { left: 8px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px); max-height: 50vh; }
+.weather-panel[hidden], .weather-panel [hidden], .app.overview-active > .weather-sim { display: none; }
+.weather-panel summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.weather-panel p { margin: 3px 0; }
+.wx-notice { color: #ffcf70; font-size: 12px; }
+.wx-layers { list-style: none; margin: 6px 0; padding: 0; }
+.wx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 3px 0; }
+.wx-row label { display: flex; align-items: center; gap: 6px; min-height: 28px; flex: 1; cursor: pointer; }
+.wx-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+.wx-row input[type=range] { width: 100%; accent-color: var(--accent); }
+.wx-sub { padding-left: 14px; }
+.wx-group { font-size: 12px; color: #9aa4b1; margin-top: 4px; }
+.wx-badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 4px; padding: 1px 5px; }
+.wx-observed { background: #2f5d3a; color: #d9f5df; }
+.wx-forecast { background: #3b3f6b; color: #dfe2ff; }
+.wx-status { width: 100%; font-size: 11px; color: #ffcf70; }
+.wx-timeline { margin: 6px 0; }
+.wx-time-row { display: flex; gap: 6px; }
+.wx-time-row button { min-height: 32px; padding: 4px 10px; background: #2a3038; color: var(--text); border-radius: 8px; }
+.wx-time-row .wx-play { flex: 1; }
+.wx-timeline input { width: 100%; accent-color: var(--accent); }
+.wx-time { font-size: 12px; font-variant-numeric: tabular-nums; }
+.wx-legend { margin: 8px 0; }
+.wx-legend-title { font-size: 12px; font-weight: 600; }
+.wx-bar { height: 10px; border-radius: 3px; }
+.wx-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #c6ced8; font-variant-numeric: tabular-nums; }
+.wx-note { font-size: 11px; color: #9aa4b1; }
+.wx-swatches { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; }
+.wx-swatches i { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.5) 0 2px, transparent 2px 5px) !important; }
+.wx-rain-mode button { min-height: 28px; font-size: 12px; }
+.wx-point { margin: 8px 0; padding-top: 6px; border-top: 1px solid #2a3038; font-size: 12px; }
+.wx-prov { margin: 6px 0; font-size: 12px; }
+.wx-prov summary { font-size: 12px; font-weight: 600; }
+.wx-prov-entry { margin: 6px 0; color: #c6ced8; }
+.wx-prov-notice { color: #ffcf70; }
+.wx-attribution { font-size: 11px; color: #9aa4b1; margin: 4px 0 0; }
+@media (max-width: 700px) {
+  .weather-overview { left: 8px; right: 8px; width: auto; max-height: 40vh; }
+  .weather-sim { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 240px); max-height: 35vh; }
+}
