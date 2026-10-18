@@ -32,14 +32,11 @@ import {
 	texturePx,
 	VR_METRES_PER_CSS_PX,
 } from "../ui/vr/theme";
-import {
-	CREDIT_CARD_CSS,
-	creditCard,
-	VrInstructionsCard,
-} from "../ui/vr/VrInfoCards";
+import { VrCreditLabel, VrInstructionsCard } from "../ui/vr/VrInfoCards";
 import { VrPanel } from "../ui/vr/VrPanel";
 import { VrPointCard } from "../ui/vr/VrPointCard";
 import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
+import { vrCreditContent } from "../xr/credit";
 import { controlsHint } from "../xr/vrMode";
 
 const GAP_CSS_PX = 32;
@@ -202,13 +199,17 @@ const infoCard = (
 const instructions = new VrInstructionsCard(scene, noop);
 instructions.showAt({ position: [0, 0, 0], yaw: 0 }, controlsHint("vuelo"));
 const controls = instructions.mesh;
-const credit = infoCard("credit", CREDIT_CARD_CSS, (ui) => {
-	const text = creditCard(ui, theme);
-	text.show(
-		"Imágenes: Esri World Imagery · Datos meteorológicos: Nubes: NOAA GOES-19",
-	);
-	text.color = theme.colors.mutedForeground;
-});
+const creditLabel = new VrCreditLabel(scene);
+creditLabel.show(
+	vrCreditContent(
+		{
+			text: "Imagen: Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community · Powered by Esri",
+			notice: null,
+		},
+		"Datos meteorológicos: Nubes: NOAA GOES-19 ABI L2",
+	),
+);
+const credit = creditLabel.mesh;
 
 // The structures XR maquette (packages/ui visuals.ts) draws its hint and buttons with these faces.
 const structuresHint = infoCard(

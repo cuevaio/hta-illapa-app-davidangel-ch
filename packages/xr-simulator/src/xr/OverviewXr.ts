@@ -2,7 +2,6 @@ import {
 	Ray as BabylonRay,
 	Color3,
 	type LinesMesh,
-	Mesh,
 	MeshBuilder,
 	type MotionControllerComponentType,
 	Quaternion,
@@ -12,7 +11,6 @@ import {
 	type WebXRInputSource,
 	WebXRState,
 } from "@babylonjs/core";
-import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import {
 	clampAltitude,
 	clampToBounds,
@@ -35,13 +33,8 @@ import {
 	yawAbout,
 } from "../map/rig";
 import { entryActions, pointCardContent } from "../ui/sections";
-import { metresOf, readVrTheme, texturePx, type VrTheme } from "../ui/vr/theme";
-import type { MayuText } from "../ui/vr/themeGui";
-import {
-	CREDIT_CARD_CSS,
-	creditCard,
-	VrInstructionsCard,
-} from "../ui/vr/VrInfoCards";
+import { readVrTheme } from "../ui/vr/theme";
+import { VrCreditLabel, VrInstructionsCard } from "../ui/vr/VrInfoCards";
 import { VrPointCard } from "../ui/vr/VrPointCard";
 import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
 import {
@@ -50,6 +43,12 @@ import {
 	placePointCard,
 	toTableLocal,
 } from "./cardPlacement";
+import {
+	creditOutOfView,
+	flightCreditPose,
+	tableCreditPose,
+	vrCreditContent,
+} from "./credit";
 import {
 	INSTRUCTIONS_START,
 	type InstructionsState,
@@ -79,8 +78,6 @@ import {
  * exaggeration of the web slider applies on top).
  */
 const STICK_DEAD_ZONE = 0.15;
-/** Gap between the right controller and the attribution card under it (m). */
-const CREDIT_DROP_M = 0.06;
 /** Weather menu (X): distance along the gaze and shift to the left of it, beside the card (m). */
 const WEATHER_MENU_DISTANCE = 0.9;
 const WEATHER_MENU_LEFT = 0.45;
@@ -130,13 +127,10 @@ export class OverviewXr {
 	private table: MaquettePose | null = null;
 	private readonly tableGrab = new TableGrab();
 	private tableSnap = { armed: true };
-	/** Imagery attribution (+ prototype notice) under the hint card while Satélite is visible (S7). */
-	private credit: {
-		mesh: Mesh;
-		text: MayuText;
-		shown: string;
-		theme: VrTheme;
-	} | null = null;
+	/** Imagery and weather attribution as a small map credit (S16), never on a controller. */
+	private credit: VrCreditLabel | null = null;
+	/** Flight: the credit is placed again on the next frame (entering, view change, start view). */
+	private creditStale = true;
 	private readonly ray = new BabylonRay(Vector3.Zero(), Vector3.Forward());
 	private zoom: ZoomTween | null = null;
 	private readonly gripTap = new DoubleTap();
@@ -192,6 +186,8 @@ export class OverviewXr {
 							() => this.reopenInstructions(),
 						)
 					: null;
+				this.credit = new VrCreditLabel(this.host.scene);
+				this.creditStale = true;
 				this.instructions = new VrInstructionsCard(this.host.scene, () => {
 					this.instructionsState = instructionsStep(
 						this.instructionsState,
@@ -215,7 +211,7 @@ export class OverviewXr {
 					this.instructionsState,
 					"exit",
 				);
-				this.credit?.mesh.dispose();
+				this.credit?.dispose();
 				this.credit = null;
 				this.card?.dispose();
 				this.card = null;
@@ -236,12 +232,6 @@ export class OverviewXr {
 				this.host.setMapPlacement(null);
 				this.host.vrChanged(false);
 			}
-		});
-		xr.input.onControllerAddedObservable.add((input) => {
-			if (input.inputSource.handedness === "right")
-				input.onMotionControllerInitObservable.add(() =>
-					this.attachCredit(input),
-				);
 		});
 	}
 
@@ -530,6 +520,7 @@ export class OverviewXr {
 	/** Switches the rig and the map root between flight and the table. */
 	private applyView(view: VrView): void {
 		this.view = view;
+		this.creditStale = true;
 		this.zoom = null;
 		this.tableGrab.reset();
 		this.card?.hide();
@@ -695,6 +686,7 @@ export class OverviewXr {
 	 * highest relief, the map level (S10). Only yaw is changed, never pitch or roll.
 	 */
 	private toStartView(): void {
+		this.creditStale = true;
 		this.zoom = null;
 		const start = this.host.vrStart();
 		this.card?.hide();
@@ -768,56 +760,29 @@ export class OverviewXr {
 		return now && !before;
 	}
 
-	/** The imagery and weather attribution under the right controller (filled by syncCredit). */
-	private attachCredit(input: WebXRInputSource): void {
-		if (!this.inXr || this.credit) return;
-		const theme = readVrTheme();
-		// Attribution card right under the controller, filled by syncCredit().
-		const label = MeshBuilder.CreatePlane(
-			"peru-vr-credit",
-			{
-				width: metresOf(CREDIT_CARD_CSS.width),
-				height: metresOf(CREDIT_CARD_CSS.height),
-				sideOrientation: Mesh.DOUBLESIDE,
-			},
-			this.host.scene,
-		);
-		label.isPickable = false;
-		label.parent = input.grip ?? input.pointer;
-		label.position.set(
-			0,
-			-CREDIT_DROP_M - metresOf(CREDIT_CARD_CSS.height) / 2,
-			0.02,
-		);
-		label.billboardMode = Mesh.BILLBOARDMODE_ALL;
-		const lui = AdvancedDynamicTexture.CreateForMesh(
-			label,
-			texturePx(CREDIT_CARD_CSS.width),
-			texturePx(CREDIT_CARD_CSS.height),
-			false,
-		);
-		const ltext = creditCard(lui, theme);
-		label.setEnabled(false);
-		this.credit = { mesh: label, text: ltext, shown: "", theme };
-	}
-
-	/** Shows the imagery attribution (+ prototype notice) and the weather attribution whenever they are visible. */
+	/**
+	 * The map credit whenever imagery or weather layers are visible: on the near edge of the
+	 * maquette, or low in the flight view, world-stable until it leaves the view.
+	 */
 	private syncCredit(): void {
-		if (!this.credit) return;
-		const c = this.host.imageryCredit();
-		const wx = this.host.weatherCredit();
-		const text = [
-			c ? (c.notice ? `${c.text}\n${c.notice}` : c.text) : "",
-			wx ?? "",
-		]
-			.filter(Boolean)
-			.join("\n");
-		if (text === this.credit.shown) return;
-		this.credit.shown = text;
-		this.credit.text.show(text);
-		this.credit.text.color = c?.notice
-			? this.credit.theme.colors.destructive
-			: this.credit.theme.colors.mutedForeground;
-		this.credit.mesh.setEnabled(!!text);
+		const credit = this.credit;
+		if (!credit) return;
+		credit.show(
+			vrCreditContent(this.host.imageryCredit(), this.host.weatherCredit()),
+		);
+		if (!credit.visible) return;
+		if (this.table) {
+			credit.place(tableCreditPose(this.host.bounds(), this.table));
+			return;
+		}
+		const cam = this.xr.baseExperience.camera;
+		const head: Vec3 = [cam.position.x, cam.position.y, cam.position.z];
+		const forward = cam.getDirection(Vector3.Forward());
+		const gaze: Vec3 = [forward.x, forward.y, forward.z];
+		const at = credit.mesh.position;
+		if (this.creditStale || creditOutOfView(head, gaze, [at.x, at.y, at.z])) {
+			this.creditStale = false;
+			credit.place(flightCreditPose(head, gaze));
+		}
 	}
 }
