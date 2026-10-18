@@ -18,7 +18,7 @@ export const NATIVE_APP_SCHEME_ORIGIN = "hack-the-andes-project://";
 export const EXPO_DEV_ORIGINS = ["exp://", "http://localhost:8081"];
 
 export const DEMO_RATE_LIMIT_WINDOW_S = 60;
-export const DEMO_RATE_LIMIT_MAX_REQUESTS = 30;
+export const DEMO_RATE_LIMIT_MAX_REQUESTS = 120;
 export const DEMO_CHANGE_FORBIDDEN_MESSAGE =
 	"La cuenta demo no permite este cambio.";
 export const DEMO_SESSION_CONFLICT_MESSAGE =
