@@ -21,6 +21,8 @@ export const DEMO_RATE_LIMIT_WINDOW_S = 60;
 export const DEMO_RATE_LIMIT_MAX_REQUESTS = 30;
 export const DEMO_CHANGE_FORBIDDEN_MESSAGE =
 	"La cuenta demo no permite este cambio.";
+export const DEMO_SESSION_CONFLICT_MESSAGE =
+	"Ya tienes una sesión abierta con otra cuenta. Cierra sesión para abrir la demo.";
 export const DEMO_BLOCKED_AUTH_PATHS: ReadonlySet<string> = new Set([
 	"/change-password",
 	"/change-email",

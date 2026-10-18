@@ -18,7 +18,11 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
-import { DEMO_START_ROUTE, TOO_MANY_REQUESTS_STATUS } from "@/constants";
+import {
+	CONFLICT_STATUS,
+	DEMO_START_ROUTE,
+	TOO_MANY_REQUESTS_STATUS,
+} from "@/constants";
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
 
@@ -32,17 +36,33 @@ function DemoRoute() {
 	const navigate = useNavigate();
 	const router = useRouter();
 	const hasStartedSignIn = useRef(false);
+	const viewHeadingRef = useRef<HTMLHeadingElement>(null);
 	const {
 		mutate: enterDemo,
+		data: signedInEmail,
+		variables: shouldSignOutFirst,
+		isPending,
 		error,
 		isError,
 	} = useMutation({
 		retry: false,
-		mutationFn: async () => {
+		mutationFn: async (shouldSignOutFirst?: boolean) => {
+			if (shouldSignOutFirst) {
+				const { error: signOutError } = await authClient.signOut();
+				if (signOutError) throw signOutError;
+			}
 			const { error: signInError } = await authClient.$fetch(
 				DEMO_SIGN_IN_AUTH_PATH,
 				{ method: "POST", body: {}, credentials: "include" },
 			);
+			if (signInError?.status === CONFLICT_STATUS) {
+				const { data: signedInSession, error: sessionError } =
+					await authClient.getSession();
+				if (!signedInSession) {
+					throw sessionError ?? new Error(m.demo_sign_in_error());
+				}
+				return signedInSession.user.email;
+			}
 			if (signInError) throw signInError;
 
 			await queryClient.cancelQueries();
@@ -68,13 +88,51 @@ function DemoRoute() {
 		enterDemo();
 	}, [enterDemo]);
 
+	useEffect(() => {
+		if (signedInEmail || (isPending && shouldSignOutFirst))
+			viewHeadingRef.current?.focus();
+	}, [signedInEmail, isPending, shouldSignOutFirst]);
+
 	const isRateLimited =
 		error && "status" in error && error.status === TOO_MANY_REQUESTS_STATUS;
 
 	return (
 		<AuthShell>
 			<div className="flex flex-col gap-6">
-				{isError ? (
+				{signedInEmail ? (
+					<>
+						<div className="flex flex-col gap-2">
+							<h2
+								ref={viewHeadingRef}
+								tabIndex={-1}
+								className="type-title outline-none"
+							>
+								{m.demo_already_signed_in_title()}
+							</h2>
+							<p className="type-body wrap-break-word">
+								{m.demo_already_signed_in_description({
+									email: signedInEmail,
+								})}
+							</p>
+						</div>
+						<div className="flex flex-col gap-3">
+							<Button
+								className="min-h-11"
+								nativeButton={false}
+								render={<Link to="/dashboard" replace />}
+							>
+								{m.demo_continue_with_account()}
+							</Button>
+							<Button
+								className="min-h-11"
+								variant="outline"
+								onClick={() => enterDemo(true)}
+							>
+								{m.demo_sign_out_and_open()}
+							</Button>
+						</div>
+					</>
+				) : isError ? (
 					<>
 						<h2 className="type-title">{m.demo_error_title()}</h2>
 						<Alert>
@@ -97,7 +155,13 @@ function DemoRoute() {
 				) : (
 					<div role="status" className="flex items-center gap-3">
 						<Spinner aria-hidden="true" />
-						<h2 className="type-heading">{m.demo_preparing()}</h2>
+						<h2
+							ref={viewHeadingRef}
+							tabIndex={-1}
+							className="type-heading outline-none"
+						>
+							{m.demo_preparing()}
+						</h2>
 					</div>
 				)}
 			</div>

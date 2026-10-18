@@ -1,3 +1,4 @@
+import { isDemoAccountEmail } from "@hack-the-andes-project/business/demo-account";
 import {
 	AuthForm,
 	type AuthMode,
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/login")({
 	}),
 	beforeLoad: async () => {
 		const session = await authClient.getSession().catch(() => null);
-		if (session?.data) {
+		if (session?.data && !isDemoAccountEmail(session.data.user.email)) {
 			throw redirect({ to: "/dashboard" });
 		}
 	},
@@ -39,6 +40,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginRoute() {
 	const navigate = useNavigate();
+	const { queryClient } = Route.useRouteContext();
 	const { mode: initialMode } = Route.useSearch();
 	const [mode, setMode] = useState<AuthMode>(initialMode ?? "sign-in");
 
@@ -69,6 +71,8 @@ function LoginRoute() {
 							DEFAULT_AUTH_ERROR_MESSAGE
 						);
 					}
+					await queryClient.cancelQueries();
+					queryClient.removeQueries();
 					await navigate({ to: "/dashboard" });
 					return undefined;
 				}}
