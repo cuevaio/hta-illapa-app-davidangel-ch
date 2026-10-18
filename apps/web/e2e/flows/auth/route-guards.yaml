@@ -1,4 +1,4 @@
-url: https://app-staging.52-21-151-223.sslip.io/dashboard
+url: https://dash-staging.getillapa.com/dashboard
 name: Signed-out users are sent to login and signed-in users skip it
 tags:
   - auth

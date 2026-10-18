@@ -1,0 +1,14 @@
+url: https://dash-staging.getillapa.com/demo/ingenieria
+name: Engineer demo opens the simulators
+tags:
+  - demo
+  - engineer
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*Estás en la demo.*"
+    timeout: 40000
+- extendedWaitUntil:
+    visible: "Simuladores"
+    timeout: 40000
+- takeScreenshot: 01-engineer-demo
