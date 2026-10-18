@@ -13,9 +13,11 @@ COPY services/tiles/diagnostico ./diagnostico/
 ENV PATH=/app/.venv/bin:$PATH \
     TILES_TILESETS=/app/tilesets.yaml \
     TILES_DIAGNOSTICO_DIR=/app/diagnostico \
+    TILES_FS_ROOT=/data/tiles \
     CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-RUN useradd --system --uid 10001 tiles
+# A volume mounted at /data/tiles keeps this ownership, so TILES_STORAGE=fs can write there.
+RUN useradd --system --uid 10001 tiles && mkdir -p /data/tiles && chown tiles /data/tiles
 USER tiles
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \

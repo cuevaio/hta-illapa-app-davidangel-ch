@@ -108,10 +108,10 @@ Cron, in UTC: `*/2 * * * *`.
 | Build context | repository root | repository root |
 | Port | `8080` | `8787` |
 | Health check | `GET /salud` | `GET /api/health` |
-| Volume | none with S3 storage | `/data/cache` (GFS, GLM and cloud cache) |
+| Volume | `/data/tiles` with `fs` storage, none with S3 | `/data/cache` (GFS, GLM and cloud cache) |
 | Server variable | `TILES_API_URL=http://<tiles app name>:8080` | `WEATHER_API_URL=http://<weather app name>:8787` |
 
-- tiles: set `TILES_STORAGE=s3` with `TILES_S3_ENDPOINT`, `TILES_S3_BUCKET`, `TILES_S3_ACCESS_KEY`, `TILES_S3_SECRET_KEY` (R2 or S3), and `TILES_CONTACT`. With `TILES_STORAGE=fs`, mount a volume at `TILES_FS_ROOT` that user `10001` can write to. All variables are listed in `services/tiles/README.md`.
+- tiles: set `TILES_STORAGE=s3` with `TILES_S3_ENDPOINT`, `TILES_S3_BUCKET`, `TILES_S3_ACCESS_KEY`, `TILES_S3_SECRET_KEY` (R2 or S3), and `TILES_CONTACT`. Without S3, keep the default `TILES_STORAGE=fs` and mount a volume at `/data/tiles` (the image's `TILES_FS_ROOT`, owned by the service user). All variables are listed in `services/tiles/README.md`.
 - weather: the defaults cover Peru. Run exactly one replica, because its pollers write to the cache volume. Variables are listed in `services/weather/README.md`.
 - `services/docker-compose.yml` runs both services with MinIO locally (`docker compose -f services/docker-compose.yml up -d --build`). The server's local defaults already point at them.
 
