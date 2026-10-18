@@ -1,8 +1,15 @@
-import { Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
+import { Mesh, MeshBuilder, type Scene, Vector3 } from "@babylonjs/core";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import type { VrView } from "../../xr/vrMode";
 import type { CardAction, PointCardContent } from "../sections";
-import { metresOf, readVrTheme, texturePx } from "./theme";
+import {
+	CARD_SPACING_CSS_PX,
+	metresOf,
+	readVrTheme,
+	texturePx,
+	VR_TEXTURE_PX_PER_CSS_PX,
+	vrTextStyle,
+} from "./theme";
 import {
 	type MayuControl,
 	type MayuControlKind,
@@ -60,8 +67,8 @@ export class VrPointCard {
 			scene,
 		);
 		this.mesh.isPickable = true;
-		// Always facing the user, wherever they fly.
-		this.mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
+		// Always facing the user, wherever they fly, and level.
+		this.mesh.billboardMode = Mesh.BILLBOARDMODE_Y;
 		this.ui = AdvancedDynamicTexture.CreateForMesh(
 			this.mesh,
 			texturePx(CARD_CSS_W),
@@ -110,6 +117,25 @@ export class VrPointCard {
 
 	get visible(): boolean {
 		return this.mesh.isEnabled();
+	}
+
+	/** The card mesh in metres (the card hugs its content from the top of it). */
+	get size(): { width: number; height: number } {
+		const extent = this.mesh.getBoundingInfo().boundingBox.extendSize;
+		return { width: extent.x * 2, height: extent.y * 2 };
+	}
+
+	/** Is a world point on the card on its header (the title band, where it is grabbed)? */
+	onHeader(point: Vector3): boolean {
+		const local = Vector3.TransformCoordinates(
+			point,
+			this.mesh.getWorldMatrix().clone().invert(),
+		);
+		const headerCssPx =
+			CARD_SPACING_CSS_PX * 2 +
+			vrTextStyle(this.theme, "heading").lineHeightPx /
+				VR_TEXTURE_PX_PER_CSS_PX;
+		return local.y >= this.size.height / 2 - metresOf(headerCssPx);
 	}
 
 	/** Shows the card at a world position (it turns to face the camera by itself). */

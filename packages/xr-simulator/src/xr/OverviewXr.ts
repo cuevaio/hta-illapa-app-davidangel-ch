@@ -1,5 +1,7 @@
 import {
 	Ray as BabylonRay,
+	Color3,
+	type LinesMesh,
 	Mesh,
 	MeshBuilder,
 	type MotionControllerComponentType,
@@ -44,6 +46,12 @@ import {
 import { VrPointCard } from "../ui/vr/VrPointCard";
 import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
 import {
+	fromTableLocal,
+	leaderStart,
+	placePointCard,
+	toTableLocal,
+} from "./cardPlacement";
+import {
 	type GrabHand,
 	mapRootFromPose,
 	TableGrab,
@@ -66,9 +74,6 @@ import {
  * exaggeration of the web slider applies on top).
  */
 const STICK_DEAD_ZONE = 0.15;
-/** "Simular aquí" card: distance along the gaze and drop below it (m). */
-const CARD_DISTANCE = 0.6;
-const CARD_DROP = 0.08;
 /** Gap between the right controller and the controls card above it / the attribution card below (m). */
 const HINT_LIFT_M = 0.06;
 /** Weather menu (X): distance along the gaze and shift to the left of it, beside the card (m). */
@@ -103,6 +108,16 @@ export class OverviewXr {
 	private cardShown = "";
 	private cardBusy = false;
 	private cardError: string | null = null;
+	/** The marked point (world), and in the maquette also in the table's frame to follow it. */
+	private cardMarker: { world: Vec3; tableLocal: Vec3 | null } | null = null;
+	/** Hairline from the card to the marked point (S13). */
+	private leader: LinesMesh | null = null;
+	/** The card dragged by its header with a trigger: controller, ray length and grab offset. */
+	private cardDrag: {
+		controllerId: string;
+		distance: number;
+		offset: Vector3;
+	} | null = null;
 	/** Label of the simulator being opened from the card (S5); null for "Simular aquí". */
 	private cardOpening: string | null = null;
 	/** Maquette: table pose (XR metres) and the grip manipulation. */
@@ -151,6 +166,17 @@ export class OverviewXr {
 					},
 					entryActions(this.host.entries()),
 				);
+				this.leader = MeshBuilder.CreateLines(
+					"peru-vr-card-leader",
+					{ points: [Vector3.Zero(), Vector3.Zero()], updatable: true },
+					this.host.scene,
+				);
+				// The border hairline's colour without its alpha: over the relief a 13 % line vanishes.
+				this.leader.color = Color3.FromHexString(
+					readVrTheme().colors.border.slice(0, 7),
+				);
+				this.leader.isPickable = false;
+				this.leader.setEnabled(false);
 				const weather = this.host.weatherMenu();
 				this.weatherMenu = weather
 					? new VrWeatherMenu(this.host.scene, weather, (id) =>
@@ -170,6 +196,10 @@ export class OverviewXr {
 				this.hintText = null;
 				this.card?.dispose();
 				this.card = null;
+				this.leader?.dispose();
+				this.leader = null;
+				this.cardMarker = null;
+				this.cardDrag = null;
 				this.weatherMenu?.dispose();
 				this.weatherMenu = null;
 				this.cardShown = "";
@@ -261,12 +291,23 @@ export class OverviewXr {
 		if (left && this.pressedOnce(left, "y-button"))
 			this.link.dispatch({ type: "toggle-view" });
 		if (left && this.pressedOnce(left, "x-button")) this.toggleWeatherMenu();
-		// Trigger: on the card it presses the card's buttons (pointer selection); otherwise the view decides.
+		// Trigger: on the card it presses the card's buttons (pointer selection), on its header it
+		// drags the card; otherwise the view decides.
 		const triggered: WebXRInputSource[] = [];
 		for (const c of [left, right]) {
 			if (!c || !this.pressedOnce(c, "xr-standard-trigger", "trigger"))
 				continue;
 			c.getWorldPointerRayToRef(this.ray);
+			const card = this.card;
+			const cardPick = card?.visible
+				? this.ray.intersectsMesh(card.mesh)
+				: null;
+			if (card && cardPick?.pickedPoint && card.onHeader(cardPick.pickedPoint))
+				this.cardDrag = {
+					controllerId: c.uniqueId,
+					distance: cardPick.distance,
+					offset: card.mesh.position.subtract(cardPick.pickedPoint),
+				};
 			const cardHit = [this.card, this.weatherMenu].some(
 				(panel) => panel?.visible && this.ray.intersectsMesh(panel.mesh).hit,
 			);
@@ -274,19 +315,22 @@ export class OverviewXr {
 		}
 		if (gripUse(this.view) === "table") this.tableFrame(left, right);
 		else this.flightFrame(left, right, triggered);
+		this.dragCard(left, right);
 
 		if (right && this.pressedOnce(right, "a-button")) {
 			right.getWorldPointerRayToRef(this.ray);
 			const o = this.ray.origin;
 			const d = this.ray.direction;
-			if (this.host.pickRay([o.x, o.y, o.z], [d.x, d.y, d.z])) {
+			const marker = this.host.hitRay([o.x, o.y, o.z], [d.x, d.y, d.z]);
+			if (marker && this.host.pickRay([o.x, o.y, o.z], [d.x, d.y, d.z])) {
 				void right.motionController?.pulse(0.5, 60);
-				this.openCard();
+				this.openCard(marker);
 			}
 		}
 		if (right && this.pressedOnce(right, "b-button"))
 			void this.xr.baseExperience.exitXRAsync();
 		this.syncCard();
+		this.syncLeader();
 		const weather = this.weatherMenu?.visible ? this.host.weatherMenu() : null;
 		if (weather) this.weatherMenu?.update(weather);
 	}
@@ -469,20 +513,81 @@ export class OverviewXr {
 		this.host.setMapPlacement(mapRootFromPose(this.host.bounds(), this.table));
 	}
 
-	/** A marked the point: the card appears in front of the user. */
-	private openCard(): void {
+	/** A marked the point: the card appears beside it (S13), where it stays unless dragged. */
+	private openCard(marker: Vec3): void {
 		if (!this.card) return;
 		const cam = this.xr.baseExperience.camera;
 		const head = cam.position;
-		const g = cam.getDirection(Vector3.Forward());
-		const up = cam.getDirection(Vector3.Up());
+		const gaze = cam.getDirection(Vector3.Forward());
 		this.cardError = null;
-		this.card.showAt([
-			head.x + g.x * CARD_DISTANCE - up.x * CARD_DROP,
-			head.y + g.y * CARD_DISTANCE - up.y * CARD_DROP,
-			head.z + g.z * CARD_DISTANCE - up.z * CARD_DROP,
-		]);
+		this.cardDrag = null;
+		this.cardMarker = {
+			world: marker,
+			tableLocal: this.table ? toTableLocal(marker, this.table) : null,
+		};
+		this.card.showAt(
+			placePointCard({
+				marker,
+				head: [head.x, head.y, head.z],
+				gaze: [gaze.x, gaze.y, gaze.z],
+				view: this.view,
+				cardSize: this.card.size,
+			}).position,
+		);
 		this.cardShown = "";
+	}
+
+	/** Trigger held after grabbing the header: the card follows the ray at the grab length. */
+	private dragCard(
+		left: WebXRInputSource | undefined,
+		right: WebXRInputSource | undefined,
+	): void {
+		const drag = this.cardDrag;
+		if (!drag) return;
+		const controller = [left, right].find(
+			(c) => c?.uniqueId === drag.controllerId,
+		);
+		if (
+			!this.card?.visible ||
+			!controller?.motionController?.getComponentOfType("trigger")?.pressed
+		) {
+			this.cardDrag = null;
+			return;
+		}
+		controller.getWorldPointerRayToRef(this.ray);
+		const position = this.ray.origin
+			.add(this.ray.direction.scale(drag.distance))
+			.addInPlace(drag.offset);
+		this.card.showAt([position.x, position.y, position.z]);
+	}
+
+	/** The leader from the card's edge to the marked point, which follows a moved table. */
+	private syncLeader(): void {
+		const leader = this.leader;
+		const card = this.card;
+		const marked = this.cardMarker;
+		if (!leader) return;
+		if (!card?.visible || !marked) {
+			leader.setEnabled(false);
+			return;
+		}
+		const marker =
+			marked.tableLocal && this.table
+				? fromTableLocal(marked.tableLocal, this.table)
+				: marked.world;
+		const head = this.xr.baseExperience.camera.position;
+		const position = card.mesh.position;
+		const start = leaderStart(
+			[position.x, position.y, position.z],
+			[head.x, head.y, head.z],
+			marker,
+			card.size.width,
+		);
+		MeshBuilder.CreateLines("peru-vr-card-leader", {
+			points: [new Vector3(...start), new Vector3(...marker)],
+			instance: leader,
+		});
+		leader.setEnabled(true);
 	}
 
 	private closeCard(forget: boolean): void {
