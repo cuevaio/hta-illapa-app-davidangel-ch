@@ -67,6 +67,7 @@ export class TilesClient {
     readonly base = tilesBaseUrl(),
     private readonly fetchFn: FetchFn = (u, i) => fetch(u, i),
     private readonly decode: DecodeFn = decodePng,
+    private readonly credentials: RequestCredentials = 'same-origin',
   ) {}
 
   private async get(path: string, timeoutMs: number, signal?: AbortSignal): Promise<Response> {
@@ -76,7 +77,7 @@ export class TilesClient {
     signal?.addEventListener('abort', onAbort, { once: true });
     let res: Response;
     try {
-      res = await this.fetchFn(`${this.base}${path}`, { signal: ctrl.signal });
+      res = await this.fetchFn(`${this.base}${path}`, { signal: ctrl.signal, credentials: this.credentials });
     } catch (err) {
       // A caller's cancellation is not an outage.
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
