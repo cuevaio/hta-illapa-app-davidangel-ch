@@ -2,11 +2,11 @@ import {
 	MAX_VEHICLE_AXLE_COUNT,
 	MIN_VEHICLE_AXLE_COUNT,
 } from "@hack-the-andes-project/business/constants";
+import { ROUTE_REVIEW_PLACE_IDS } from "@hack-the-andes-project/business/route-review/places";
 import {
 	routeCandidateSchema as businessRouteCandidateSchema,
 	routeReviewSchema as businessRouteReviewSchema,
 	routeSignalSchema as businessRouteSignalSchema,
-	placeIdSchema,
 	plannedTripSummarySchema,
 	routeRecommendationSchema,
 	routeRiskAssessmentSchema,
@@ -44,6 +44,8 @@ export {
 	routeRiskAssessmentSchema,
 	routeSegmentSchema,
 };
+
+const placeIdSchema = z.enum(ROUTE_REVIEW_PLACE_IDS);
 
 export const routeReviewInputSchema = z
 	.object({

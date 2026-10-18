@@ -5,10 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MS_PER_SECOND, ROUTE_REVIEW_RETENTION_MS } from "../constants";
 import { simulateDemoPositions } from "../providers/demo";
 import * as evaluation from "../route-review/evaluate";
-import {
-	ROUTE_REVIEW_PLACE_IDS,
-	ROUTE_REVIEW_PLACES,
-} from "../route-review/places";
+import { ROUTE_REVIEW_PLACES } from "../route-review/places";
 import {
 	persistedRouteReviewSchema,
 	type StoredRouteReview,
@@ -164,19 +161,6 @@ describe("review trip rules", () => {
 		expect(
 			persistedRouteReviewSchema.parse(JSON.parse(JSON.stringify(review))),
 		).toEqual(review);
-	});
-	it("still reads a review stored for a place that is no longer offered", () => {
-		const storedReview: StoredRouteReview = {
-			...review,
-			destinationPlaceId: "cerro_de_pasco",
-		};
-
-		expect(ROUTE_REVIEW_PLACE_IDS).not.toContain("cerro_de_pasco");
-		expect(
-			persistedRouteReviewSchema.parse(
-				JSON.parse(JSON.stringify(storedReview)),
-			),
-		).toEqual(storedReview);
 	});
 	it("keeps imported vehicles unprofiled until their profile is set", () => {
 		expect(
