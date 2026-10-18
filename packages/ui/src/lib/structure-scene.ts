@@ -132,6 +132,7 @@ export type TerrainStatus = "loading" | "ready" | "error";
 export interface StructureSceneLabels {
 	canvas: string;
 	outsideTerrain: string;
+	terrainError: string;
 	span: string;
 	heightDifference: string;
 	length: string;
