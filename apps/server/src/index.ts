@@ -165,6 +165,7 @@ app.use("*", async (c, next) => {
 	const procedurePath = path.slice(RPC_PREFIX.length + 1).replaceAll("/", ".");
 	if (
 		path.startsWith(`${RPC_PREFIX}/`) &&
+		!c.req.raw.headers.has("x-orpc-batch") &&
 		PUBLIC_PROCEDURE_PATHS.has(procedurePath)
 	) {
 		return next();
