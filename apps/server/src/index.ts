@@ -20,6 +20,7 @@ import {
 } from "@hack-the-andes-project/business/demo-account";
 import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
 import {
+	TILE_METADATA_HEADERS,
 	TILES_API_PATH,
 	WEATHER_API_PATH,
 } from "@hack-the-andes-project/business/simulators";
@@ -106,6 +107,7 @@ app.use(
 		origin: (origin) => (isAllowedOrigin(origin) ? origin : null),
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization", "x-orpc-batch"],
+		exposeHeaders: TILE_METADATA_HEADERS,
 		credentials: true,
 		maxAge: CORS_PREFLIGHT_MAX_AGE_S,
 	}),
