@@ -12,32 +12,15 @@ export const RETICLE_SEGMENTS_COUNT = 48;
 export const RETICLE_SURFACE_OFFSET_M = 0.002;
 export const HINT_DISTANCE_M = 0.65;
 export const HINT_VERTICAL_OFFSET_M = -0.14;
-export const HINT_WIDTH_M = 0.46;
-export const HINT_HEIGHT_M = 0.12;
-export const HINT_FONT_SIZE_PX = 38;
-export const HINT_TEXTURE_WIDTH_PX = 1024;
-export const HINT_TEXTURE_HEIGHT_PX = 256;
+/** The placement hint card, in web CSS px (the xr-simulator VR scale turns them into metres). */
+export const HINT_CSS_PX = { width: 368, height: 96 } as const;
 export const PANEL_OFFSET_X_M = 0.68;
 export const PANEL_OFFSET_Y_M = 0.18;
-export const PANEL_BUTTON_WIDTH_M = 0.22;
-export const PANEL_BUTTON_HEIGHT_M = 0.065;
+/** Panel buttons are Mayu `lg` buttons this wide (web CSS px). */
+export const PANEL_BUTTON_WIDTH_CSS_PX = 224;
 export const PANEL_BUTTON_DEPTH_M = 0.012;
-export const PANEL_BUTTON_GAP_M = 0.018;
 export const PANEL_FIRST_BUTTON_OFFSET_RATIO = 0.5;
 export const PANEL_LABEL_OFFSET_M = 0.007;
-export const PANEL_FONT_SIZE_PX = 52;
-/** Mayu buttons: Archivo 600, uppercase (docs/DESIGN.md). */
-export const PANEL_FONT_WEIGHT = "600";
-export const PANEL_TEXTURE_WIDTH_PX = 512;
-export const PANEL_TEXTURE_HEIGHT_PX = 128;
-export const PANEL_HOVER_SCALE_RATIO = 1.06;
-export const PANEL_PRESSED_SCALE_RATIO = 0.96;
 export const XR_CAMERA_NEAR_M = 0.01;
 export const XR_CAMERA_FAR_M = 20;
-export const DEFAULT_CARD_COLOR = "#ffffff";
-export const DEFAULT_FOREGROUND_COLOR = "#0a2530";
-export const DEFAULT_ACCENT_COLOR = "#d5e8ec";
-export const DEFAULT_SECONDARY_COLOR = "#e4eff1";
-export const DEFAULT_PRIMARY_COLOR = "#0b6e78";
-export const DEFAULT_PRIMARY_FOREGROUND_COLOR = "#ffffff";
 export const DEFAULT_RING_COLOR = "#0b6e78";

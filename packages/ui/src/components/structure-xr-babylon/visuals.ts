@@ -11,37 +11,26 @@ import {
 import {
 	AdvancedDynamicTexture,
 	GUI3DManager,
-	TextBlock,
 	TouchMeshButton3D,
 } from "@babylonjs/gui";
+import {
+	VR_BUTTON_HEIGHT_CSS_PX,
+	VR_CONTROL_GAP_CSS_PX,
+	vrButtonFace,
+	vrMetresOf,
+	vrTextCard,
+	vrTexturePx,
+} from "@hack-the-andes-project/xr-simulator/viewer";
 import type { StructureXrLabels } from "../../lib/structure-xr-babylon";
 import {
-	DEFAULT_ACCENT_COLOR,
-	DEFAULT_CARD_COLOR,
-	DEFAULT_FOREGROUND_COLOR,
-	DEFAULT_PRIMARY_COLOR,
-	DEFAULT_PRIMARY_FOREGROUND_COLOR,
 	DEFAULT_RING_COLOR,
-	DEFAULT_SECONDARY_COLOR,
+	HINT_CSS_PX,
 	HINT_DISTANCE_M,
-	HINT_FONT_SIZE_PX,
-	HINT_HEIGHT_M,
-	HINT_TEXTURE_HEIGHT_PX,
-	HINT_TEXTURE_WIDTH_PX,
 	HINT_VERTICAL_OFFSET_M,
-	HINT_WIDTH_M,
 	PANEL_BUTTON_DEPTH_M,
-	PANEL_BUTTON_GAP_M,
-	PANEL_BUTTON_HEIGHT_M,
-	PANEL_BUTTON_WIDTH_M,
+	PANEL_BUTTON_WIDTH_CSS_PX,
 	PANEL_FIRST_BUTTON_OFFSET_RATIO,
-	PANEL_FONT_SIZE_PX,
-	PANEL_FONT_WEIGHT,
-	PANEL_HOVER_SCALE_RATIO,
 	PANEL_LABEL_OFFSET_M,
-	PANEL_PRESSED_SCALE_RATIO,
-	PANEL_TEXTURE_HEIGHT_PX,
-	PANEL_TEXTURE_WIDTH_PX,
 	RETICLE_DIAMETER_M,
 	RETICLE_SEGMENTS_COUNT,
 	RETICLE_SURFACE_OFFSET_M,
@@ -68,19 +57,6 @@ export function createXrVisuals(
 	backToMap: { label: string; invoke: () => void },
 ): XrVisuals {
 	const styles = getComputedStyle(document.documentElement);
-	const cardColor =
-		styles.getPropertyValue("--card").trim() || DEFAULT_CARD_COLOR;
-	const foregroundColor =
-		styles.getPropertyValue("--foreground").trim() || DEFAULT_FOREGROUND_COLOR;
-	const accentColor =
-		styles.getPropertyValue("--accent").trim() || DEFAULT_ACCENT_COLOR;
-	const secondaryColor =
-		styles.getPropertyValue("--secondary").trim() || DEFAULT_SECONDARY_COLOR;
-	const primaryColor =
-		styles.getPropertyValue("--primary").trim() || DEFAULT_PRIMARY_COLOR;
-	const primaryForegroundColor =
-		styles.getPropertyValue("--primary-foreground").trim() ||
-		DEFAULT_PRIMARY_FOREGROUND_COLOR;
 	const ringColor =
 		styles.getPropertyValue("--ring").trim() || DEFAULT_RING_COLOR;
 	const textures: AdvancedDynamicTexture[] = [];
@@ -118,11 +94,12 @@ export function createXrVisuals(
 	materials.push(ringMaterial);
 	reticle.setEnabled(false);
 
+	// A Mayu card (S12): the web Card at the shared VR scale.
 	const hint = MeshBuilder.CreatePlane(
 		"xr-placement-hint",
 		{
-			width: HINT_WIDTH_M,
-			height: HINT_HEIGHT_M,
+			width: vrMetresOf(HINT_CSS_PX.width),
+			height: vrMetresOf(HINT_CSS_PX.height),
 			sideOrientation: Mesh.DOUBLESIDE,
 		},
 		scene,
@@ -132,34 +109,32 @@ export function createXrVisuals(
 	hint.isPickable = false;
 	const hintTexture = AdvancedDynamicTexture.CreateForMesh(
 		hint,
-		HINT_TEXTURE_WIDTH_PX,
-		HINT_TEXTURE_HEIGHT_PX,
+		vrTexturePx(HINT_CSS_PX.width),
+		vrTexturePx(HINT_CSS_PX.height),
 		false,
 	);
-	hintTexture.background = cardColor;
-	const hintLabel = new TextBlock("xr-placement-hint-label", labels.placeTable);
-	hintLabel.color = foregroundColor;
-	hintLabel.fontFamily = "Archivo Variable, sans-serif";
-	hintLabel.fontSize = HINT_FONT_SIZE_PX;
-	hintLabel.textWrapping = true;
-	hintTexture.addControl(hintLabel);
+	vrTextCard(hintTexture, labels.placeTable);
 	textures.push(hintTexture);
 	if (hint.material) materials.push(hint.material);
 	hint.setEnabled(false);
 
+	const buttonWidthM = vrMetresOf(PANEL_BUTTON_WIDTH_CSS_PX);
+	const buttonHeightM = vrMetresOf(VR_BUTTON_HEIGHT_CSS_PX);
+	const buttonGapM = vrMetresOf(VR_CONTROL_GAP_CSS_PX);
 	const panel = new TransformNode("xr-actions", utilityScene);
 	const buttonMeshes: Mesh[] = [];
 	panel.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 	for (const [buttonIndex, action] of [
-		{ label: labels.undo, invoke: onUndo },
-		{ label: labels.exit, invoke: onExit },
-		backToMap,
+		{ label: labels.undo, invoke: onUndo, variant: "outline" as const },
+		{ label: labels.exit, invoke: onExit, variant: "outline" as const },
+		// The panel's one primary action, as on the web: back to the map.
+		{ ...backToMap, variant: "default" as const },
 	].entries()) {
 		const buttonMesh = MeshBuilder.CreateBox(
 			`xr-action-${buttonIndex}`,
 			{
-				width: PANEL_BUTTON_WIDTH_M,
-				height: PANEL_BUTTON_HEIGHT_M,
+				width: buttonWidthM,
+				height: buttonHeightM,
 				depth: PANEL_BUTTON_DEPTH_M,
 			},
 			utilityScene,
@@ -168,15 +143,15 @@ export function createXrVisuals(
 			`xr-action-material-${buttonIndex}`,
 			utilityScene,
 		);
-		buttonMaterial.disableLighting = true;
-		buttonMaterial.emissiveColor = Color3.FromHexString(secondaryColor);
+		// The box only catches the controller; the Mayu face on the label plane is what shows.
+		buttonMaterial.alpha = 0;
 		buttonMesh.material = buttonMaterial;
 		materials.push(buttonMaterial);
 		const labelPlane = MeshBuilder.CreatePlane(
 			`xr-action-label-${buttonIndex}`,
 			{
-				width: PANEL_BUTTON_WIDTH_M,
-				height: PANEL_BUTTON_HEIGHT_M,
+				width: buttonWidthM,
+				height: buttonHeightM,
 				sideOrientation: Mesh.DOUBLESIDE,
 			},
 			utilityScene,
@@ -186,19 +161,11 @@ export function createXrVisuals(
 		labelPlane.isPickable = false;
 		const labelTexture = AdvancedDynamicTexture.CreateForMesh(
 			labelPlane,
-			PANEL_TEXTURE_WIDTH_PX,
-			PANEL_TEXTURE_HEIGHT_PX,
+			vrTexturePx(PANEL_BUTTON_WIDTH_CSS_PX),
+			vrTexturePx(VR_BUTTON_HEIGHT_CSS_PX),
 			false,
 		);
-		const buttonLabel = new TextBlock(
-			`xr-action-text-${buttonIndex}`,
-			action.label.toUpperCase(),
-		);
-		buttonLabel.color = foregroundColor;
-		buttonLabel.fontFamily = "Archivo Variable, sans-serif";
-		buttonLabel.fontWeight = PANEL_FONT_WEIGHT;
-		buttonLabel.fontSize = PANEL_FONT_SIZE_PX;
-		labelTexture.addControl(buttonLabel);
+		const face = vrButtonFace(labelTexture, action.label, action.variant);
 		textures.push(labelTexture);
 		if (labelPlane.material) materials.push(labelPlane.material);
 		const button = new TouchMeshButton3D(
@@ -208,24 +175,12 @@ export function createXrVisuals(
 		manager.addControl(button);
 		buttonMesh.parent = panel;
 		button.position.y =
-			(PANEL_BUTTON_HEIGHT_M + PANEL_BUTTON_GAP_M) *
+			(buttonHeightM + buttonGapM) *
 			(PANEL_FIRST_BUTTON_OFFSET_RATIO - buttonIndex);
 		button.collidableFrontDirection.setAll(0);
 		let hovered = false;
 		let pressed = false;
-		const updateFeedback = () => {
-			buttonMaterial.emissiveColor = Color3.FromHexString(
-				pressed ? primaryColor : hovered ? accentColor : secondaryColor,
-			);
-			buttonLabel.color = pressed ? primaryForegroundColor : foregroundColor;
-			buttonMesh.scaling.setAll(
-				pressed
-					? PANEL_PRESSED_SCALE_RATIO
-					: hovered
-						? PANEL_HOVER_SCALE_RATIO
-						: 1,
-			);
-		};
+		const updateFeedback = () => face.paint({ hovered, pressed });
 		button.pointerEnterAnimation = () => {
 			hovered = true;
 			updateFeedback();
