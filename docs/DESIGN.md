@@ -158,7 +158,8 @@ The dashboard uses one collapsible rail built on the shadcn `Sidebar` with `coll
 
 - Expanded on desktop (1280px and up), collapsed to an icon rail on tablets (768 to 1279px), a drawer on phones. Only an explicit choice is saved (`useSidebarPreference`, key `illapa-sidebar`).
 - Toggle with the button in the rail head, the rail edge, `[` or Ctrl/Cmd+B. Collapsed items keep their icon and show their label in a tooltip; badges become a dot.
-- The rail holds everything global: brand, navigation and the account at the bottom. The page header keeps only the page title (and the drawer button on phones).
+- Rail head: expanded, the toggle sits right of the lockup. Collapsed, the centred mark cross-fades to the expand button over 150ms while the rail is hovered or holds keyboard focus (`has-[:focus-visible]`, not `focus-within`, so focus left by a click does not keep it showing).
+- The rail holds the brand (a plain lockup: no link, no tagline), the navigation (no group label) and the account at the bottom. The page header keeps only the page title (and the drawer button on phones).
 - The account menu (`AccountMenu`) is a `Popover` above the avatar, or to its right when collapsed. It holds the identity, then Preferencias as segmented `ToggleGroup`s (Tema: Claro, Oscuro, Sistema; Idioma: 🇵🇪 ES, 🇺🇸 EN, flags from `country-flag-icons`; Tamaño de texto: S, M, L), then Cerrar sesión, which stays open with a retry message if signing out fails.
 
 ## Shapes

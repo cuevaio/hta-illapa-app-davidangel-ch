@@ -126,7 +126,6 @@ function DashboardLayout() {
 		>
 			<DashboardSidebar
 				items={navigationItems}
-				homeLink={<Link to="/dashboard" />}
 				account={(collapsed) => <UserMenu collapsed={collapsed} />}
 				expandLabel={m.sidebar_expand()}
 				collapseLabel={m.sidebar_collapse()}
