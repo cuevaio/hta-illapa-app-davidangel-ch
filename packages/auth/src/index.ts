@@ -26,7 +26,7 @@ import { ensurePersonalOrganization } from "./organization";
 import { parseAllowedOrigins } from "./origins";
 import { hashPassword, verifyPassword } from "./password";
 
-export { parseAllowedOrigins } from "./origins";
+export { createOriginMatcher, parseAllowedOrigins } from "./origins";
 
 export interface AuthConfig {
 	BETTER_AUTH_URL: string;

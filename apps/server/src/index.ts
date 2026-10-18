@@ -8,6 +8,7 @@ import { appRouter } from "@hack-the-andes-project/api/routers/index";
 import {
 	type Auth,
 	createAuth,
+	createOriginMatcher,
 	parseAllowedOrigins,
 	type Session,
 } from "@hack-the-andes-project/auth";
@@ -58,7 +59,9 @@ initWorkersLogger({
 	},
 });
 
-const allowedOrigins = parseAllowedOrigins(ENV.ALLOWED_ORIGINS);
+const isAllowedOrigin = createOriginMatcher(
+	parseAllowedOrigins(ENV.ALLOWED_ORIGINS),
+);
 
 // db, auth and session are resolved once per request by the guard below and
 // shared through the Hono context, so the /api/auth/* handler and the oRPC
@@ -93,7 +96,7 @@ app.use(evlog());
 app.use(
 	"/*",
 	cors({
-		origin: allowedOrigins,
+		origin: (origin) => (isAllowedOrigin(origin) ? origin : null),
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization", "x-orpc-batch"],
 		credentials: true,
@@ -251,7 +254,7 @@ app.onError((error, c) => {
 	// An exception can bypass the cors() middleware, so re-apply CORS headers or
 	// the browser reports an opaque CORS failure instead of the 500.
 	const origin = c.req.header("Origin");
-	if (origin && allowedOrigins.includes(origin)) {
+	if (origin && isAllowedOrigin(origin)) {
 		c.header("Access-Control-Allow-Origin", origin);
 		c.header("Access-Control-Allow-Credentials", "true");
 		c.header("Vary", "Origin");
