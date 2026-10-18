@@ -1,0 +1,1 @@
+ALTER TABLE `hack_the_andes_user` ADD `role` varchar(32) DEFAULT 'fleet' NOT NULL;
