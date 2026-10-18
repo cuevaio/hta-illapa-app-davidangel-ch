@@ -1,13 +1,13 @@
-import { DataUtils } from "three";
+import { FromHalfFloat } from "@babylonjs/core";
 import { describe, expect, it } from "vitest";
 import { encodeHalfHeights, fromHalfFloat, toHalfFloat } from "./half-float";
 
 describe("half-float", () => {
-	it("decodes every finite half-float bit pattern like three.js", () => {
+	it("decodes every finite half-float bit pattern like Babylon.js", () => {
 		for (let height = 0; height < 0x10000; height++) {
 			const exponent = (height >> 10) & 0x1f;
 			if (exponent === 0x1f) continue;
-			expect(fromHalfFloat(height)).toBe(DataUtils.fromHalfFloat(height));
+			expect(fromHalfFloat(height)).toBe(FromHalfFloat(height));
 		}
 	});
 
