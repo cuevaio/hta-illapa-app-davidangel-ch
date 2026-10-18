@@ -60,9 +60,12 @@ describe("selectTiles (screen-space error quadtree)", () => {
 		const zs = r.display.map((t) => t.z);
 		expect(Math.max(...zs)).toBeGreaterThan(8);
 		expect(Math.max(...zs)).toBeLessThanOrEqual(11);
-		for (const a of r.display)
-			for (const b of r.display)
-				if (a !== b) expect(isAncestor(a, b)).toBe(false);
+		const overlappingPairs = r.display.flatMap((ancestor) =>
+			r.display
+				.filter((tile) => tile !== ancestor && isAncestor(ancestor, tile))
+				.map((tile) => [tileKey(ancestor), tileKey(tile)]),
+		);
+		expect(overlappingPairs).toEqual([]);
 		// The tile right under the camera is the finest one.
 		const w = lonLatToWorld(centre.lon, centre.lat);
 		const z = Math.max(...zs);
