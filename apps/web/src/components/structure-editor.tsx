@@ -32,8 +32,7 @@ import {
 	type StructurePaletteItem,
 } from "@hack-the-andes-project/ui/components/structure-editor-palette";
 import { StructureEditorParameters } from "@hack-the-andes-project/ui/components/structure-editor-parameters";
-import { StructureScene } from "@hack-the-andes-project/ui/components/structure-scene";
-import { useIsArSupported } from "@hack-the-andes-project/ui/components/structure-xr";
+import { BabylonStructureScene } from "@hack-the-andes-project/ui/components/structure-scene-babylon";
 import { INCIDENT_SOURCE_LABELS } from "@hack-the-andes-project/ui/lib/incident-constants";
 import type {
 	PlacementTool,
@@ -41,6 +40,7 @@ import type {
 	SceneCameraRequest,
 	SceneCursor,
 	SceneStructure,
+	SceneXrRequest,
 	TerrainStatus,
 	TransformMode,
 } from "@hack-the-andes-project/ui/lib/structure-scene";
@@ -74,7 +74,7 @@ import { orpc } from "@/utils/orpc";
 import { useStructureEditor } from "./structure-editor-provider";
 
 export function StructureEditor({ selectedId }: { selectedId: string | null }) {
-	const { session, snapshot, xrStore, query } = useStructureEditor();
+	const { session, snapshot, query } = useStructureEditor();
 	const navigate = useNavigate();
 	const labels = structureEditorLabels();
 
@@ -129,6 +129,10 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 		null,
 	);
 	const cameraRequestId = useRef(0);
+	const [xrRequest, setXrRequest] = useState<SceneXrRequest | null>(null);
+	const xrRequestId = useRef(0);
+	const [isArSupported, setIsArSupported] = useState(false);
+	const [isXrPresenting, setIsXrPresenting] = useState(false);
 	const [activePanelTab, setActivePanelTab] = useState("parameters");
 	const [terrainStatus, setTerrainStatus] = useState<TerrainStatus>("loading");
 	const [terrainWasReady, setTerrainWasReady] = useState(false);
@@ -148,7 +152,6 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 	const isOnline = snapshot.save.isOnline;
 	const rejectedStructureId = snapshot.save.rejectedIds.values().next().value;
 	const sceneContainer = useRef<HTMLDivElement>(null);
-	const isArSupported = useIsArSupported();
 	const selectedStructure = snapshot.structures.find(
 		(structure) => structure.id === selectedId,
 	);
@@ -285,6 +288,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 			event.repeat ||
 			event.isComposing ||
 			event.altKey ||
+			isXrPresenting ||
 			deleteOpen ||
 			shortcutsOpen ||
 			!isDesktopViewport ||
@@ -454,7 +458,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 				onUndo={() => replay("undo")}
 				onRedo={() => replay("redo")}
 				onEnterXr={() => {
-					void xrStore.enterAR().catch(() => toast.error(labels.xrError));
+					setXrRequest({ requestId: ++xrRequestId.current });
 				}}
 			>
 				<SidebarTrigger className="md:hidden" aria-label={m.sidebar_toggle()} />
@@ -478,7 +482,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 						tabIndex={-1}
 						className="absolute inset-0 outline-none"
 					>
-						<StructureScene
+						<BabylonStructureScene
 							key={terrainAttempt}
 							origin={PE22_TERRAIN_ORIGIN}
 							landmarks={PE22_LANDMARKS}
@@ -520,7 +524,9 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 									ENGINEERING_OVERLAY_GAP_PX,
 							}}
 							locale={locale}
-							xrStore={xrStore}
+							xrRequest={xrRequest}
+							onXrSupportChange={setIsArSupported}
+							onXrSessionChange={setIsXrPresenting}
 							labels={{
 								canvas: labels.canvas,
 								terrainError: m.engineering_sceneTerrainError(),
@@ -711,6 +717,9 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 									action={labels.retry}
 									onAction={() => {
 										setTerrainStatus("loading");
+										setXrRequest(null);
+										setIsArSupported(false);
+										setIsXrPresenting(false);
 										setTerrainAttempt((attempt) => attempt + 1);
 									}}
 									destructive
