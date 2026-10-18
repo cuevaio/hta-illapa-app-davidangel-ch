@@ -1,7 +1,9 @@
-import { RPP_FETCH_CONCURRENCY, RPP_LATEST_NEWS_URL } from "../constants";
+import { z } from "zod";
+
+import { RPP_FEED_URL, RPP_FETCH_CONCURRENCY } from "../constants";
 import { mapWithConcurrency } from "../lib/concurrency";
 import { parseIsoDate } from "../lib/dates";
-import { decodeHtmlEntities, stripHtml } from "../lib/html";
+import { decodeHtmlEntities } from "../lib/html";
 import { fetchText } from "../lib/http";
 import { classifyNews } from "../lib/jev";
 import type {
@@ -11,88 +13,120 @@ import type {
 	ScrapeContext,
 } from "./types";
 
-const ARTICLE_PATTERN = /<article[^>]*>([\s\S]*?)<\/article>/g;
-const TITLE_PATTERN =
-	/class="news__title"[^>]*>\s*<a href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/;
-const TAG_PATTERN = /class="news__tag"[^>]*>\s*<a[^>]*>([\s\S]*?)<\/a>/;
-const AUTHOR_PATTERN =
-	/class="news__author"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/;
-const DATE_PATTERN = /class="news__date[^"]*"[^>]*data-x="([^"]+)"/;
+const FEED_ITEM_PATTERN = /<item>([\s\S]*?)<\/item>/g;
+const FEED_TITLE_PATTERN =
+	/<title>\s*(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?\s*<\/title>/;
+const FEED_LINK_PATTERN = /<link>([^<]+)<\/link>/;
+const FEED_PUB_DATE_PATTERN = /<pubDate>([^<]+)<\/pubDate>/;
 const ARTICLE_ID_PATTERN = /-noticia-(\d+)\/?$/;
 const META_DESCRIPTION_PATTERN =
 	/<meta[^>]+(?:name|property)="(?:og:)?description"[^>]*content="([^"]*)"/;
+const META_AUTHOR_PATTERN = /<meta[^>]+name="author"[^>]*content="([^"]*)"/;
+const JSON_LD_PATTERN =
+	/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/g;
 
-export interface RppListingEntry {
+const breadcrumbListSchema = z.object({
+	"@type": z.literal("BreadcrumbList"),
+	itemListElement: z.array(z.object({ name: z.string() })),
+});
+
+export interface RppFeedEntry {
 	sourceId: string;
 	url: string;
 	title: string;
-	section: string | null;
-	author: string | null;
 	publishedAt: Date | null;
 }
 
-export function parseRppListing(html: string): RppListingEntry[] {
-	const entries: RppListingEntry[] = [];
-	for (const [, article] of html.matchAll(ARTICLE_PATTERN)) {
-		const titleMatch = article?.match(TITLE_PATTERN);
-		if (!article || !titleMatch?.[1] || !titleMatch[2]) {
+export interface RppArticleDetails {
+	excerpt: string | null;
+	section: string | null;
+	author: string | null;
+}
+
+// Live blogs (`…-live-3663`) have no `-noticia-<id>` to key them by and are
+// retitled every day, so only articles are listed.
+export function parseRppFeed(xml: string): RppFeedEntry[] {
+	const entries: RppFeedEntry[] = [];
+	for (const [, item] of xml.matchAll(FEED_ITEM_PATTERN)) {
+		const url = item?.match(FEED_LINK_PATTERN)?.[1];
+		const sourceId = url?.match(ARTICLE_ID_PATTERN)?.[1];
+		const title = item?.match(FEED_TITLE_PATTERN)?.[1];
+		if (!item || !url || !sourceId || !title) {
 			continue;
 		}
-		const url = titleMatch[1];
 		entries.push({
-			sourceId: url.match(ARTICLE_ID_PATTERN)?.[1] ?? url,
+			sourceId,
 			url,
-			title: stripHtml(titleMatch[2]),
-			section: article.match(TAG_PATTERN)?.[1]
-				? stripHtml(article.match(TAG_PATTERN)?.[1] ?? "")
-				: null,
-			author: article.match(AUTHOR_PATTERN)?.[1]
-				? stripHtml(article.match(AUTHOR_PATTERN)?.[1] ?? "")
-				: null,
-			publishedAt: parseIsoDate(article.match(DATE_PATTERN)?.[1]),
+			title: decodeHtmlEntities(title).trim(),
+			publishedAt: parseIsoDate(item.match(FEED_PUB_DATE_PATTERN)?.[1]),
 		});
+	}
+	if (entries.length === 0) {
+		throw new Error("RPP feed lists no articles");
 	}
 	return entries;
 }
 
-export function extractExcerpt(articleHtml: string): string | null {
-	const description = articleHtml.match(META_DESCRIPTION_PATTERN)?.[1];
-	if (!description) {
-		return null;
+// The breadcrumb runs home › section › subsection › headline; the subsection
+// ("Ica", "Policiales") is the section RPP's listing cards show. A missing or
+// malformed breadcrumb only leaves the section empty.
+function readBreadcrumbSection(articleHtml: string): string | null {
+	for (const [, jsonLd] of articleHtml.matchAll(JSON_LD_PATTERN)) {
+		if (!jsonLd?.includes('"BreadcrumbList"')) {
+			continue;
+		}
+		try {
+			const breadcrumbs = breadcrumbListSchema.parse(JSON.parse(jsonLd));
+			return breadcrumbs.itemListElement.at(-2)?.name.trim() ?? null;
+		} catch {
+			return null;
+		}
 	}
-	const excerpt = decodeHtmlEntities(description).trim();
-	return excerpt.length > 0 ? excerpt : null;
+	return null;
+}
+
+export function parseRppArticle(articleHtml: string): RppArticleDetails {
+	const description = articleHtml.match(META_DESCRIPTION_PATTERN)?.[1];
+	const excerpt = description ? decodeHtmlEntities(description).trim() : "";
+	const author = articleHtml.match(META_AUTHOR_PATTERN)?.[1];
+	return {
+		excerpt: excerpt.length > 0 ? excerpt : null,
+		section: readBreadcrumbSection(articleHtml),
+		author: author ? decodeHtmlEntities(author).trim() : null,
+	};
 }
 
 // Only articles not yet stored are expanded (one page fetch for the excerpt,
-// one Jev call for the classification); a failure on either side drops the
-// article from this run so it is retried on the next listing.
+// section and author, one Jev call for the classification); a failure on
+// either side drops the article from this run so it is retried on the next
+// listing.
 async function expandEntry(
-	entry: RppListingEntry,
+	entry: RppFeedEntry,
 	context: ScrapeContext,
 ): Promise<NewsRecord | null> {
-	let excerpt: string | null = null;
+	let article: RppArticleDetails;
 	try {
-		excerpt = extractExcerpt(await fetchText(entry.url));
+		article = parseRppArticle(await fetchText(entry.url));
 	} catch (error) {
 		context.log.set({
-			rpp: { excerptFailures: [{ url: entry.url, error: String(error) }] },
+			rpp: { articleFailures: [{ url: entry.url, error: String(error) }] },
 		});
+		return null;
 	}
 	try {
 		const classification = await classifyNews(context.jevApiKey, {
 			title: entry.title,
-			excerpt,
-			section: entry.section,
+			excerpt: article.excerpt,
+			section: article.section,
 			publishedAt: entry.publishedAt,
 		});
 		return {
 			sourceId: entry.sourceId,
 			url: entry.url,
 			title: entry.title,
-			excerpt,
-			section: entry.section,
-			author: entry.author,
+			excerpt: article.excerpt,
+			section: article.section,
+			author: article.author,
 			publishedAt: entry.publishedAt,
 			relevant: classification.relevant,
 			relevance: classification.relevance,
@@ -122,7 +156,7 @@ export const rppNewsSource: NewsSource = {
 	schedule: "hourly",
 	snapshot: "partial",
 	async fetch(context) {
-		const listing = parseRppListing(await fetchText(RPP_LATEST_NEWS_URL));
+		const listing = parseRppFeed(await fetchText(RPP_FEED_URL));
 		const fresh = listing.filter(
 			(entry) => !context.knownSourceIds.has(entry.sourceId),
 		);
