@@ -1,0 +1,25 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Sign out returns to login and the dashboard stays protected
+tags:
+  - auth
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- tapOn: ${EMAIL}
+- extendedWaitUntil:
+    visible: "Cerrar sesión"
+    timeout: 10000
+- tapOn: "Cerrar sesión"
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 20000
+- takeScreenshot: 01-signed-out
+- openLink: ${APP_URL}/dashboard
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- assertNotVisible: ".*incidentes encontrados.*"
+- takeScreenshot: 02-dashboard-after-sign-out

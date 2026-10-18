@@ -1,0 +1,29 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Noticias renders its feed or empty state
+tags:
+  - fleet-pages
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 45000
+- tapOn: "Noticias"
+- extendedWaitUntil:
+    visible: "Actualidad en ruta"
+    timeout: 30000
+- assertVisible: "Relevantes para tu operación"
+- extendedWaitUntil:
+    notVisible:
+      id: "Cargando noticias"
+    timeout: 30000
+- takeScreenshot: 01-relevant-news
+- tapOn: "Incluir noticias no relevantes"
+- extendedWaitUntil:
+    visible: "Todas las noticias"
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible:
+      id: "Cargando noticias"
+    timeout: 30000
+- takeScreenshot: 02-all-news

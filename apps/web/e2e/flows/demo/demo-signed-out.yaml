@@ -1,0 +1,42 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Demo signed out opens Revisar ruta with the demo banner and fleet
+tags:
+  - demo
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- evalScript: ${output.demoStartedAt = Date.now()}
+- openLink: ${APP_URL}/demo
+- extendedWaitUntil:
+    visible: "Estás en la demo"
+    timeout: 30000
+- evalScript: ${output.demoLoadMs = Date.now() - output.demoStartedAt}
+- takeScreenshot: 01-demo-ready-${output.demoLoadMs}ms
+- assertTrue:
+    condition: ${output.demoLoadMs <= 6000}
+    label: "Demo opened within 6 s"
+    optional: true
+- assertVisible: "Crear cuenta"
+- assertVisible: "demo@illapa.app"
+- extendedWaitUntil:
+    visible: "Elige un vehículo"
+    timeout: 30000
+- tapOn: "Elige un vehículo"
+- extendedWaitUntil:
+    visible: "Tracto 01.*"
+    timeout: 10000
+- assertVisible: "Tracto 02.*"
+- assertVisible: "Tracto 03.*"
+- assertVisible: "Tracto 04.*"
+- assertVisible: "Tracto 05.*"
+- assertVisible: "Tracto 06.*"
+- takeScreenshot: 02-demo-vehicles
+- tapOn: "Tracto 01.*"
+- tapOn: "demo@illapa.app"
+- extendedWaitUntil:
+    visible: "Cerrar sesión"
+    timeout: 10000
+- assertNotVisible: "Cambiar perfil"
+- takeScreenshot: 03-demo-account-menu

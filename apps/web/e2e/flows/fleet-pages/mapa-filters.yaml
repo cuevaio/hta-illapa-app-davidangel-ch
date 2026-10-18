@@ -1,0 +1,93 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Mapa filters narrow the incidents and Restablecer resets them
+tags:
+  - fleet-pages
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 45000
+- copyTextFrom:
+    text: "[0-9]+ incidentes encontrados.*"
+- evalScript: ${output.allCount = maestro.copiedText.split(' ')[0]}
+- takeScreenshot: 01-all-${output.allCount}-incidents
+- tapOn: "Todas las categorías"
+- tapOn: "Incendio forestal"
+- tapOn: "Severidad"
+- extendedWaitUntil:
+    visible: "Incendio forestal"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 30000
+- copyTextFrom:
+    text: "[0-9]+ incidentes encontrados.*"
+- evalScript: ${output.categoryCount = maestro.copiedText.split(' ')[0]}
+- takeScreenshot: 02-wildfire-${output.categoryCount}-incidents
+- assertTrue:
+    condition: ${Number(output.categoryCount) < Number(output.allCount)}
+    label: "Category filter lowers the count"
+- tapOn: "Restablecer"
+- extendedWaitUntil:
+    visible: "Todas las categorías"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "${output.allCount} incidentes encontrados.*"
+    timeout: 30000
+- tapOn:
+    text: "Crítica"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 30000
+- copyTextFrom:
+    text: "[0-9]+ incidentes encontrados.*"
+- evalScript: ${output.withoutCriticalCount = maestro.copiedText.split(' ')[0]}
+- takeScreenshot: 03-without-critical-${output.withoutCriticalCount}-incidents
+- assertTrue:
+    condition: ${Number(output.withoutCriticalCount) < Number(output.allCount)}
+    label: "Dropping Crítica lowers the count"
+- tapOn:
+    text: "Precaución"
+    index: 0
+- tapOn:
+    text: "Informativa"
+    index: 0
+- extendedWaitUntil:
+    visible: "Sin incidentes para estos filtros"
+    timeout: 30000
+- assertVisible: "Selecciona al menos una severidad para ver incidentes."
+- takeScreenshot: 04-no-severity
+- tapOn: "Restablecer"
+- extendedWaitUntil:
+    visible: "${output.allCount} incidentes encontrados.*"
+    timeout: 30000
+- tapOn: "Todo el período"
+- tapOn: "Últimas 24 h"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 30000
+- copyTextFrom:
+    text: "[0-9]+ incidentes encontrados.*"
+- evalScript: ${output.lastDayCount = maestro.copiedText.split(' ')[0]}
+- takeScreenshot: 05-last-24h-${output.lastDayCount}-incidents
+- assertTrue:
+    condition: ${Number(output.lastDayCount) <= Number(output.allCount)}
+    label: "Últimas 24 h never shows more than the whole period"
+- tapOn: "Restablecer"
+- extendedWaitUntil:
+    visible: "Todo el período"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "${output.allCount} incidentes encontrados.*"
+    timeout: 30000
+- takeScreenshot: 06-reset

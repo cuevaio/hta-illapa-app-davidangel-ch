@@ -1,0 +1,46 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Sign-up form validates name, email and password length
+tags:
+  - auth
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- tapOn: "Crea una"
+- extendedWaitUntil:
+    visible: "Crea tu cuenta"
+    timeout: 10000
+- assertVisible: "Monitorea tu flota y las rutas del Perú desde un solo lugar."
+- assertVisible: "Nombre"
+- assertVisible: "Al menos 8 caracteres."
+- takeScreenshot: 01-sign-up-form
+- tapOn: "Crear cuenta"
+- assertVisible: "Tu nombre debe tener al menos 2 caracteres."
+- assertVisible: "Ingresa un correo válido."
+- assertVisible: "La contraseña debe tener al menos 8 caracteres."
+- takeScreenshot: 02-empty-submit
+- tapOn:
+    id: auth-name
+- inputText: "E2E Maestro"
+- tapOn:
+    id: auth-email
+- inputText: "e2e-maestro-not-an-email"
+- tapOn:
+    id: auth-password
+- inputText: "short12"
+- tapOn: "Crear cuenta"
+- assertVisible: "Ingresa un correo válido."
+- assertVisible: "La contraseña debe tener al menos 8 caracteres."
+- assertNotVisible: "Tu nombre debe tener al menos 2 caracteres."
+- assertVisible: "Crea tu cuenta"
+- takeScreenshot: 03-invalid-email-short-password
+- tapOn: "Inicia sesión"
+- extendedWaitUntil:
+    visible: "Entra al centro de operaciones de tu flota."
+    timeout: 10000
+- openLink: ${APP_URL}/login?mode=sign-up
+- extendedWaitUntil:
+    visible: "Crea tu cuenta"
+    timeout: 30000
+- takeScreenshot: 04-sign-up-deep-link

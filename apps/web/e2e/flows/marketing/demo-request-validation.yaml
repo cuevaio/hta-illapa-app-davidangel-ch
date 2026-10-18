@@ -1,0 +1,34 @@
+url: https://staging.52-21-151-223.sslip.io/
+name: Demo request form validates name and contact fields
+tags:
+  - marketing
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Solicitar una demo"
+    timeout: 30000
+- tapOn: "Solicitar una demo"
+- extendedWaitUntil:
+    visible: "Enviar solicitud"
+    timeout: 10000
+- takeScreenshot: 01-dialog
+- tapOn: "Enviar solicitud"
+- assertVisible: "Escribe tu nombre."
+- takeScreenshot: 02-name-required
+- tapOn:
+    id: ".*-name"
+- inputText: "E2E Maestro Test"
+- tapOn: "Enviar solicitud"
+- assertVisible: "Escribe al menos un teléfono o correo para contactarte."
+- takeScreenshot: 03-contact-required
+- tapOn:
+    id: ".*-email"
+- inputText: "e2e-maestro-not-an-email"
+- tapOn: "Enviar solicitud"
+- assertVisible: "Escribe un correo válido."
+- assertNotVisible: "Recibimos tu solicitud.*"
+- takeScreenshot: 04-invalid-email
+- tapOn: "Cerrar"
+- extendedWaitUntil:
+    notVisible: "Enviar solicitud"
+    timeout: 10000
