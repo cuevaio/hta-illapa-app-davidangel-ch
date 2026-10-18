@@ -106,7 +106,7 @@ export async function evaluateRouteReview({
 	const bounds = routingBounds(origin, destination);
 	const [{ edges, nodes }, routingAssessments, incidentRows, altRoutes] =
 		await Promise.all([
-			loadRoadGraph(db, bounds),
+			loadRoadGraph(db),
 			loadAssessments(db, bounds, now),
 			db
 				.select({
