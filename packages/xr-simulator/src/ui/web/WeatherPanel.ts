@@ -26,6 +26,8 @@ import type {
 	WeatherController,
 	WeatherSnapshot,
 } from "../../map/weather/WeatherController";
+import { iconSvg } from "../icons";
+import { syncRangeFill, weatherBadgeClass } from "./mayu";
 
 /**
  * "Capas meteorológicas" (S8): toggles with observed/forecast badge, opacity and status, legends,
@@ -114,9 +116,9 @@ export class WeatherPanel {
         <ul class="wx-layers"></ul>
         <div class="wx-timeline" hidden>
           <div class="wx-time-row">
-            <button type="button" data-step="-1" aria-label="Tiempo anterior">◀</button>
-            <button type="button" class="wx-play" aria-label="Reproducir">▶︎ Reproducir</button>
-            <button type="button" data-step="1" aria-label="Tiempo siguiente">▶</button>
+            <button type="button" data-step="-1" aria-label="Tiempo anterior">${iconSvg("stepBack")}</button>
+            <button type="button" class="wx-play" aria-label="Reproducir">${iconSvg("play")}<span>Reproducir</span></button>
+            <button type="button" data-step="1" aria-label="Tiempo siguiente">${iconSvg("stepForward")}</button>
           </div>
           <input type="range" min="0" max="0" step="1" value="0" aria-label="Tiempo del pronóstico">
           <p class="wx-time"></p>
@@ -177,14 +179,17 @@ export class WeatherPanel {
 			const li = document.createElement("li");
 			li.className = `wx-row${l.group ? " wx-sub" : ""}`;
 			li.innerHTML = `
-        <label><input type="checkbox"> ${esc(l.title)}</label>
-        <span class="wx-badge wx-${l.kindLabel === "observado" ? "observed" : "forecast"}">${esc(l.kindLabel)}</span>
+        <label><input type="checkbox" role="switch" class="switch"> ${esc(l.title)}</label>
+        <span class="${weatherBadgeClass(l.kindLabel)}">${esc(l.kindLabel)}</span>
         <input type="range" min="0" max="1" step="0.05" value="${l.opacity}" aria-label="Opacidad de ${esc(l.title)}">
         <span class="wx-status" aria-live="polite"></span>`;
 			const box = li.querySelector<HTMLInputElement>("input[type=checkbox]")!;
 			const range = li.querySelector<HTMLInputElement>("input[type=range]")!;
 			box.onchange = () => this.weather.setEnabled(l.id, box.checked);
-			range.oninput = () => this.weather.setOpacity(l.id, Number(range.value));
+			range.oninput = () => {
+				syncRangeFill(range);
+				this.weather.setOpacity(l.id, Number(range.value));
+			};
 			this.rows.set(l.id, {
 				box,
 				range,
@@ -208,6 +213,7 @@ export class WeatherPanel {
 			r.box.disabled = l.disabled;
 			r.range.hidden = !l.enabled;
 			if (document.activeElement !== r.range) r.range.value = String(l.opacity);
+			syncRangeFill(r.range);
 			r.status.textContent = l.statusText ?? "";
 			r.status.hidden = !l.statusText;
 		}
@@ -216,10 +222,13 @@ export class WeatherPanel {
 		this.slider.max = String(Math.max(0, s.times.length - 1));
 		if (document.activeElement !== this.slider)
 			this.slider.value = String(Math.max(0, s.timeIndex));
+		syncRangeFill(this.slider);
 		this.timeText.textContent = s.timeLabel
 			? `Válido ${s.timeLabel}${s.leadLabel ? ` · ${s.leadLabel}` : ""}`
 			: "";
-		this.playBtn.textContent = s.playing ? "❚❚ Pausa" : "▶︎ Reproducir";
+		this.playBtn.innerHTML = s.playing
+			? `${iconSvg("pause")}<span>Pausa</span>`
+			: `${iconSvg("play")}<span>Reproducir</span>`;
 		this.playBtn.setAttribute(
 			"aria-label",
 			s.playing ? "Pausar" : "Reproducir",
@@ -237,7 +246,7 @@ export class WeatherPanel {
 				.map(
 					(p) => `
         <div class="wx-prov-entry">
-          <p><strong>${esc(p.title)}</strong> <span class="wx-badge wx-${p.kindLabel === "observado" ? "observed" : "forecast"}">${esc(p.kindLabel)}</span></p>
+          <p><strong>${esc(p.title)}</strong> <span class="${weatherBadgeClass(p.kindLabel)}">${esc(p.kindLabel)}</span></p>
           <p>${esc(p.time)}</p>
           <p>Fuente: ${esc(p.source)}</p>
           <p>Atribución: ${esc(p.attribution)}</p>

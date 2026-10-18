@@ -1,14 +1,78 @@
+/* The viewer's DOM UI in Mayu (docs/DESIGN.md), matching the web components of packages/ui
+   (Card, Button, ToggleGroup, Switch, Slider, Badge, Alert). Colours, fonts and radius come from
+   the host page's tokens, so the host's light/dark (`.dark` on <html>) applies; the fallbacks are
+   the DESIGN.md light values for the standalone page. Everything is scoped under `.xr-viewer`. */
+.xr-viewer {
+	--xr-background: var(--background, #f2f7f8);
+	--xr-foreground: var(--foreground, #0a2530);
+	--xr-card: var(--card, #ffffff);
+	--xr-card-foreground: var(--card-foreground, #0a2530);
+	--xr-primary: var(--primary, #0b6e78);
+	--xr-primary-foreground: var(--primary-foreground, #ffffff);
+	--xr-secondary: var(--secondary, #e4eff1);
+	--xr-secondary-foreground: var(--secondary-foreground, #0a2530);
+	--xr-muted: var(--muted, #e4eff1);
+	--xr-muted-foreground: var(--muted-foreground, #4d6b74);
+	--xr-destructive: var(--destructive, #c92a22);
+	--xr-destructive-foreground: var(--destructive-foreground, #ffffff);
+	--xr-border: var(--border, #0a253021);
+	--xr-input: var(--input, #0a253029);
+	--xr-ring: var(--ring, #0b6e78);
+	--xr-risk-moderate: var(--risk-moderate, #e8bc00);
+	--xr-info: var(--info, #2459c9);
+	--xr-info-foreground: var(--info-foreground, #ffffff);
+	--xr-success: var(--success, #3e7d18);
+	--xr-success-foreground: var(--success-foreground, #ffffff);
+	--xr-font-sans: var(
+		--font-sans,
+		"Archivo Variable",
+		Archivo,
+		ui-sans-serif,
+		system-ui,
+		sans-serif
+	);
+	--xr-font-heading: var(--font-heading, var(--xr-font-sans));
+	--xr-font-mono: var(
+		--font-mono,
+		"JetBrains Mono Variable",
+		"JetBrains Mono",
+		ui-monospace,
+		Menlo,
+		monospace
+	);
+	--xr-radius-lg: var(--radius, 14px);
+	--xr-radius-md: calc(var(--xr-radius-lg) - 4px);
+	--xr-radius-sm: calc(var(--xr-radius-lg) - 8px);
+	--xr-gap: 8px;
+	--xr-card-spacing: 16px;
+	--xr-edge: 8px;
+	color-scheme: light dark;
+	font-family: var(--xr-font-sans);
+	font-size: 15px;
+	line-height: 1.6;
+	background: var(--xr-background);
+	color: var(--xr-foreground);
+}
 .app-body {
+	margin: 0;
 	padding: 0;
 	overflow: hidden;
 	overscroll-behavior: none;
 }
-.app {
+.xr-viewer.app {
 	position: fixed;
 	inset: 0;
 	max-width: none;
 }
-.scene-canvas {
+.xr-viewer *,
+.xr-viewer *::before,
+.xr-viewer *::after {
+	box-sizing: border-box;
+}
+.xr-viewer [hidden] {
+	display: none !important;
+}
+.xr-viewer .scene-canvas {
 	position: absolute;
 	inset: 0;
 	width: 100%;
@@ -17,222 +81,873 @@
 	touch-action: none;
 	outline: none;
 }
-.hud {
-	position: absolute;
-	top: max(8px, env(safe-area-inset-top));
-	left: 8px;
-	max-width: min(460px, calc(100vw - 16px));
-	background: rgba(15, 18, 22, 0.78);
-	border-radius: 8px;
-	padding: 8px 10px;
+.xr-viewer p {
+	margin: 0;
+}
+.xr-viewer a {
+	color: var(--xr-primary);
+	text-underline-offset: 3px;
+}
+.xr-viewer code {
+	font-family: var(--xr-font-mono);
+	font-size: 0.85em;
+}
+
+/* Card (card.tsx): rounded-lg, hairline border, bg-card, 16px spacing, no shadow. */
+.xr-viewer :is(.peru-overlay, .weather-panel, .imagery-sim, .hud, .notice) {
+	background: var(--xr-card);
+	color: var(--xr-card-foreground);
+	border: 1px solid var(--xr-border);
+	border-radius: var(--xr-radius-lg);
+	box-shadow: none;
+}
+/* type-heading: Archivo Expanded 800, uppercase. */
+.xr-viewer
+:is(.peru-overlay h2, .weather-panel .wx-main > summary, .notice h2) {
+	margin: 0;
+	font-family: var(--xr-font-heading);
+	font-weight: 800;
+	font-stretch: 125%;
+	font-size: 1.0625rem;
+	line-height: 1.2;
+	letter-spacing: 0.005em;
+	text-transform: uppercase;
+	overflow-wrap: break-word;
+}
+/* type-label: JetBrains Mono 600, uppercase, 0.1em. */
+.xr-viewer
+:is(.wx-group, .peru-lod summary, .wx-prov summary, .wx-legend-title) {
+	font-family: var(--xr-font-mono);
+	font-weight: 600;
+	font-size: 0.6875rem;
+	line-height: 1.4;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--xr-muted-foreground);
+}
+/* type-data: JetBrains Mono 500, tabular. */
+.xr-viewer :is(.peru-exag output, .timeline-time, .wx-time, .hud) {
+	font-family: var(--xr-font-mono);
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+/* Small muted text: hints, attribution, notes. */
+.xr-viewer
+:is(
+	.peru-fly-hint,
+	.imagery-hint,
+	.imagery-credit,
+	.peru-attribution,
+	.wx-note,
+	.wx-attribution,
+	.panel-hint,
+	.wx-prov-entry,
+	.wx-ticks
+) {
 	font-size: 12px;
 	line-height: 1.5;
-	font-variant-numeric: tabular-nums;
-	pointer-events: none;
+	color: var(--xr-muted-foreground);
 }
-.panel-host {
+
+/* Button (button.tsx): Archivo 600 12px uppercase 0.06em, rounded-md; outline is the base. */
+.xr-viewer button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 36px;
+	padding: 0 10px;
+	font-family: var(--xr-font-sans);
+	font-weight: 600;
+	font-size: 12px;
+	line-height: 1;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	border: 1px solid var(--xr-border);
+	border-radius: var(--xr-radius-md);
+	background: var(--xr-background);
+	color: var(--xr-foreground);
+	cursor: pointer;
+	transition:
+		background-color 120ms,
+		border-color 120ms,
+		color 120ms;
+}
+.xr-viewer button svg {
+	width: 16px;
+	height: 16px;
+	flex: none;
+}
+.xr-viewer button:focus-visible {
+	outline: none;
+	border-color: var(--xr-ring);
+	box-shadow: 0 0 0 1px var(--xr-ring);
+}
+.xr-viewer button:active:not(:disabled) {
+	transform: translateY(1px);
+}
+.xr-viewer button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+@media (hover: hover) {
+	.xr-viewer button:hover:not(:disabled) {
+		background: var(--xr-muted);
+	}
+}
+
+.dark .xr-viewer button {
+	border-color: var(--xr-input);
+	background: color-mix(in oklab, var(--xr-input) 30%, transparent);
+}
+/* default: the single primary action of a group. */
+.xr-viewer :is(.peru-simulate, .xr-buttons button),
+.dark .xr-viewer :is(.peru-simulate, .xr-buttons button) {
+	border-color: transparent;
+	background: var(--xr-primary);
+	color: var(--xr-primary-foreground);
+}
+@media (hover: hover) {
+	.xr-viewer :is(.peru-simulate, .xr-buttons button):hover:not(:disabled) {
+		background: color-mix(in oklab, var(--xr-primary) 80%, transparent);
+	}
+}
+/* secondary: the alternatives next to it. */
+.xr-viewer :is(.peru-skip, .peru-entry),
+.dark .xr-viewer :is(.peru-skip, .peru-entry) {
+	border-color: transparent;
+	background: var(--xr-secondary);
+	color: var(--xr-secondary-foreground);
+}
+@media (hover: hover) {
+	.xr-viewer :is(.peru-skip, .peru-entry):hover:not(:disabled) {
+		background: color-mix(
+			in oklch,
+			var(--xr-secondary),
+			var(--xr-foreground) 5%
+		);
+	}
+}
+/* destructive: recording in progress. */
+.xr-viewer .timeline button.active,
+.dark .xr-viewer .timeline button.active {
+	border-color: transparent;
+	background: var(--xr-destructive);
+	color: var(--xr-destructive-foreground);
+}
+
+/* Toggle / ToggleGroup (toggle.tsx outline): Archivo 500 12px, on = bg-muted. */
+.xr-viewer
+:is(.peru-mode button, .toolbar button, .timeline button, .wx-time-row button) {
+	font-weight: 500;
+	text-transform: none;
+	letter-spacing: 0;
+	background: transparent;
+}
+.xr-viewer :is(.peru-mode button, .toolbar button)[aria-pressed="true"],
+.xr-viewer .toolbar button.active {
+	background: var(--xr-muted);
+	color: var(--xr-foreground);
+}
+.xr-viewer .peru-mode {
+	display: flex;
+	margin: 0;
+}
+.xr-viewer .peru-mode button {
+	flex: 1;
+	min-width: 0;
+	border-color: var(--xr-input);
+	border-radius: 0;
+}
+.xr-viewer .peru-mode button + button {
+	border-left-width: 0;
+}
+.xr-viewer .peru-mode button:first-child {
+	border-radius: var(--xr-radius-md) 0 0 var(--xr-radius-md);
+}
+.xr-viewer .peru-mode button:last-child {
+	border-radius: 0 var(--xr-radius-md) var(--xr-radius-md) 0;
+}
+.xr-viewer .imagery-toggle .peru-mode button:disabled {
+	cursor: not-allowed;
+}
+
+/* Slider (slider.tsx): 4px muted track, primary range, 12px thumb ringed, background fill. */
+.xr-viewer input[type="range"] {
+	--fill: 50%;
+	appearance: none;
+	-webkit-appearance: none;
+	height: 16px;
+	margin: 0;
+	background: transparent;
+	cursor: pointer;
+}
+.xr-viewer input[type="range"]::-webkit-slider-runnable-track {
+	height: 4px;
+	border-radius: 9999px;
+	background: linear-gradient(
+		to right,
+		var(--xr-primary) 0 var(--fill),
+		var(--xr-muted) var(--fill) 100%
+	);
+}
+.xr-viewer input[type="range"]::-moz-range-track {
+	height: 4px;
+	border-radius: 9999px;
+	background: var(--xr-muted);
+}
+.xr-viewer input[type="range"]::-moz-range-progress {
+	height: 4px;
+	border-radius: 9999px;
+	background: var(--xr-primary);
+}
+.xr-viewer input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	width: 12px;
+	height: 12px;
+	margin-top: -4px;
+	border-radius: 9999px;
+	border: 1px solid var(--xr-ring);
+	background: var(--xr-background);
+}
+.xr-viewer input[type="range"]::-moz-range-thumb {
+	width: 12px;
+	height: 12px;
+	border-radius: 9999px;
+	border: 1px solid var(--xr-ring);
+	background: var(--xr-background);
+}
+.xr-viewer input[type="range"]:focus-visible {
+	outline: none;
+}
+.xr-viewer input[type="range"]:focus-visible::-webkit-slider-thumb {
+	box-shadow: 0 0 0 1px var(--xr-ring);
+}
+
+/* Switch (switch.tsx): 32 × 18.4px pill, primary when on, input when off. */
+.xr-viewer input.switch {
+	appearance: none;
+	-webkit-appearance: none;
+	position: relative;
+	flex: none;
+	width: 32px;
+	height: 18.4px;
+	margin: 0;
+	border: 1px solid transparent;
+	border-radius: 9999px;
+	background: var(--xr-input);
+	cursor: pointer;
+	transition: background-color 120ms;
+}
+.xr-viewer input.switch::before {
+	content: "";
 	position: absolute;
-	top: 8px;
-	right: 8px;
-	max-height: calc(100vh - 16px);
+	top: 0.2px;
+	left: 0;
+	width: 16px;
+	height: 16px;
+	border-radius: 9999px;
+	background: var(--xr-background);
+	transition: transform 120ms;
+}
+.xr-viewer input.switch:checked {
+	background: var(--xr-primary);
+}
+.xr-viewer input.switch:checked::before {
+	transform: translateX(calc(100% - 2px));
+}
+.dark .xr-viewer input.switch:not(:checked) {
+	background: color-mix(in oklab, var(--xr-input) 80%, transparent);
+}
+.dark .xr-viewer input.switch:not(:checked)::before {
+	background: var(--xr-foreground);
+}
+.dark .xr-viewer input.switch:checked::before {
+	background: var(--xr-primary-foreground);
+}
+.xr-viewer input.switch:focus-visible {
+	outline: none;
+	border-color: var(--xr-ring);
+	box-shadow: 0 0 0 1px var(--xr-ring);
+}
+.xr-viewer input.switch:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Badge (badge.tsx): type-label, h-5, rounded-md, solid status fills. */
+.xr-viewer .badge {
+	display: inline-flex;
+	align-items: center;
+	height: 20px;
+	padding: 0 8px;
+	border-radius: var(--xr-radius-md);
+	font-family: var(--xr-font-mono);
+	font-weight: 600;
+	font-size: 0.6875rem;
+	line-height: 1;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+.xr-viewer .badge-success {
+	background: var(--xr-success);
+	color: var(--xr-success-foreground);
+}
+.xr-viewer .badge-info {
+	background: var(--xr-info);
+	color: var(--xr-info-foreground);
+}
+
+/* Alert (alert.tsx): card surface tinted with the status colour, a left border in it. */
+.xr-viewer :is(.imagery-notice, .wx-notice, .wx-prov-notice, .wx-status) {
+	padding: 8px 12px;
+	border: 1px solid
+		color-mix(in oklab, var(--xr-risk-moderate) 35%, transparent);
+	border-left: 3px solid var(--xr-risk-moderate);
+	border-radius: var(--xr-radius-md);
+	background: color-mix(in oklab, var(--xr-risk-moderate) 12%, var(--xr-card));
+	color: var(--xr-card-foreground);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+/* Notices of the app (WebGPU unavailable, VR compatibility mode): Alerts with a close button. */
+.xr-viewer .notice {
+	display: grid;
+	gap: 6px;
+	padding: 12px 16px;
+	font-size: 14px;
+	line-height: 1.5;
+}
+.xr-viewer .notice ul {
+	margin: 0;
+	padding-left: 18px;
+	color: var(--xr-muted-foreground);
+}
+.xr-viewer .notice-error {
+	border-color: color-mix(in oklab, var(--xr-destructive) 25%, transparent);
+	border-left: 3px solid var(--xr-destructive);
+	background: color-mix(in oklab, var(--xr-destructive) 8%, var(--xr-card));
+}
+.xr-viewer .notice-ok {
+	border-color: color-mix(in oklab, var(--xr-info) 25%, transparent);
+	border-left: 3px solid var(--xr-info);
+	background: color-mix(in oklab, var(--xr-info) 8%, var(--xr-card));
+}
+.xr-viewer .notice .close {
+	justify-self: start;
+	margin-top: 4px;
+}
+.xr-viewer > .notice {
+	position: absolute;
+	bottom: var(--xr-edge);
+	left: var(--xr-edge);
+	right: var(--xr-edge);
+	max-width: 560px;
+	max-height: calc(100% - 2 * var(--xr-edge));
 	overflow-y: auto;
+	z-index: 3;
 }
-.panel-host .lil-gui {
-	--width: 320px;
-	--font-size: 12px;
-	--input-font-size: 12px;
-	--widget-height: 24px;
-}
-.app > .notice {
-	position: absolute;
-	bottom: 8px;
-	left: 8px;
-	right: 8px;
-	max-width: 640px;
-	z-index: 2;
-}
-.app-error {
+.xr-viewer .app-error {
 	position: absolute;
 	top: 16px;
 	left: 16px;
 	right: 16px;
 	max-width: 640px;
 }
-.loading {
+.xr-viewer .loading {
 	position: absolute;
 	inset: 0;
 	display: grid;
 	place-items: center;
-	color: var(--muted);
+	color: var(--xr-muted-foreground);
 }
 
-/* Phones and narrow tablets: panel becomes a bottom sheet, HUD shrinks. */
-@media (max-width: 700px) {
-	.panel-host {
-		top: auto;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		max-height: 50vh;
-		padding-bottom: env(safe-area-inset-bottom);
-	}
-	.panel-host .lil-gui.lil-root {
-		width: 100% !important;
-		--width: 100%;
-		--widget-height: 32px;
-		--font-size: 14px;
-		--input-font-size: 14px;
-	}
-	.hud {
-		font-size: 11px;
-		padding: 6px 8px;
-	}
-	.app > .notice {
-		bottom: auto;
-		top: 120px;
-	}
-}
-
-.toolbar {
-	position: absolute;
-	left: 50%;
-	bottom: max(12px, env(safe-area-inset-bottom));
-	transform: translateX(-50%);
-	display: flex;
-	gap: 4px;
-	align-items: center;
-	padding: 4px;
-	border-radius: 10px;
-	background: rgba(15, 18, 22, 0.85);
-	z-index: 1;
-}
-.toolbar button {
-	min-height: 40px;
-	padding: 6px 12px;
-	background: #2a3038;
-	color: var(--text);
-	font-size: 13px;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-}
-.toolbar button svg {
-	width: 18px;
-	height: 18px;
-	flex: none;
-}
-.toolbar button.active {
-	background: var(--accent);
-	color: #111;
-}
-.toolbar button:disabled {
-	opacity: 0.35;
-}
-.toolbar .sep {
-	width: 1px;
-	align-self: stretch;
-	background: #3a414b;
-	margin: 0 2px;
-}
-@media (max-width: 700px) {
-	/* Sit above the collapsed parameter sheet. */
-	.toolbar {
-		bottom: calc(44px + env(safe-area-inset-bottom));
-	}
-	.toolbar button {
-		min-height: 44px;
-		padding: 6px 10px;
-	}
-	/* Icons only on narrow screens; the labels stay as tooltips and accessible names. */
-	.toolbar button span {
-		display: none;
-	}
-}
-
-.timeline {
-	position: absolute;
-	left: 50%;
-	bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px);
-	transform: translateX(-50%);
-	display: flex;
-	gap: 4px;
-	align-items: center;
-	padding: 4px;
-	border-radius: 10px;
-	background: rgba(15, 18, 22, 0.85);
-	z-index: 1;
-	max-width: calc(100vw - 32px);
-}
-.timeline button {
-	min-height: 36px;
-	padding: 4px 10px;
-	background: #2a3038;
-	color: var(--text);
-	font-size: 13px;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-}
-.timeline button svg {
-	width: 16px;
-	height: 16px;
-	flex: none;
-}
-.timeline button.active {
-	background: #c0392b;
-	color: #fff;
-}
-.timeline button:disabled {
-	opacity: 0.35;
-}
-.timeline button.icon-only span {
+/* Peru overview ("Perú en relieve"): a Card at the top left, a bottom sheet on phones. */
+.xr-viewer.overview-active
+> :is(
+	.hud,
+	.panel-host,
+	.toolbar,
+	.timeline,
+	.xr-buttons,
+	.imagery-sim,
+	.weather-sim
+) {
 	display: none;
 }
-.timeline [hidden] {
-	display: none !important;
-}
-.timeline button span {
-	white-space: nowrap;
-}
-.timeline-result {
+.xr-viewer .peru-overlay {
+	position: absolute;
+	top: max(var(--xr-edge), env(safe-area-inset-top));
+	left: var(--xr-edge);
+	width: min(360px, calc(100% - 2 * var(--xr-edge)));
+	max-height: calc(100% - 2 * var(--xr-edge));
+	overflow-y: auto;
+	z-index: 2;
 	display: flex;
-	gap: 4px;
-	align-items: center;
+	flex-direction: column;
+	gap: 12px;
+	padding: var(--xr-card-spacing);
+	font-size: 14px;
+	line-height: 1.5;
 }
-.timeline-result[hidden] {
-	display: none;
+.xr-viewer .peru-status {
+	color: var(--xr-muted-foreground);
 }
-.timeline input[type="range"] {
-	width: min(280px, 30vw);
-	accent-color: var(--accent);
-}
-.timeline-time {
-	font-size: 12px;
-	color: var(--text);
-	min-width: 92px;
-	text-align: center;
+.xr-viewer .peru-pick {
+	font-size: 14px;
+	line-height: 1.5;
 	font-variant-numeric: tabular-nums;
 }
-.timeline select {
-	min-height: 32px;
-	background: #2a3038;
-	color: var(--text);
-	border: 0;
-	border-radius: 6px;
+.xr-viewer .imagery-toggle {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
-@media (max-width: 700px) {
-	.timeline {
-		bottom: calc(44px + env(safe-area-inset-bottom) + 60px);
+.xr-viewer .peru-exag {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: 6px 12px;
+}
+.xr-viewer .peru-exag span {
+	font-family: var(--xr-font-mono);
+	font-weight: 600;
+	font-size: 0.6875rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--xr-muted-foreground);
+}
+.xr-viewer .peru-exag input {
+	grid-column: 1 / -1;
+	grid-row: 2;
+	width: 100%;
+}
+.xr-viewer .peru-exag output {
+	font-size: 13px;
+	text-align: right;
+}
+.xr-viewer .peru-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--xr-gap);
+	margin: 0;
+}
+.xr-viewer .peru-actions button {
+	flex: 1 1 auto;
+}
+.xr-viewer .peru-actions .peru-simulate {
+	flex-basis: 100%;
+}
+.xr-viewer .peru-lod {
+	border-top: 1px solid var(--xr-border);
+	padding-top: 8px;
+}
+.xr-viewer .peru-lod summary {
+	cursor: pointer;
+}
+.xr-viewer .peru-lod p {
+	margin-top: 4px;
+	font-family: var(--xr-font-mono);
+	font-size: 11px;
+	line-height: 1.45;
+	color: var(--xr-muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+.xr-viewer .peru-attribution {
+	font-size: 11px;
+}
+/* Touch fallback for "Vuelo libre": hold buttons, only on coarse pointers. */
+.xr-viewer .peru-fly-pad {
+	display: none;
+}
+@media (pointer: coarse) {
+	.xr-viewer .peru-fly-pad:not([hidden]) {
+		position: absolute;
+		right: var(--xr-edge);
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 2;
+		display: grid;
+		grid-template-columns: repeat(2, 56px);
+		gap: 6px;
 	}
-	.timeline button span {
-		display: none;
+	.xr-viewer .peru-fly-pad button {
+		min-height: 56px;
+		background: var(--xr-card);
+		touch-action: none;
+		user-select: none;
+		-webkit-user-select: none;
 	}
-	.timeline-time {
-		min-width: 0;
-	}
+}
+.xr-viewer .peru-back {
+	position: absolute;
+	left: var(--xr-edge);
+	bottom: max(12px, env(safe-area-inset-bottom));
+	z-index: 1;
+	background: var(--xr-card);
 }
 
-.xr-buttons {
+/* Weather layers ("Capas meteorológicas"): a Card with a collapsible header. */
+.xr-viewer .weather-panel {
+	position: absolute;
+	z-index: 2;
+	width: min(372px, calc(100% - 2 * var(--xr-edge)));
+	max-height: calc(100% - 2 * var(--xr-edge));
+	overflow-y: auto;
+	padding: 0;
+	font-size: 14px;
+	line-height: 1.5;
+}
+.xr-viewer .weather-overview {
+	top: max(var(--xr-edge), env(safe-area-inset-top));
+	right: var(--xr-edge);
+}
+.xr-viewer .weather-sim {
+	left: var(--xr-edge);
+	bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
+	max-height: 50%;
+}
+.xr-viewer .weather-panel .wx-main > summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: var(--xr-card-spacing);
+	cursor: pointer;
+	list-style: none;
+}
+.xr-viewer .weather-panel .wx-main > summary::-webkit-details-marker {
+	display: none;
+}
+.xr-viewer .weather-panel .wx-main > summary::after {
+	content: "";
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-right: 1.5px solid var(--xr-muted-foreground);
+	border-bottom: 1.5px solid var(--xr-muted-foreground);
+	transform: rotate(45deg) translateY(-2px);
+	transition: transform 120ms;
+}
+.xr-viewer .weather-panel .wx-main[open] > summary::after {
+	transform: rotate(-135deg) translateY(-2px);
+}
+.xr-viewer .weather-panel .wx-main > :not(summary) {
+	margin: 0 var(--xr-card-spacing) 12px;
+}
+.xr-viewer .wx-layers {
+	list-style: none;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.xr-viewer .wx-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	padding: 4px 0;
+}
+.xr-viewer .wx-row label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 32px;
+	flex: 1;
+	min-width: 0;
+	cursor: pointer;
+}
+.xr-viewer .wx-row input[type="range"] {
+	width: 100%;
+}
+.xr-viewer .wx-sub {
+	padding-left: 12px;
+}
+.xr-viewer .wx-group {
+	margin-top: 8px;
+}
+.xr-viewer .wx-status {
+	width: 100%;
+}
+.xr-viewer .wx-timeline {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.xr-viewer .wx-time-row {
+	display: flex;
+	gap: 6px;
+}
+.xr-viewer .wx-time-row button {
+	border-color: var(--xr-input);
+}
+.xr-viewer .wx-time-row .wx-play {
+	flex: 1;
+}
+.xr-viewer .wx-timeline input {
+	width: 100%;
+}
+.xr-viewer .wx-time {
+	font-size: 12px;
+}
+.xr-viewer .wx-legends {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.xr-viewer .wx-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.xr-viewer .wx-bar {
+	height: 8px;
+	border-radius: var(--xr-radius-sm);
+}
+.xr-viewer .wx-ticks {
+	display: flex;
+	justify-content: space-between;
+	font-family: var(--xr-font-mono);
+	font-size: 10px;
+	font-variant-numeric: tabular-nums;
+}
+.xr-viewer .wx-swatches {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	font-size: 12px;
+}
+.xr-viewer .wx-swatches i {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin-right: 4px;
+	vertical-align: -2px;
+	border-radius: 3px;
+	background-image: repeating-linear-gradient(
+		135deg,
+		rgba(255, 255, 255, 0.5) 0 2px,
+		transparent 2px 5px
+	) !important;
+}
+.xr-viewer .wx-point {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding-top: 12px;
+	border-top: 1px solid var(--xr-border);
+	font-size: 13px;
+}
+.xr-viewer .wx-prov summary {
+	cursor: pointer;
+}
+.xr-viewer .wx-prov-entry {
+	margin: 8px 0;
+}
+.xr-viewer .wx-prov-entry strong {
+	color: var(--xr-card-foreground);
+	font-weight: 600;
+}
+.xr-viewer .weather-panel > .wx-attribution {
+	padding: 0 var(--xr-card-spacing) 12px;
+	font-size: 11px;
+}
+
+/* Relieve / Satélite over the simulator's map context. */
+.xr-viewer .imagery-sim {
+	position: absolute;
+	left: var(--xr-edge);
+	bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px);
+	z-index: 1;
+	width: min(300px, calc(100% - 2 * var(--xr-edge)));
+	padding: 12px;
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+/* Huayco simulator: HUD, parameters (lil-gui), toolbar, timeline and the XR buttons. */
+.xr-viewer .hud {
+	position: absolute;
+	top: max(var(--xr-edge), env(safe-area-inset-top));
+	left: var(--xr-edge);
+	max-width: min(460px, calc(100% - 2 * var(--xr-edge)));
+	padding: 10px 12px;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--xr-muted-foreground);
+	pointer-events: none;
+}
+.xr-viewer .hud strong,
+.xr-viewer .hud b {
+	color: var(--xr-card-foreground);
+}
+.xr-viewer .panel-host {
+	position: absolute;
+	top: var(--xr-edge);
+	right: var(--xr-edge);
+	max-height: calc(100% - 2 * var(--xr-edge));
+	overflow-y: auto;
+	border-radius: var(--xr-radius-lg);
+}
+.xr-viewer .panel-host .lil-gui {
+	--width: 320px;
+	--background-color: var(--xr-card);
+	--text-color: var(--xr-card-foreground);
+	--title-background-color: var(--xr-card);
+	--title-text-color: var(--xr-card-foreground);
+	--widget-color: var(--xr-muted);
+	--hover-color: color-mix(in oklch, var(--xr-muted), var(--xr-foreground) 6%);
+	--focus-color: var(--xr-ring);
+	--number-color: var(--xr-primary);
+	--string-color: var(--xr-foreground);
+	--font-family: var(--xr-font-sans);
+	--font-family-mono: var(--xr-font-mono);
+	--font-size: 12px;
+	--input-font-size: 12px;
+	--padding: 8px;
+	--spacing: 6px;
+	--widget-height: 28px;
+	--widget-border-radius: var(--xr-radius-sm);
+	--slider-knob-width: 3px;
+}
+.xr-viewer .panel-host .lil-gui.lil-root {
+	border: 1px solid var(--xr-border);
+	border-radius: var(--xr-radius-lg);
+	overflow: hidden;
+}
+.xr-viewer .panel-host .lil-gui .lil-title {
+	display: block;
+	min-height: 0;
+	text-align: left;
+	border-radius: 0;
+	border-width: 0;
+	background: var(--xr-card);
+	transform: none;
+}
+.xr-viewer .panel-host .lil-gui.lil-root > .lil-title {
+	padding: 0 12px;
+	height: 44px;
+	font-family: var(--xr-font-heading);
+	font-weight: 800;
+	font-stretch: 125%;
+	font-size: 14px;
+	letter-spacing: 0.005em;
+	text-transform: uppercase;
+}
+.xr-viewer .panel-host .lil-gui .lil-gui > .lil-title {
+	padding: 0 12px;
+	font-family: var(--xr-font-mono);
+	font-weight: 600;
+	font-size: 11px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--xr-muted-foreground);
+	border-color: var(--xr-border);
+}
+.xr-viewer .panel-host .lil-gui .lil-controller {
+	padding: 0 12px;
+}
+.xr-viewer .panel-host .lil-gui .lil-controller button {
+	height: 32px;
+	border: 1px solid transparent;
+	border-radius: var(--xr-radius-md);
+	background: var(--xr-secondary);
+	color: var(--xr-secondary-foreground);
+	font-family: var(--xr-font-sans);
+	font-weight: 600;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.xr-viewer .panel-host .lil-gui input[type="checkbox"] {
+	border: 1px solid var(--xr-input);
+	border-radius: 4px;
+	background: transparent;
+}
+.xr-viewer .panel-host .lil-gui input[type="checkbox"]:checked {
+	border-color: var(--xr-primary);
+	background: var(--xr-primary);
+	color: var(--xr-primary-foreground);
+}
+.xr-viewer .panel-host .lil-gui :is(input[type="text"], input[type="number"]) {
+	font-family: var(--xr-font-mono);
+	border: 1px solid var(--xr-input);
+	background: transparent;
+}
+.xr-viewer .panel-host .lil-controller.lil-option .lil-display {
+	border: 1px solid var(--xr-input);
+	background: transparent;
+}
+.xr-viewer .panel-host .lil-controller.lil-number .lil-slider {
+	border-radius: var(--xr-radius-sm);
+}
+.xr-viewer .panel-hint {
+	margin: 4px 12px 8px;
+}
+
+.xr-viewer :is(.toolbar, .timeline) {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 4px;
+	align-items: center;
+	padding: 4px;
+	border: 1px solid var(--xr-border);
+	border-radius: var(--xr-radius-lg);
+	background: var(--xr-card);
+	color: var(--xr-card-foreground);
+	z-index: 1;
+	max-width: calc(100% - 2 * var(--xr-edge));
+}
+.xr-viewer .toolbar {
+	bottom: max(12px, env(safe-area-inset-bottom));
+}
+.xr-viewer .timeline {
+	bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px);
+}
+.xr-viewer :is(.toolbar, .timeline) button {
+	border-color: transparent;
+	min-height: 40px;
+}
+.xr-viewer .toolbar .sep {
+	width: 1px;
+	align-self: stretch;
+	background: var(--xr-border);
+	margin: 0 2px;
+}
+.xr-viewer .timeline button.icon-only span {
+	display: none;
+}
+.xr-viewer .timeline-result {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+.xr-viewer .timeline input[type="range"] {
+	width: min(280px, 30vw);
+}
+.xr-viewer .timeline-time {
+	font-size: 12px;
+	min-width: 92px;
+	text-align: center;
+}
+/* NativeSelect (outline). */
+.xr-viewer .timeline select {
+	min-height: 32px;
+	padding: 0 8px;
+	font: inherit;
+	font-size: 12px;
+	color: var(--xr-foreground);
+	border: 1px solid var(--xr-input);
+	border-radius: var(--xr-radius-md);
+	background: transparent;
+}
+.xr-viewer .xr-buttons {
 	position: absolute;
 	top: 12px;
 	left: 50%;
@@ -241,435 +956,75 @@
 	gap: 6px;
 	z-index: 1;
 }
-.xr-buttons button {
-	min-height: 40px;
-	padding: 6px 16px;
-	background: var(--accent);
-	color: #111;
-	font-weight: 600;
-}
-@media (max-width: 700px) {
-	.xr-buttons {
-		top: auto;
-		bottom: calc(100px + env(safe-area-inset-bottom));
-	}
-}
 
-.panel-hint {
-	margin: 4px 8px 8px;
-	font-size: 12px;
-	line-height: 1.4;
-	color: #9aa4b1;
-}
-
-/* Peru overview ("vista general"): the simulator UI is hidden while it is shown. */
-.app.overview-active > .hud,
-.app.overview-active > .panel-host,
-.app.overview-active > .toolbar,
-.app.overview-active > .timeline,
-.app.overview-active > .xr-buttons {
-	display: none;
-}
-.peru-overlay {
-	position: absolute;
-	top: max(8px, env(safe-area-inset-top));
-	left: 8px;
-	width: min(360px, calc(100vw - 16px));
-	z-index: 2;
-	background: rgba(15, 18, 22, 0.85);
-	border-radius: 10px;
-	padding: 10px 12px;
-	font-size: 13px;
-	line-height: 1.45;
-}
-.peru-overlay[hidden],
-.peru-back[hidden],
-.peru-overlay [hidden] {
-	display: none;
-}
-.peru-overlay h2 {
-	margin: 0 0 4px;
-	font-size: 16px;
-}
-.peru-overlay p {
-	margin: 4px 0;
-}
-.peru-status {
-	color: var(--accent);
-}
-.peru-pick {
-	font-variant-numeric: tabular-nums;
-}
-.peru-exag {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin: 6px 0;
-}
-.peru-exag input {
-	flex: 1;
-	accent-color: var(--accent);
-}
-.peru-exag output {
-	min-width: 32px;
-	text-align: right;
-	font-variant-numeric: tabular-nums;
-}
-.peru-actions {
-	display: flex;
-	gap: 6px;
-	margin: 8px 0 4px;
-	flex-wrap: wrap;
-}
-.peru-actions button {
-	min-height: 40px;
-	padding: 6px 14px;
-	background: #2a3038;
-	color: var(--text);
-}
-.peru-actions .peru-simulate {
-	background: var(--accent);
-	color: #111;
-	font-weight: 600;
-}
-.peru-actions button:disabled {
-	opacity: 0.4;
-}
-.peru-attribution {
-	font-size: 11px;
-	color: #9aa4b1;
-}
-.peru-lod {
-	font-size: 11px;
-	color: #9aa4b1;
-	font-variant-numeric: tabular-nums;
-}
-.peru-mode {
-	display: flex;
-	gap: 0;
-	margin: 6px 0;
-}
-.peru-mode button {
-	flex: 1;
-	min-height: 36px;
-	padding: 4px 10px;
-	background: #2a3038;
-	color: var(--text);
-	border-radius: 0;
-}
-.peru-mode button:first-child {
-	border-radius: 8px 0 0 8px;
-}
-.peru-mode button:last-child {
-	border-radius: 0 8px 8px 0;
-}
-.peru-mode button[aria-pressed="true"] {
-	background: var(--accent);
-	color: #111;
-	font-weight: 600;
-}
-.peru-fly-hint {
-	font-size: 12px;
-	color: #c6ced8;
-}
-/* Relieve / Satélite (S7): in the overview overlay and over the simulator's map context. */
-.imagery-toggle .peru-mode button:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-.imagery-hint {
-	font-size: 12px;
-	color: #c6ced8;
-}
-.imagery-credit {
-	font-size: 11px;
-	color: #9aa4b1;
-}
-.imagery-notice {
-	font-size: 11px;
-	color: #ffcf70;
-}
-.imagery-sim {
-	position: absolute;
-	left: 8px;
-	bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px);
-	z-index: 1;
-	width: min(300px, calc(100vw - 16px));
-	background: rgba(15, 18, 22, 0.85);
-	border-radius: 10px;
-	padding: 4px 10px;
-	font-size: 13px;
-	line-height: 1.4;
-}
-.imagery-sim[hidden],
-.imagery-toggle [hidden],
-.app.overview-active > .imagery-sim {
-	display: none;
-}
-.peru-actions .peru-vr {
-	background: var(--accent);
-	color: #111;
-	font-weight: 600;
-}
-/* Touch fallback for "Vuelo libre": hold buttons, only on coarse pointers. */
-.peru-fly-pad {
-	display: none;
-}
-@media (pointer: coarse) {
-	.peru-fly-pad:not([hidden]) {
-		position: absolute;
-		right: 8px;
-		top: 50%;
-		transform: translateY(-50%);
-		z-index: 2;
-		display: grid;
-		grid-template-columns: repeat(2, 56px);
-		gap: 6px;
-	}
-	.peru-fly-pad button {
-		min-height: 56px;
-		background: rgba(15, 18, 22, 0.8);
-		color: var(--text);
-		border-radius: 10px;
-		touch-action: none;
-		user-select: none;
-		-webkit-user-select: none;
-	}
-}
-.peru-back {
-	position: absolute;
-	left: 8px;
-	bottom: max(12px, env(safe-area-inset-bottom));
-	z-index: 1;
-	min-height: 40px;
-	padding: 6px 14px;
-	background: rgba(15, 18, 22, 0.85);
-	color: var(--text);
-	border-radius: 10px;
-}
+/* Phones and narrow tablets: bottom sheets, icon-only bars, 44px targets. */
 @media (max-width: 700px) {
-	.peru-overlay {
-		top: auto;
-		bottom: max(8px, env(safe-area-inset-bottom));
-		font-size: 14px;
-	}
-	.peru-actions button {
+	.xr-viewer button {
 		min-height: 44px;
-		flex: 1;
 	}
-	.peru-back {
+	.xr-viewer .peru-overlay {
+		top: auto;
+		bottom: max(var(--xr-edge), env(safe-area-inset-bottom));
+		max-height: 55%;
+	}
+	.xr-viewer .peru-back {
 		bottom: auto;
-		top: max(8px, env(safe-area-inset-top));
+		top: max(var(--xr-edge), env(safe-area-inset-top));
 		left: auto;
-		right: 8px;
+		right: var(--xr-edge);
 	}
-}
-/* Phones: above the toolbar, the timeline and the "Volver al mapa" button. */
-@media (max-width: 700px) {
-	.imagery-sim {
+	.xr-viewer .weather-overview {
+		left: var(--xr-edge);
+		right: var(--xr-edge);
+		width: auto;
+		max-height: 40%;
+	}
+	.xr-viewer .weather-sim {
+		bottom: calc(max(12px, env(safe-area-inset-bottom)) + 240px);
+		max-height: 35%;
+	}
+	.xr-viewer .imagery-sim {
 		bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
 	}
-}
-/* Weather layers (S8): over the overview (top right) and over the simulator's map context. */
-.weather-panel {
-	position: absolute;
-	z-index: 2;
-	width: min(330px, calc(100vw - 16px));
-	max-height: calc(100vh - 16px);
-	overflow-y: auto;
-	background: rgba(15, 18, 22, 0.85);
-	border-radius: 10px;
-	padding: 8px 12px;
-	font-size: 13px;
-	line-height: 1.4;
-}
-.weather-overview {
-	top: max(8px, env(safe-area-inset-top));
-	right: 8px;
-}
-.weather-sim {
-	left: 8px;
-	bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
-	max-height: 50vh;
-}
-.weather-panel[hidden],
-.weather-panel [hidden],
-.app.overview-active > .weather-sim {
-	display: none;
-}
-.weather-panel summary {
-	cursor: pointer;
-	font-weight: 600;
-	font-size: 14px;
-}
-.weather-panel p {
-	margin: 3px 0;
-}
-.wx-notice {
-	color: #ffcf70;
-	font-size: 12px;
-}
-.wx-layers {
-	list-style: none;
-	margin: 6px 0;
-	padding: 0;
-}
-.wx-row {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 4px 8px;
-	padding: 3px 0;
-}
-.wx-row label {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	min-height: 28px;
-	flex: 1;
-	cursor: pointer;
-}
-.wx-row input[type="checkbox"] {
-	width: 18px;
-	height: 18px;
-	accent-color: var(--accent);
-}
-.wx-row input[type="range"] {
-	width: 100%;
-	accent-color: var(--accent);
-}
-.wx-sub {
-	padding-left: 14px;
-}
-.wx-group {
-	font-size: 12px;
-	color: #9aa4b1;
-	margin-top: 4px;
-}
-.wx-badge {
-	font-size: 10px;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	border-radius: 4px;
-	padding: 1px 5px;
-}
-.wx-observed {
-	background: #2f5d3a;
-	color: #d9f5df;
-}
-.wx-forecast {
-	background: #3b3f6b;
-	color: #dfe2ff;
-}
-.wx-status {
-	width: 100%;
-	font-size: 11px;
-	color: #ffcf70;
-}
-.wx-timeline {
-	margin: 6px 0;
-}
-.wx-time-row {
-	display: flex;
-	gap: 6px;
-}
-.wx-time-row button {
-	min-height: 32px;
-	padding: 4px 10px;
-	background: #2a3038;
-	color: var(--text);
-	border-radius: 8px;
-}
-.wx-time-row .wx-play {
-	flex: 1;
-}
-.wx-timeline input {
-	width: 100%;
-	accent-color: var(--accent);
-}
-.wx-time {
-	font-size: 12px;
-	font-variant-numeric: tabular-nums;
-}
-.wx-legend {
-	margin: 8px 0;
-}
-.wx-legend-title {
-	font-size: 12px;
-	font-weight: 600;
-}
-.wx-bar {
-	height: 10px;
-	border-radius: 3px;
-}
-.wx-ticks {
-	display: flex;
-	justify-content: space-between;
-	font-size: 10px;
-	color: #c6ced8;
-	font-variant-numeric: tabular-nums;
-}
-.wx-note {
-	font-size: 11px;
-	color: #9aa4b1;
-}
-.wx-swatches {
-	display: flex;
-	gap: 10px;
-	flex-wrap: wrap;
-	font-size: 11px;
-}
-.wx-swatches i {
-	display: inline-block;
-	width: 12px;
-	height: 12px;
-	margin-right: 4px;
-	vertical-align: -2px;
-	background-image: repeating-linear-gradient(
-		135deg,
-		rgba(255, 255, 255, 0.5) 0 2px,
-		transparent 2px 5px
-	) !important;
-}
-.wx-rain-mode button {
-	min-height: 28px;
-	font-size: 12px;
-}
-.wx-point {
-	margin: 8px 0;
-	padding-top: 6px;
-	border-top: 1px solid #2a3038;
-	font-size: 12px;
-}
-.wx-prov {
-	margin: 6px 0;
-	font-size: 12px;
-}
-.wx-prov summary {
-	font-size: 12px;
-	font-weight: 600;
-}
-.wx-prov-entry {
-	margin: 6px 0;
-	color: #c6ced8;
-}
-.wx-prov-notice {
-	color: #ffcf70;
-}
-.wx-attribution {
-	font-size: 11px;
-	color: #9aa4b1;
-	margin: 4px 0 0;
-}
-@media (max-width: 700px) {
-	.weather-overview {
-		left: 8px;
-		right: 8px;
-		width: auto;
-		max-height: 40vh;
+	.xr-viewer .panel-host {
+		top: auto;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		max-height: 50%;
+		border-radius: var(--xr-radius-lg) var(--xr-radius-lg) 0 0;
+		padding-bottom: env(safe-area-inset-bottom);
 	}
-	.weather-sim {
-		bottom: calc(max(12px, env(safe-area-inset-bottom)) + 240px);
-		max-height: 35vh;
+	.xr-viewer .panel-host .lil-gui.lil-root {
+		width: 100% !important;
+		--width: 100%;
+		--widget-height: 32px;
+		--font-size: 14px;
+		--input-font-size: 14px;
+	}
+	.xr-viewer .hud {
+		font-size: 11px;
+		padding: 6px 8px;
+	}
+	.xr-viewer > .notice {
+		bottom: auto;
+		top: 120px;
+	}
+	.xr-viewer .toolbar {
+		bottom: calc(44px + env(safe-area-inset-bottom));
+	}
+	.xr-viewer .timeline {
+		bottom: calc(44px + env(safe-area-inset-bottom) + 60px);
+	}
+	/* Icons only on narrow screens; the labels stay as tooltips and accessible names. */
+	.xr-viewer :is(.toolbar, .timeline) button span {
+		display: none;
+	}
+	.xr-viewer .timeline-time {
+		min-width: 0;
+	}
+	.xr-viewer .xr-buttons {
+		top: auto;
+		bottom: calc(100px + env(safe-area-inset-bottom));
 	}
 }

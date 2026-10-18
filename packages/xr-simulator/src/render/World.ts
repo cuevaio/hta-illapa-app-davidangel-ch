@@ -2,7 +2,6 @@ import {
 	type AbstractEngine,
 	ArcRotateCamera,
 	Color3,
-	Color4,
 	DirectionalLight,
 	HemisphericLight,
 	Matrix,
@@ -15,6 +14,7 @@ import {
 } from "@babylonjs/core";
 import type { Ray } from "../input/pointer";
 import type { Terrain } from "../scenario/terrain";
+import { followPageBackground } from "./sceneBackground";
 
 /**
  * Scene graph shared by every mode: `root` holds the terrain-local frame
@@ -31,7 +31,9 @@ export class World {
 
 	constructor(engine: AbstractEngine, canvas: HTMLCanvasElement) {
 		this.scene = new Scene(engine);
-		this.scene.clearColor = new Color4(0.62, 0.7, 0.78, 1);
+		followPageBackground(this.scene, (background) => {
+			this.scene.clearColor = background.toColor4(1);
+		});
 		this.scene.ambientColor = new Color3(0.3, 0.3, 0.3);
 		this.root = new TransformNode("terrain-root", this.scene);
 

@@ -2,6 +2,7 @@ import type { ResultActions } from "../../playback/ResultActions";
 import type { AppState } from "../../state/appState";
 import type { Store } from "../../state/store";
 import { type IconName, iconSvg } from "../icons";
+import { syncRangeFill } from "./mayu";
 
 const SPEEDS = [-60, -20, -5, 5, 20, 60];
 
@@ -55,7 +56,10 @@ export class Timeline {
 		range.type = "range";
 		range.step = "any";
 		range.setAttribute("aria-label", "Tiempo del resultado");
-		range.addEventListener("input", () => actions.seek(Number(range.value)));
+		range.addEventListener("input", () => {
+			syncRangeFill(range);
+			actions.seek(Number(range.value));
+		});
 		const label = document.createElement("span");
 		label.className = "timeline-time";
 		const speed = document.createElement("select");
@@ -96,6 +100,7 @@ export class Timeline {
 			range.min = String(r.start);
 			range.max = String(r.end);
 			if (document.activeElement !== range) range.value = String(r.time);
+			syncRangeFill(range);
 			label.textContent = `t = ${r.time.toFixed(0)} / ${r.end.toFixed(0)} s`;
 			speed.value = String(r.speed);
 		};

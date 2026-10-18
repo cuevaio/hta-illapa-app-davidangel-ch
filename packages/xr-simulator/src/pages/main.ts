@@ -1,4 +1,3 @@
-import "./base.css";
 import "./app.css";
 import { createXrViewer } from "../viewer/createXrViewer";
 

@@ -3,7 +3,6 @@ import {
 	ArcRotateCamera,
 	type Camera,
 	Color3,
-	Color4,
 	Matrix,
 	type Mesh,
 	MeshBuilder,
@@ -13,12 +12,14 @@ import {
 	TransformNode,
 	Vector3,
 } from "@babylonjs/core";
+import { followPageBackground } from "../render/sceneBackground";
 import {
 	type WeatherMenuContent,
 	weatherMenuAction,
 	weatherMenuContent,
 } from "../ui/sections";
 import { ImageryToggle } from "../ui/web/ImageryToggle";
+import { syncRangeFill } from "../ui/web/mayu";
 import { WeatherPanel } from "../ui/web/WeatherPanel";
 import { FOG_DENSITY_PER_KM, FOG_UPDATE_RATIO } from "./constants";
 import {
@@ -123,7 +124,6 @@ export interface OverviewActions {
 
 /** Hillshade slope exaggeration (as the former static z6 overview): real slopes look flat from afar. */
 const HILLSHADE_Z = 5;
-const FOG_COLOR = new Color3(0.62, 0.7, 0.78);
 const HUD_INTERVAL_MS = 250;
 /** Closest orbit distance (scene km); was 30 before the satellite imagery. */
 const ORBIT_MIN_RADIUS = 2;
@@ -196,6 +196,7 @@ export class PeruOverview implements FlightHost {
 	private terrain: LodTerrain | null = null;
 	/** Follows the view distance (S11), shared by the scene fog and the relief shader. */
 	private fogDensity = FOG_DENSITY_PER_KM;
+	private readonly fogColor = new Color3();
 	private readonly frame = peruFrame();
 	private localBounds: Bounds;
 	/** The Peru bbox itself (no flight margin), framed top-down by the web overview (S7). */
@@ -267,15 +268,15 @@ export class PeruOverview implements FlightHost {
 		private readonly weather: OverviewWeather | null = null,
 	) {
 		this.scene = new Scene(engine);
-		this.scene.clearColor = new Color4(
-			FOG_COLOR.r,
-			FOG_COLOR.g,
-			FOG_COLOR.b,
-			1,
-		);
 		this.scene.fogMode = Scene.FOGMODE_EXP2;
 		this.scene.fogDensity = this.fogDensity;
-		this.scene.fogColor = FOG_COLOR;
+		// The haze fades the Andes into the page background, light or dark.
+		followPageBackground(this.scene, (background) => {
+			this.fogColor.copyFrom(background);
+			this.scene.clearColor = background.toColor4(1);
+			this.scene.fogColor = this.fogColor;
+			this.terrain?.setLook(this.look());
+		});
 		const sw = lonLatToWorld(PERU_BBOX.west, PERU_BBOX.south);
 		const ne = lonLatToWorld(PERU_BBOX.east, PERU_BBOX.north);
 		const [minX, minZ] = worldToLocal(this.frame, sw.x, sw.y);
@@ -377,24 +378,26 @@ export class PeruOverview implements FlightHost {
         <button type="button" data-mode="fly" aria-pressed="false">Vuelo libre</button>
       </div>
       <p class="peru-fly-hint" hidden>W A S D: moverse · Q / E: bajar / subir · Shift: turbo · arrastra para mirar</p>
-      <label class="peru-exag">Exageración vertical <input type="range" min="${EXAGGERATION.min}" max="${EXAGGERATION.max}" step="${EXAGGERATION.step}" value="${EXAGGERATION.default}"> <output>${exaggerationLabel(EXAGGERATION.default)}</output></label>
+      <label class="peru-exag"><span>Exageración vertical</span> <input type="range" min="${EXAGGERATION.min}" max="${EXAGGERATION.max}" step="${EXAGGERATION.step}" value="${EXAGGERATION.default}"> <output>${exaggerationLabel(EXAGGERATION.default)}</output></label>
       <p class="peru-pick">Toca o haz clic en el mapa para elegir un punto; doble clic para acercarte.</p>
       <div class="peru-actions">
         <button type="button" class="peru-simulate" disabled>Simular aquí</button>
         <button type="button" class="peru-skip" disabled title="Preparando el simulador…">Ir al simulador</button>
         <button type="button" class="peru-vr" hidden>Entrar en VR</button>
       </div>
-      <p class="peru-lod" aria-hidden="true"></p>
+      <details class="peru-lod"><summary>Diagnóstico</summary><p></p></details>
       <p class="peru-attribution"></p>`;
 		this.status = this.overlay.querySelector(".peru-status")!;
 		this.pickInfo = this.overlay.querySelector(".peru-pick")!;
 		this.simulateBtn = this.overlay.querySelector(".peru-simulate")!;
 		this.attribution = this.overlay.querySelector(".peru-attribution")!;
-		this.lodInfo = this.overlay.querySelector(".peru-lod")!;
+		this.lodInfo = this.overlay.querySelector(".peru-lod p")!;
 		this.attribution.textContent = DEFAULT_ATTRIBUTION;
 		const slider = this.overlay.querySelector("input")!;
 		const out = this.overlay.querySelector("output")!;
+		syncRangeFill(slider);
 		slider.oninput = () => {
+			syncRangeFill(slider);
 			this.setExaggeration(Number(slider.value));
 			out.textContent = exaggerationLabel(Number(slider.value));
 		};
@@ -586,7 +589,7 @@ export class PeruOverview implements FlightHost {
 	private look() {
 		return {
 			exaggeration: this.exaggeration,
-			fogColor: FOG_COLOR,
+			fogColor: this.fogColor,
 			fogDensity: this.fogDensity,
 			hillshadeZ: HILLSHADE_Z,
 		};
