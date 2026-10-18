@@ -8,6 +8,7 @@ export default defineConfig({
 	outDir: "./dist-node",
 	clean: true,
 	alias: NODE_BUNDLE_ALIASES,
+	copy: "../../packages/db/src/migrations",
 	deps: {
 		alwaysBundle: [/.*/],
 		onlyBundle: false,

@@ -22,6 +22,7 @@ The URLs are baked in at build time. Empty or omitted build args use the site's 
   - `cloudflare:workers`: `env` is `process.env`. `HYPERDRIVE` is parsed from `DATABASE_URL`. The scraper's `SELF` binding calls back into the same process on `127.0.0.1:$PORT`.
   - `evlog/workers`: one JSON line per event on stdout.
   - `createDb`: closes the per-request MySQL connection when its request or cron run finishes. workerd does this on its own; Node does not.
+- The server bundle also copies `packages/db/src/migrations` into `dist-node/migrations`, and the server applies the pending ones before it listens. A failed migration stops the boot, so the deploy fails instead of serving the new code against the old schema. scraper and fleet-sync never migrate.
 - The image does not run varlock, so `.env.schema` defaults do not apply. Set every variable below. Only `DATABASE_URL` is checked at boot; any other missing variable fails the first request that needs it.
 
 ## Build and run
