@@ -75,7 +75,10 @@ describe("Babylon structure meshes", () => {
 		const material = deck.material;
 		model.outline(Color3.Blue());
 		expect(deck.material).toBe(material);
-		expect(material.albedoColor.equals(concreteColor)).toBe(true);
+		const displayedColor = material.albedoColor.toGammaSpace();
+		expect(displayedColor.r).toBeCloseTo(concreteColor.r);
+		expect(displayedColor.g).toBeCloseTo(concreteColor.g);
+		expect(displayedColor.b).toBeCloseTo(concreteColor.b);
 		expect(material.alpha).toBe(1);
 		for (const support of model.meshes.filter(
 			(mesh) => mesh.name === "bridge-abutment" || mesh.name === "bridge-pier",

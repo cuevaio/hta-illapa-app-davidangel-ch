@@ -8,8 +8,8 @@ import {
 } from "@babylonjs/core";
 import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
-	BabylonStructureSceneProps,
 	SceneInsets,
+	StructureSceneProps,
 } from "../../lib/structure-scene";
 import {
 	CAMERA_FAR_DISTANCE_RATIO,
@@ -195,7 +195,7 @@ export class SceneCamera {
 	}
 
 	update(
-		props: BabylonStructureSceneProps,
+		props: StructureSceneProps,
 		models: Map<string, StructureModel>,
 		presenting: boolean,
 	) {

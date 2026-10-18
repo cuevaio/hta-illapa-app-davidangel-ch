@@ -1,9 +1,0 @@
-export const TEST_ANCHOR_ELEVATION_M = 2500;
-export const TEST_METRES_PER_DEG = 100000;
-export const TEST_VIEWPORT_WIDTH_PX = 1456;
-export const TEST_VIEWPORT_HEIGHT_PX = 829;
-export const TEST_FOCUS_OCCUPANCY_MIN_RATIO = 0.42;
-export const TEST_FOCUS_OCCUPANCY_MAX_RATIO = 0.48;
-export const TEST_ROAD_LENGTH_M = 100;
-export const TEST_ROAD_GAP_START_M = 40;
-export const TEST_ROAD_GAP_END_M = 60;

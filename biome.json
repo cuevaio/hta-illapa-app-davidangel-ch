@@ -44,7 +44,13 @@
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -96,8 +102,12 @@
 			"includes": ["packages/ui/src/components/map.tsx"],
 			"linter": {
 				"rules": {
-					"suspicious": { "noShadowRestrictedNames": "off" },
-					"a11y": { "noSvgWithoutTitle": "off" }
+					"suspicious": {
+						"noShadowRestrictedNames": "off"
+					},
+					"a11y": {
+						"noSvgWithoutTitle": "off"
+					}
 				}
 			}
 		},
@@ -131,19 +141,9 @@
 						"noArrayIndexKey": "off",
 						"noDoubleEquals": "off"
 					},
-					"security": { "noDangerouslySetInnerHtml": "off" }
-				}
-			}
-		},
-		{
-			"includes": [
-				"packages/ui/src/components/structure-scene.tsx",
-				"packages/ui/src/components/structure-scene/**/*.tsx"
-			],
-			"linter": {
-				"rules": {
-					"a11y": { "noStaticElementInteractions": "off" },
-					"suspicious": { "noArrayIndexKey": "off" }
+					"security": {
+						"noDangerouslySetInnerHtml": "off"
+					}
 				}
 			}
 		}

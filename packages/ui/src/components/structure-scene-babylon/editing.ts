@@ -18,10 +18,10 @@ import {
 import { MAX_BYPASS_POINTS } from "@hack-the-andes-project/business/structures/constants";
 import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
-	BabylonStructureSceneProps,
 	SceneStructure,
 	StructureElement,
 	StructurePoint,
+	StructureSceneProps,
 } from "../../lib/structure-scene";
 import type { SceneCamera } from "./camera";
 import {
@@ -79,7 +79,7 @@ export interface EditingOptions {
 	parent: TransformNode;
 	camera: SceneCamera;
 	linkLabel(control: Control, mesh: Mesh): void;
-	getProps(): BabylonStructureSceneProps;
+	getProps(): StructureSceneProps;
 	onDraft(draft: SceneStructure | null): void;
 	onDragging(dragging: boolean): void;
 }

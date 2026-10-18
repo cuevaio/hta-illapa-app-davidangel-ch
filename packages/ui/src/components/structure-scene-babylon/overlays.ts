@@ -24,8 +24,8 @@ import {
 import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type { LocalPoint } from "@hack-the-andes-project/terrain/types";
 import type {
-	BabylonStructureSceneProps,
 	SceneStructure,
+	StructureSceneProps,
 } from "../../lib/structure-scene";
 import { modelFramePoints, type SceneCamera } from "./camera";
 import {
@@ -46,8 +46,10 @@ import {
 	LABEL_LIFT_M,
 	LANDMARK_CLEARANCE_PX,
 	LANDMARK_FADE_DISTANCE_M,
+	LANDMARK_LABEL_OFFSET_PX,
 	LANDMARK_LIFT_M,
 	LANDMARK_MAX_DISTANCE_M,
+	LANDMARK_OPACITY_RATIO,
 	MARKER_LIFT_M,
 	MAX_VISIBLE_INCIDENT_MARKERS_COUNT,
 } from "./constants";
@@ -62,7 +64,7 @@ interface LinkedLabel {
 
 export function structureMeasurements(
 	structure: SceneStructure,
-	props: BabylonStructureSceneProps,
+	props: StructureSceneProps,
 ): string {
 	const template = structure.template;
 	const length = formatStructureLength(
@@ -114,7 +116,7 @@ export class SceneLabels {
 	}
 
 	rebuild(
-		props: BabylonStructureSceneProps,
+		props: StructureSceneProps,
 		models: Map<string, StructureModel>,
 		palette: ScenePalette,
 	) {
@@ -165,7 +167,7 @@ export class SceneLabels {
 				landmark.name,
 				new Vector3(local.x, elevationM + LANDMARK_LIFT_M, local.z),
 				palette.css("--muted-foreground"),
-				"transparent",
+				palette.css("--card"),
 				"transparent",
 			);
 			label.landmark = true;
@@ -259,17 +261,23 @@ export class SceneLabels {
 						this.projection.y - this.selectedProjection.y,
 					) * engine.getHardwareScalingLevel()
 				: Number.POSITIVE_INFINITY;
-			label.control.isVisible =
-				distanceM < LANDMARK_MAX_DISTANCE_M &&
-				selectedClearancePx > LANDMARK_CLEARANCE_PX;
-			label.control.alpha = Math.max(
-				0,
-				Math.min(
-					1,
-					(LANDMARK_MAX_DISTANCE_M - distanceM) /
-						(LANDMARK_MAX_DISTANCE_M - LANDMARK_FADE_DISTANCE_M),
-				),
-			);
+			label.control.isVisible = distanceM < LANDMARK_MAX_DISTANCE_M;
+			const offsetPx =
+				selectedClearancePx < LANDMARK_CLEARANCE_PX
+					? LANDMARK_LABEL_OFFSET_PX
+					: 0;
+			if (label.control.linkOffsetYInPixels !== offsetPx)
+				label.control.linkOffsetYInPixels = offsetPx;
+			label.control.alpha =
+				LANDMARK_OPACITY_RATIO *
+				Math.max(
+					0,
+					Math.min(
+						1,
+						(LANDMARK_MAX_DISTANCE_M - distanceM) /
+							(LANDMARK_MAX_DISTANCE_M - LANDMARK_FADE_DISTANCE_M),
+					),
+				);
 		}
 	}
 

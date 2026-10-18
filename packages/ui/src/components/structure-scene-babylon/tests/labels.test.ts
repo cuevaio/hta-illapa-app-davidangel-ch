@@ -11,7 +11,15 @@ import {
 import { Rectangle, TextBlock } from "@babylonjs/gui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SceneCamera } from "../camera";
-import { HANDLE_CHIP_OFFSET_PX, LABEL_HEIGHT_PX } from "../constants";
+import {
+	HALF_RATIO,
+	HANDLE_CHIP_OFFSET_PX,
+	LABEL_HEIGHT_PX,
+	LANDMARK_FADE_DISTANCE_M,
+	LANDMARK_LABEL_OFFSET_PX,
+	LANDMARK_MAX_DISTANCE_M,
+	LANDMARK_OPACITY_RATIO,
+} from "../constants";
 import { SceneEditing } from "../editing";
 import { createStructureModel } from "../models";
 import { SceneLabels } from "../overlays";
@@ -229,6 +237,55 @@ describe("Babylon scene label layout", () => {
 		expect(control.notRenderable).toBe(false);
 		expect(control.isVisible).toBe(true);
 		expect(control.heightInPixels).toBeLessThanOrEqual(LABEL_HEIGHT_PX);
+		const anchor = control.linkedMesh;
+		if (!anchor) throw new Error("Missing landmark anchor");
+		camera.camera.position.copyFrom(anchor.position);
+		camera.camera.position.y +=
+			(LANDMARK_FADE_DISTANCE_M + LANDMARK_MAX_DISTANCE_M) * HALF_RATIO;
+		labels.tick(camera);
+		expect(control.alpha).toBeCloseTo(LANDMARK_OPACITY_RATIO * HALF_RATIO);
+		expect(control.isVisible).toBe(true);
+		camera.camera.position.y = anchor.position.y + LANDMARK_MAX_DISTANCE_M;
+		labels.tick(camera);
+		expect(control.alpha).toBe(0);
+		expect(control.isVisible).toBe(false);
+	});
+
+	it("keeps a nearby landmark visible beside the selected structure in an overview", () => {
+		const terrain = createTestTerrain(scene);
+		const props = createTestProps();
+		props.landmarks = [{ name: "Matucana", ...TEST_STRUCTURE.anchor }];
+		const parent = new TransformNode("world", scene);
+		const camera = new SceneCamera(scene, terrain);
+		const labels = new SceneLabels(scene, terrain, parent);
+		const palette = { color: () => Color3.White(), css: () => "white" };
+		const model = createStructureModel(
+			scene,
+			TEST_STRUCTURE,
+			terrain,
+			palette,
+			parent,
+		);
+		labels.rebuild(props, new Map([[TEST_STRUCTURE.id, model]]), palette);
+		scene.updateTransformMatrix(true);
+		labels.tick(camera);
+		labels.texture._checkUpdate(camera.camera);
+		labels.texture.markAsDirty();
+		labels.texture._checkUpdate(camera.camera);
+		const landmark = labels.texture.rootContainer.children.find(
+			(control) =>
+				control instanceof Rectangle &&
+				control.children.some(
+					(child) => child instanceof TextBlock && child.text === "Matucana",
+				),
+		);
+		if (!(landmark instanceof Rectangle)) throw new Error("Missing landmark");
+		expect(landmark.isVisible).toBe(true);
+		expect(landmark.notRenderable).toBe(false);
+		expect(landmark.alpha).toBeGreaterThan(0);
+		expect(landmark.linkOffsetYInPixels).toBe(LANDMARK_LABEL_OFFSET_PX);
+		labels.setVisible(false);
+		expect(labels.texture.rootContainer.isVisible).toBe(false);
 	});
 
 	it("re-links rebuilt labels to live anchors and keeps the fullscreen layer hidden throughout XR", () => {

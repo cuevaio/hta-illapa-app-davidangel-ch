@@ -113,9 +113,9 @@ export function createStructureModel(
 		let resource = materials.get(kind);
 		if (!resource) {
 			resource = new PBRMaterial(kind, scene);
-			resource.albedoColor = palette.color(
-				opacity < 1 ? "--primary" : MATERIAL_TOKEN_NAMES[kind],
-			);
+			resource.albedoColor = palette
+				.color(opacity < 1 ? "--primary" : MATERIAL_TOKEN_NAMES[kind])
+				.toLinearSpace();
 			resource.roughness = MATERIAL_ROUGHNESS_RATIO;
 			resource.metallic = kind === "steel" ? STEEL_METALNESS_RATIO : 0;
 			resource.alpha = opacity;

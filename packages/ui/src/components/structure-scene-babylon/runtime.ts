@@ -15,9 +15,9 @@ import { MAX_STRUCTURE_ELEMENTS } from "@hack-the-andes-project/business/structu
 import { terrainGradient } from "@hack-the-andes-project/business/structures/placement";
 import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
-	BabylonStructureSceneProps,
 	SceneCursor,
 	SceneStructure,
+	StructureSceneProps,
 	TerrainStatus,
 } from "../../lib/structure-scene";
 import { SceneCamera } from "./camera";
@@ -100,7 +100,7 @@ export class StructureSceneRuntime {
 	private gridZ = Number.NaN;
 	private terrainDirty = true;
 	private overlaysDirty = true;
-	private props: BabylonStructureSceneProps;
+	private props: StructureSceneProps;
 	private palette: ScenePalette;
 	private status: TerrainStatus = "loading";
 	private presenting = false;
@@ -110,7 +110,7 @@ export class StructureSceneRuntime {
 	constructor(
 		readonly scene: Scene,
 		readonly terrain: BabylonTerrain,
-		props: BabylonStructureSceneProps,
+		props: StructureSceneProps,
 		palette: ScenePalette,
 	) {
 		this.props = props;
@@ -406,7 +406,7 @@ export class StructureSceneRuntime {
 		);
 	}
 
-	update(props: BabylonStructureSceneProps, palette: ScenePalette) {
+	update(props: StructureSceneProps, palette: ScenePalette) {
 		const previous = this.props;
 		const firstUpdate = !this.initialized;
 		this.initialized = true;

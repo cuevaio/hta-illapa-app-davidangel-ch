@@ -7,7 +7,6 @@ import type {
 } from "@hack-the-andes-project/business/structures/catalog";
 import type { CorridorLandmark } from "@hack-the-andes-project/business/structures/landmarks";
 import type { GeoPoint } from "@hack-the-andes-project/terrain/types";
-import type { XRStore } from "@react-three/xr";
 import type { Incident } from "./incident";
 
 export interface StructurePoint {
@@ -160,7 +159,9 @@ export interface StructureSceneProps {
 	landmarks: CorridorLandmark[];
 	insets: SceneInsets;
 	locale: string;
-	xrStore: XRStore;
+	xrRequest: SceneXrRequest | null;
+	onXrSupportChange: (supported: boolean) => void;
+	onXrSessionChange: (active: boolean) => void;
 	labels: StructureSceneLabels;
 	onCreateStructure: (placed: PlacedStructure) => void;
 	onStructureChange: (structure: SceneStructure) => void;
@@ -174,11 +175,4 @@ export interface StructureSceneProps {
 
 export interface SceneXrRequest {
 	requestId: number;
-}
-
-export interface BabylonStructureSceneProps
-	extends Omit<StructureSceneProps, "xrStore"> {
-	xrRequest: SceneXrRequest | null;
-	onXrSupportChange: (supported: boolean) => void;
-	onXrSessionChange: (active: boolean) => void;
 }

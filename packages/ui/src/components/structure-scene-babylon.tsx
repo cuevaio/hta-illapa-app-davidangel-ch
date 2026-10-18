@@ -10,7 +10,7 @@ import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/typ
 import { useEffect, useRef, useState } from "react";
 import { useTokenColors } from "../hooks/use-token-colors";
 import { STRUCTURE_COLOR_TOKENS } from "../lib/structure-colors";
-import type { BabylonStructureSceneProps } from "../lib/structure-scene";
+import type { StructureSceneProps } from "../lib/structure-scene";
 import type { StructureXrController } from "../lib/structure-xr-babylon";
 import { cn } from "../lib/utils";
 import {
@@ -28,7 +28,7 @@ interface SceneResource {
 	xrRequestId: number | undefined;
 }
 
-export function BabylonStructureScene(props: BabylonStructureSceneProps) {
+export function BabylonStructureScene(props: StructureSceneProps) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const resourceRef = useRef<SceneResource | null>(null);
 	const latest = useRef(props);

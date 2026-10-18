@@ -1,8 +1,8 @@
 import { vi } from "vitest";
-import type { BabylonStructureSceneProps } from "../../../lib/structure-scene";
+import type { StructureSceneProps } from "../../../lib/structure-scene";
 import { TEST_STRUCTURE } from "./constants";
 
-export function createTestProps(): BabylonStructureSceneProps {
+export function createTestProps(): StructureSceneProps {
 	return {
 		origin: TEST_STRUCTURE.anchor,
 		structures: [TEST_STRUCTURE],
