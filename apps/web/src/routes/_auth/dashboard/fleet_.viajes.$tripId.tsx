@@ -425,6 +425,8 @@ function PlannedTripPage() {
 						labels={labels}
 						className="h-full"
 						isBusy={rescoreMutation.isPending}
+						vehicleAxleCount={trip.review.vehicleAxleCount}
+						vehicleName={trip.vehicleName}
 						lineWidthPx={ROUTE_REVIEW_MAP_LINE_WIDTH_PX}
 						selectedLineWidthPx={ROUTE_REVIEW_MAP_SELECTED_WIDTH_PX}
 						casingWidthPx={ROUTE_REVIEW_MAP_CASING_WIDTH_PX}

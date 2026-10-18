@@ -2,7 +2,10 @@ import { peakRiskAssessment } from "@hack-the-andes-project/business/route-revie
 import type { RouteRiskHorizon } from "@hack-the-andes-project/business/route-review/risk";
 import { cn } from "cn";
 import type { FeatureCollection, LineString } from "geojson";
+import { BoxIcon, MapIcon, Maximize2Icon, Minimize2Icon } from "lucide-react";
 import {
+	lazy,
+	Suspense,
 	useEffect,
 	useEffectEvent,
 	useId,
@@ -45,6 +48,8 @@ import { RouteReviewLegend } from "./route-review-legend";
 import { RouteReviewSignalTag } from "./route-review-signal-tag";
 import { Spinner } from "./spinner";
 
+const RouteReview3dMap = lazy(() => import("./route-review-3d-map"));
+
 interface RouteReviewMapPlace {
 	name: string;
 	lat: number;
@@ -61,6 +66,8 @@ interface RouteReviewMapProps {
 	className?: string;
 	labels: RouteReviewLabels;
 	isBusy?: boolean;
+	vehicleAxleCount?: number;
+	vehicleName?: string | null;
 	lineWidthPx: number;
 	selectedLineWidthPx: number;
 	casingWidthPx: number;
@@ -451,72 +458,138 @@ function RouteReviewMapCanvas({
 }
 export function RouteReviewMap(props: RouteReviewMapProps) {
 	const [legendOpen, setLegendOpen] = useState(false);
+	const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+	const [isFullscreen3d, setIsFullscreen3d] = useState(false);
+
 	return (
 		<section
 			aria-label={props.labels.mapLabel}
 			className={cn(
 				"relative min-h-60 overflow-hidden rounded-lg border",
 				props.className,
+				isFullscreen3d &&
+					viewMode === "3d" &&
+					"fixed inset-0 z-50 rounded-none",
 			)}
 		>
-			<RouteReviewMapCanvas {...props} />
-			{props.isBusy ? (
-				<div
-					role="status"
-					className="absolute top-3 left-3 flex items-center gap-2 rounded-md border bg-card p-2 text-sm"
-				>
-					<Spinner />
-					{props.labels.calculating}
-				</div>
-			) : null}
-			<div className="absolute inset-x-3 bottom-3 hidden xl:block">
-				<RouteReviewLegend
-					horizonLabel={props.labels.horizon(props.horizon)}
-					labels={props.labels}
-				/>
-			</div>
-			<div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 xl:hidden">
-				<div className="flex flex-col gap-2">
-					{legendOpen ? (
-						<RouteReviewLegend
-							horizonLabel={props.labels.horizon(props.horizon)}
-							labels={props.labels}
-						/>
-					) : null}
+			<div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5">
+				<div className="inline-flex items-center rounded-md border bg-card p-1">
 					<Button
-						variant="outline"
-						className="min-h-11 w-fit"
-						aria-expanded={legendOpen}
-						onClick={() => setLegendOpen(!legendOpen)}
+						variant={viewMode === "2d" ? "default" : "ghost"}
+						size="sm"
+						onClick={() => {
+							setViewMode("2d");
+							setIsFullscreen3d(false);
+						}}
 					>
-						{props.labels.legend}
+						<MapIcon data-icon="inline-start" />
+						Mapa 2D
+					</Button>
+					<Button
+						variant={viewMode === "3d" ? "default" : "ghost"}
+						size="sm"
+						onClick={() => setViewMode("3d")}
+					>
+						<BoxIcon data-icon="inline-start" />
+						Ver en 3D
 					</Button>
 				</div>
-				<Drawer>
-					<DrawerTrigger
-						render={<Button variant="outline" className="min-h-11" />}
+				{viewMode === "3d" ? (
+					<Button
+						variant="outline"
+						size="sm"
+						className="bg-card"
+						onClick={() => setIsFullscreen3d(!isFullscreen3d)}
 					>
-						{props.labels.expand}
-					</DrawerTrigger>
-					<DrawerContent className="h-dvh! max-h-dvh! rounded-none!">
-						<DrawerHeader>
-							<DrawerTitle>{props.labels.mapLabel}</DrawerTitle>
-							<DrawerClose
-								render={<Button variant="outline" className="min-h-11" />}
-							>
-								{props.labels.close}
-							</DrawerClose>
-						</DrawerHeader>
-						<div className="relative min-h-0 flex-1">
-							<RouteReviewMapCanvas {...props} />
+						{isFullscreen3d ? (
+							<Minimize2Icon data-icon="inline-start" />
+						) : (
+							<Maximize2Icon data-icon="inline-start" />
+						)}
+						{isFullscreen3d
+							? "Salir de pantalla completa"
+							: "Pantalla completa"}
+					</Button>
+				) : null}
+			</div>
+
+			{viewMode === "3d" ? (
+				<Suspense
+					fallback={
+						<div className="flex size-full items-center justify-center gap-2 bg-card text-sm">
+							<Spinner />
+							Cargando maqueta 3D…
 						</div>
+					}
+				>
+					<RouteReview3dMap
+						vehicleAxleCount={props.vehicleAxleCount}
+						vehicleName={props.vehicleName}
+						selectedCandidateId={props.selectedCandidateId}
+					/>
+				</Suspense>
+			) : (
+				<>
+					<RouteReviewMapCanvas {...props} />
+					{props.isBusy ? (
+						<div
+							role="status"
+							className="absolute top-14 left-3 flex items-center gap-2 rounded-md border bg-card p-2 text-sm"
+						>
+							<Spinner />
+							{props.labels.calculating}
+						</div>
+					) : null}
+					<div className="absolute inset-x-3 bottom-3 hidden xl:block">
 						<RouteReviewLegend
 							horizonLabel={props.labels.horizon(props.horizon)}
 							labels={props.labels}
 						/>
-					</DrawerContent>
-				</Drawer>
-			</div>
+					</div>
+					<div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 xl:hidden">
+						<div className="flex flex-col gap-2">
+							{legendOpen ? (
+								<RouteReviewLegend
+									horizonLabel={props.labels.horizon(props.horizon)}
+									labels={props.labels}
+								/>
+							) : null}
+							<Button
+								variant="outline"
+								className="min-h-11 w-fit"
+								aria-expanded={legendOpen}
+								onClick={() => setLegendOpen(!legendOpen)}
+							>
+								{props.labels.legend}
+							</Button>
+						</div>
+						<Drawer>
+							<DrawerTrigger
+								render={<Button variant="outline" className="min-h-11" />}
+							>
+								{props.labels.expand}
+							</DrawerTrigger>
+							<DrawerContent className="h-dvh! max-h-dvh! rounded-none!">
+								<DrawerHeader>
+									<DrawerTitle>{props.labels.mapLabel}</DrawerTitle>
+									<DrawerClose
+										render={<Button variant="outline" className="min-h-11" />}
+									>
+										{props.labels.close}
+									</DrawerClose>
+								</DrawerHeader>
+								<div className="relative min-h-0 flex-1">
+									<RouteReviewMapCanvas {...props} />
+								</div>
+								<RouteReviewLegend
+									horizonLabel={props.labels.horizon(props.horizon)}
+									labels={props.labels}
+								/>
+							</DrawerContent>
+						</Drawer>
+					</div>
+				</>
+			)}
 		</section>
 	);
 }

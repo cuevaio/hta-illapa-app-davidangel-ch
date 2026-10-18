@@ -6,6 +6,7 @@
 	"exports": {
 		"./globals.css": "./src/styles/globals.css",
 		"./lib/highlighter": "./src/lib/highlighter.tsx",
+		"./lib/route-review-3d/*": "./src/lib/route-review-3d/*.ts",
 		"./lib/*": "./src/lib/*.ts",
 		"./components/*": "./src/components/*.tsx",
 		"./hooks/*": "./src/hooks/*.ts",

@@ -1,0 +1,25 @@
+{
+	"name": "illapa-quest",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc --noEmit && vite build",
+		"preview": "vite preview",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@fontsource-variable/archivo": "^5.3.0",
+		"@fontsource-variable/jetbrains-mono": "^5.3.0",
+		"@hack-the-andes-project/ui": "workspace:*",
+		"three": "^0.180.0"
+	},
+	"devDependencies": {
+		"@hack-the-andes-project/config": "workspace:*",
+		"@types/three": "^0.180.0",
+		"@vitejs/plugin-basic-ssl": "^1.2.0",
+		"typescript": "^6.0.3",
+		"vite": "^6.2.0"
+	}
+}
