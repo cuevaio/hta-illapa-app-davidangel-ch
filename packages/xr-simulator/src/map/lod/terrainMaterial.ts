@@ -1,4 +1,14 @@
-import { Color3, ShaderLanguage, ShaderMaterial, ShaderStore, Vector2, Vector3, Vector4, type BaseTexture, type Scene } from '@babylonjs/core';
+import {
+	type BaseTexture,
+	type Color3,
+	type Scene,
+	ShaderLanguage,
+	ShaderMaterial,
+	ShaderStore,
+	Vector2,
+	Vector3,
+	Vector4,
+} from "@babylonjs/core";
 
 /**
  * Streamed-tile material: heights from a per-tile R16F texture displaced in the vertex
@@ -25,24 +35,64 @@ import { Color3, ShaderLanguage, ShaderMaterial, ShaderStore, Vector2, Vector3, 
  * uWxOn = 0 leaves the colour exactly as without it; without the define nothing changes at all.
  */
 
-const NAME = 'peruTile';
+const NAME = "peruTile";
 
 const UNIFORMS = [
-  'world', 'uHole', 'viewProjection', 'cameraPosition', 'uOrigin', 'uSize', 'uSegments', 'uMorph', 'uHeightTexel', 'uHeightOffset', 'uExaggeration',
-  'uSkirtDepth', 'uParentUv', 'uParentFade', 'uParentTexel', 'uParentOffset', 'uParentSize', 'uFogColor', 'uFogDensity', 'uHillshadeZ',
-  'uHeightUv', 'uHeightSize', 'uImageryOn', 'uImageryUv', 'uParentImageryOn', 'uParentImageryUv', 'uImageryRelief',
+	"world",
+	"uHole",
+	"viewProjection",
+	"cameraPosition",
+	"uOrigin",
+	"uSize",
+	"uSegments",
+	"uMorph",
+	"uHeightTexel",
+	"uHeightOffset",
+	"uExaggeration",
+	"uSkirtDepth",
+	"uParentUv",
+	"uParentFade",
+	"uParentTexel",
+	"uParentOffset",
+	"uParentSize",
+	"uFogColor",
+	"uFogDensity",
+	"uHillshadeZ",
+	"uHeightUv",
+	"uHeightSize",
+	"uImageryOn",
+	"uImageryUv",
+	"uParentImageryOn",
+	"uParentImageryUv",
+	"uImageryRelief",
 ];
-const SAMPLERS = ['uHeight', 'uParentHeight', 'uImagery', 'uParentImagery'];
-const WEATHER_UNIFORMS = ['uTileWorld', 'uWxOn', 'uWxBounds', 'uWxMix', 'uWxOverlayRect', 'uWxCloudRect'];
-const WEATHER_SAMPLERS = ['uWx', 'uWxPrev', 'uWxCape', 'uWxOverlay', 'uWxClouds'];
+const SAMPLERS = ["uHeight", "uParentHeight", "uImagery", "uParentImagery"];
+const WEATHER_UNIFORMS = [
+	"uTileWorld",
+	"uWxOn",
+	"uWxBounds",
+	"uWxMix",
+	"uWxOverlayRect",
+	"uWxCloudRect",
+];
+const WEATHER_SAMPLERS = [
+	"uWx",
+	"uWxPrev",
+	"uWxCape",
+	"uWxOverlay",
+	"uWxClouds",
+];
 
 /** Shader options of a tile material: CONTEXT (map context) and WEATHER (S8) variants. */
-export function tileMaterialOptions(context: boolean, weather: boolean): { uniforms: string[]; samplers: string[]; defines: string[] } {
-  return {
-    uniforms: weather ? [...UNIFORMS, ...WEATHER_UNIFORMS] : [...UNIFORMS],
-    samplers: weather ? [...SAMPLERS, ...WEATHER_SAMPLERS] : [...SAMPLERS],
-    defines: [...(context ? ['CONTEXT'] : []), ...(weather ? ['WEATHER'] : [])],
-  };
+export function tileMaterialOptions(
+	context: boolean,
+	weather: boolean,
+): { uniforms: string[]; samplers: string[]; defines: string[] } {
+	return {
+		uniforms: weather ? [...UNIFORMS, ...WEATHER_UNIFORMS] : [...UNIFORMS],
+		samplers: weather ? [...SAMPLERS, ...WEATHER_SAMPLERS] : [...SAMPLERS],
+		defines: [...(context ? ["CONTEXT"] : []), ...(weather ? ["WEATHER"] : [])],
+	};
 }
 
 const HYPSO_GLSL = `
@@ -435,69 +485,87 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
 let registered = false;
 function register(): void {
-  if (registered) return;
-  registered = true;
-  ShaderStore.ShadersStore[`${NAME}VertexShader`] = VERTEX_GLSL;
-  ShaderStore.ShadersStore[`${NAME}FragmentShader`] = FRAGMENT_GLSL;
-  ShaderStore.ShadersStoreWGSL[`${NAME}VertexShader`] = VERTEX_WGSL;
-  ShaderStore.ShadersStoreWGSL[`${NAME}FragmentShader`] = FRAGMENT_WGSL;
+	if (registered) return;
+	registered = true;
+	ShaderStore.ShadersStore[`${NAME}VertexShader`] = VERTEX_GLSL;
+	ShaderStore.ShadersStore[`${NAME}FragmentShader`] = FRAGMENT_GLSL;
+	ShaderStore.ShadersStoreWGSL[`${NAME}VertexShader`] = VERTEX_WGSL;
+	ShaderStore.ShadersStoreWGSL[`${NAME}FragmentShader`] = FRAGMENT_WGSL;
 }
 
 export interface TerrainLook {
-  exaggeration: number;
-  fogColor: Color3;
-  fogDensity: number;
-  hillshadeZ: number;
+	exaggeration: number;
+	fogColor: Color3;
+	fogDensity: number;
+	hillshadeZ: number;
 }
 
 /** Hillshade strength over satellite imagery (0 = imagery only, 1 = full relief lighting): subtle. */
 export const IMAGERY_RELIEF = 0.5;
 
 /** No hole: min > max never contains a point. */
-export const NO_HOLE: readonly [number, number, number, number] = [1, 1, -1, -1];
+export const NO_HOLE: readonly [number, number, number, number] = [
+	1, 1, -1, -1,
+];
 
 /**
  * One material per drawn tile (pooled): per-tile uniforms cannot be shared on WebGPU.
  * `context`: CONTEXT variant (world matrix + hole), `weather`: WEATHER variant, see the header
  * (its textures and uniforms are bound by the renderer).
  */
-export function createTileMaterial(scene: Scene, id: number, segments: number, look: TerrainLook, dummy: BaseTexture, dummyImagery: BaseTexture, context = false, weather = false): ShaderMaterial {
-  register();
-  const opts = tileMaterialOptions(context, weather);
-  const m = new ShaderMaterial(`peru-tile-${id}`, scene, { vertex: NAME, fragment: NAME }, {
-    attributes: ['position'],
-    uniforms: opts.uniforms,
-    samplers: opts.samplers,
-    defines: opts.defines,
-    shaderLanguage: scene.getEngine().isWebGPU ? ShaderLanguage.WGSL : ShaderLanguage.GLSL,
-  });
-  m.setVector4('uHole', new Vector4(...NO_HOLE));
-  m.backFaceCulling = false;
-  m.setFloat('uSegments', segments);
-  m.setFloat('uMorph', 1);
-  m.setVector3('uParentUv', new Vector3(0, 0, 1));
-  m.setFloat('uParentFade', 0);
-  m.setVector2('uParentTexel', new Vector2(0.5, 0.5));
-  m.setFloat('uParentOffset', 0);
-  m.setFloat('uParentSize', 1);
-  m.setTexture('uHeight', dummy);
-  m.setTexture('uParentHeight', dummy);
-  m.setVector3('uHeightUv', new Vector3(0, 0, 1));
-  m.setFloat('uHeightSize', 1);
-  m.setTexture('uImagery', dummyImagery);
-  m.setTexture('uParentImagery', dummyImagery);
-  m.setFloat('uImageryOn', 0);
-  m.setFloat('uParentImageryOn', 0);
-  m.setVector3('uImageryUv', new Vector3(0, 0, 1));
-  m.setVector3('uParentImageryUv', new Vector3(0, 0, 1));
-  m.setFloat('uImageryRelief', IMAGERY_RELIEF);
-  applyLook(m, look);
-  return m;
+export function createTileMaterial(
+	scene: Scene,
+	id: number,
+	segments: number,
+	look: TerrainLook,
+	dummy: BaseTexture,
+	dummyImagery: BaseTexture,
+	context = false,
+	weather = false,
+): ShaderMaterial {
+	register();
+	const opts = tileMaterialOptions(context, weather);
+	const m = new ShaderMaterial(
+		`peru-tile-${id}`,
+		scene,
+		{ vertex: NAME, fragment: NAME },
+		{
+			attributes: ["position"],
+			uniforms: opts.uniforms,
+			samplers: opts.samplers,
+			defines: opts.defines,
+			shaderLanguage: scene.getEngine().isWebGPU
+				? ShaderLanguage.WGSL
+				: ShaderLanguage.GLSL,
+		},
+	);
+	m.setVector4("uHole", new Vector4(...NO_HOLE));
+	m.backFaceCulling = false;
+	m.setFloat("uSegments", segments);
+	m.setFloat("uMorph", 1);
+	m.setVector3("uParentUv", new Vector3(0, 0, 1));
+	m.setFloat("uParentFade", 0);
+	m.setVector2("uParentTexel", new Vector2(0.5, 0.5));
+	m.setFloat("uParentOffset", 0);
+	m.setFloat("uParentSize", 1);
+	m.setTexture("uHeight", dummy);
+	m.setTexture("uParentHeight", dummy);
+	m.setVector3("uHeightUv", new Vector3(0, 0, 1));
+	m.setFloat("uHeightSize", 1);
+	m.setTexture("uImagery", dummyImagery);
+	m.setTexture("uParentImagery", dummyImagery);
+	m.setFloat("uImageryOn", 0);
+	m.setFloat("uParentImageryOn", 0);
+	m.setVector3("uImageryUv", new Vector3(0, 0, 1));
+	m.setVector3("uParentImageryUv", new Vector3(0, 0, 1));
+	m.setFloat("uImageryRelief", IMAGERY_RELIEF);
+	applyLook(m, look);
+	return m;
 }
 
 export function applyLook(m: ShaderMaterial, look: TerrainLook): void {
-  m.setFloat('uExaggeration', look.exaggeration);
-  m.setColor3('uFogColor', look.fogColor);
-  m.setFloat('uFogDensity', look.fogDensity);
-  m.setFloat('uHillshadeZ', look.hillshadeZ);
+	m.setFloat("uExaggeration", look.exaggeration);
+	m.setColor3("uFogColor", look.fogColor);
+	m.setFloat("uFogDensity", look.fogDensity);
+	m.setFloat("uHillshadeZ", look.hillshadeZ);
 }

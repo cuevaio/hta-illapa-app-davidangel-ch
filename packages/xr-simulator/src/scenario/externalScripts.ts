@@ -1,14 +1,18 @@
-import { dischargeAt, DT_MAX } from '../solver/params';
-import type { HydrographPoint, MaterialParams } from '../solver/Solver';
+import { DT_MAX, dischargeAt } from "../solver/params";
+import type { HydrographPoint, MaterialParams } from "../solver/Solver";
 
 /** Validation case as the external solvers need it (terrain-local metres; y = simulator z). */
 export interface ExternalCase {
-  n: number;
-  cellSize: number;
-  material: MaterialParams;
-  emitter: { position: [number, number]; radius: number; hydrograph: HydrographPoint[] };
-  duration: number;
-  threshold: number;
+	n: number;
+	cellSize: number;
+	material: MaterialParams;
+	emitter: {
+		position: [number, number];
+		radius: number;
+		hydrograph: HydrographPoint[];
+	};
+	duration: number;
+	threshold: number;
 }
 
 const num = (v: number) => String(Math.round(v * 1000) / 1000);
@@ -17,22 +21,26 @@ const num = (v: number) => String(Math.round(v * 1000) / 1000);
  * r.avaflow hydrograph file: header + T (s), Q1 (m³/s), V1 (m/s). r.avaflow reads it as a step
  * function, so each row holds the mean discharge of its interval (midpoint of the linear ramp).
  */
-export function ravaflowHydrograph(points: HydrographPoint[], dt: number, velocity = 1): string {
-  const end = points[points.length - 1].t;
-  const rows = ['T\tQ1\tV1'];
-  for (let t = 0; t < end - 1e-9; t += dt) {
-    const q = dischargeAt(points, Math.min(t + dt / 2, end - 1e-9));
-    rows.push(`${num(t)}\t${num(q)}\t${velocity}`);
-  }
-  rows.push(`${num(end)}\t0\t0`);
-  return rows.join('\n') + '\n';
+export function ravaflowHydrograph(
+	points: HydrographPoint[],
+	dt: number,
+	velocity = 1,
+): string {
+	const end = points[points.length - 1].t;
+	const rows = ["T\tQ1\tV1"];
+	for (let t = 0; t < end - 1e-9; t += dt) {
+		const q = dischargeAt(points, Math.min(t + dt / 2, end - 1e-9));
+		rows.push(`${num(t)}\t${num(q)}\t${velocity}`);
+	}
+	rows.push(`${num(end)}\t0\t0`);
+	return rows.join("\n") + "\n";
 }
 
 /** GRASS session script for r.avaflow 4.0G (Linux). Unverified parts are marked in the comments. */
 export function ravaflowScript(c: ExternalCase): string {
-  const delta = (Math.atan(c.material.mu) * 180) / Math.PI;
-  const [x, y] = c.emitter.position;
-  return `#!/usr/bin/env bash
+	const delta = (Math.atan(c.material.mu) * 180) / Math.PI;
+	const [x, y] = c.emitter.position;
+	return `#!/usr/bin/env bash
 # Runs this case in r.avaflow 4.0G inside a GRASS session (Linux; on macOS use a Linux VM or Docker):
 #   grass -e -c dem.asc ~/grassdata/huaico_case
 #   grass ~/grassdata/huaico_case/PERMANENT --exec bash run.sh
@@ -57,11 +65,11 @@ r.out.gdal --overwrite input=cmp_treach output=external/arrival.asc format=AAIGr
 
 /** Basilisk (saint-venant.h) program with the same inflow disk, Voellmy friction and outputs. */
 export function basiliskSource(c: ExternalCase): string {
-  const [x, y] = c.emitter.position;
-  const h = c.emitter.hydrograph;
-  const ts = h.map((p) => num(p.t)).join(', ');
-  const qs = h.map((p) => num(p.q)).join(', ');
-  return `// Same case in Basilisk: qcc -O2 -Wall voellmy.c -o voellmy -lm && ./voellmy  (run from this folder)
+	const [x, y] = c.emitter.position;
+	const h = c.emitter.hydrograph;
+	const ts = h.map((p) => num(p.t)).join(", ");
+	const qs = h.map((p) => num(p.q)).join(", ");
+	return `// Same case in Basilisk: qcc -O2 -Wall voellmy.c -o voellmy -lm && ./voellmy  (run from this folder)
 // Writes ../external/hmax.asc and ../external/arrival.asc. Edges are reflective by default (symmetry).
 #include "grid/multigrid.h"
 #include "saint-venant.h"

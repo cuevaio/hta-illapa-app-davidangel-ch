@@ -8,87 +8,106 @@
 type Schema = Record<string, unknown>;
 
 export interface SchemaFiles {
-  capas: Schema;
-  tileMetadata: Schema;
-  openapi: Schema;
+	capas: Schema;
+	tileMetadata: Schema;
+	openapi: Schema;
 }
 
-export const SCHEMA_DIR = '../tiles-schema';
+export const SCHEMA_DIR = "../tiles-schema";
 export const TYPES_FILE = `${SCHEMA_DIR}/types.ts`;
 /** Response models of openapi.json used besides the two standalone schemas. */
-const OPENAPI_MODELS = ['Salud', 'Error'];
+const OPENAPI_MODELS = ["Salud", "Error"];
 
-const ident = (name: string) => (/^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name));
+const ident = (name: string) =>
+	/^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name);
 
 function refName(ref: string): string {
-  const m = /^#\/(?:\$defs|components\/schemas)\/(.+)$/.exec(ref);
-  if (!m) throw new Error(`Unsupported $ref: ${ref}`);
-  return m[1];
+	const m = /^#\/(?:\$defs|components\/schemas)\/(.+)$/.exec(ref);
+	if (!m) throw new Error(`Unsupported $ref: ${ref}`);
+	return m[1];
 }
 
 function doc(s: Schema, indent: string): string {
-  const d = typeof s.description === 'string' ? s.description : null;
-  return d ? `${indent}/** ${d.replace(/\*\//g, '*\\/')} */\n` : '';
+	const d = typeof s.description === "string" ? s.description : null;
+	return d ? `${indent}/** ${d.replace(/\*\//g, "*\\/")} */\n` : "";
 }
 
 function typeOf(s: Schema, indent: string): string {
-  if (typeof s.$ref === 'string') return refName(s.$ref);
-  if (Array.isArray(s.anyOf)) return (s.anyOf as Schema[]).map((a) => typeOf(a, indent)).join(' | ');
-  if (Array.isArray(s.enum)) return (s.enum as unknown[]).map((v) => JSON.stringify(v)).join(' | ');
-  switch (s.type) {
-    case 'string':
-      return 'string';
-    case 'number':
-    case 'integer':
-      return 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'null':
-      return 'null';
-    case 'array': {
-      const item = typeOf((s.items as Schema | undefined) ?? {}, indent);
-      return /[ |]/.test(item) ? `(${item})[]` : `${item}[]`;
-    }
-    case 'object':
-      return objectBody(s, indent);
-    case undefined:
-      return 'unknown';
-    default:
-      throw new Error(`Unsupported schema type: ${String(s.type)}`);
-  }
+	if (typeof s.$ref === "string") return refName(s.$ref);
+	if (Array.isArray(s.anyOf))
+		return (s.anyOf as Schema[]).map((a) => typeOf(a, indent)).join(" | ");
+	if (Array.isArray(s.enum))
+		return (s.enum as unknown[]).map((v) => JSON.stringify(v)).join(" | ");
+	switch (s.type) {
+		case "string":
+			return "string";
+		case "number":
+		case "integer":
+			return "number";
+		case "boolean":
+			return "boolean";
+		case "null":
+			return "null";
+		case "array": {
+			const item = typeOf((s.items as Schema | undefined) ?? {}, indent);
+			return /[ |]/.test(item) ? `(${item})[]` : `${item}[]`;
+		}
+		case "object":
+			return objectBody(s, indent);
+		case undefined:
+			return "unknown";
+		default:
+			throw new Error(`Unsupported schema type: ${String(s.type)}`);
+	}
 }
 
 function objectBody(s: Schema, indent: string): string {
-  const props = (s.properties ?? {}) as Record<string, Schema>;
-  const required = new Set((s.required ?? []) as string[]);
-  const inner = `${indent}  `;
-  const lines = Object.entries(props).map(([k, p]) => `${doc(p, inner)}${inner}${ident(k)}${required.has(k) ? '' : '?'}: ${typeOf(p, inner)};\n`);
-  if (s.additionalProperties === true || (!lines.length && s.additionalProperties !== false)) lines.push(`${inner}[key: string]: unknown;\n`);
-  return lines.length ? `{\n${lines.join('')}${indent}}` : '{}';
+	const props = (s.properties ?? {}) as Record<string, Schema>;
+	const required = new Set((s.required ?? []) as string[]);
+	const inner = `${indent}  `;
+	const lines = Object.entries(props).map(
+		([k, p]) =>
+			`${doc(p, inner)}${inner}${ident(k)}${required.has(k) ? "" : "?"}: ${typeOf(p, inner)};\n`,
+	);
+	if (
+		s.additionalProperties === true ||
+		(!lines.length && s.additionalProperties !== false)
+	)
+		lines.push(`${inner}[key: string]: unknown;\n`);
+	return lines.length ? `{\n${lines.join("")}${indent}}` : "{}";
 }
 
 function declaration(name: string, s: Schema): string {
-  return `${doc(s, '')}export interface ${name} ${objectBody(s, '')}\n`;
+	return `${doc(s, "")}export interface ${name} ${objectBody(s, "")}\n`;
 }
 
 /** The whole types.ts text, deterministic (sorted by name). */
 export function generateTypes(files: SchemaFiles): string {
-  const decls = new Map<string, string>();
-  const add = (name: string, s: Schema) => {
-    const d = declaration(name, s);
-    const prev = decls.get(name);
-    if (prev !== undefined && prev !== d) throw new Error(`Conflicting definitions of ${name} across the schema files`);
-    decls.set(name, d);
-  };
-  for (const [n, s] of Object.entries((files.capas.$defs ?? {}) as Record<string, Schema>)) add(n, s);
-  add(String(files.capas.title ?? 'Capas'), files.capas);
-  add(String(files.tileMetadata.title ?? 'TileMetadata'), files.tileMetadata);
-  const components = ((files.openapi.components as Schema | undefined)?.schemas ?? {}) as Record<string, Schema>;
-  for (const n of OPENAPI_MODELS) {
-    if (!components[n]) throw new Error(`openapi.json has no ${n} schema`);
-    add(n, components[n]);
-  }
-  const body = [...decls.keys()].sort().map((n) => decls.get(n)).join('\n');
-  return `// Generated by tools/gen-tiles-types.ts from ${SCHEMA_DIR}/*.json — do not edit (pnpm --filter @hack-the-andes-project/xr-simulator schema:types).\n\n${body}`;
+	const decls = new Map<string, string>();
+	const add = (name: string, s: Schema) => {
+		const d = declaration(name, s);
+		const prev = decls.get(name);
+		if (prev !== undefined && prev !== d)
+			throw new Error(
+				`Conflicting definitions of ${name} across the schema files`,
+			);
+		decls.set(name, d);
+	};
+	for (const [n, s] of Object.entries(
+		(files.capas.$defs ?? {}) as Record<string, Schema>,
+	))
+		add(n, s);
+	add(String(files.capas.title ?? "Capas"), files.capas);
+	add(String(files.tileMetadata.title ?? "TileMetadata"), files.tileMetadata);
+	const components = ((files.openapi.components as Schema | undefined)
+		?.schemas ?? {}) as Record<string, Schema>;
+	for (const n of OPENAPI_MODELS) {
+		if (!components[n]) throw new Error(`openapi.json has no ${n} schema`);
+		add(n, components[n]);
+	}
+	const body = [...decls.keys()]
+		.sort()
+		.map((n) => decls.get(n))
+		.join("\n");
+	return `// Generated by tools/gen-tiles-types.ts from ${SCHEMA_DIR}/*.json — do not edit (pnpm --filter @hack-the-andes-project/xr-simulator schema:types).\n\n${body}`;
 }
-

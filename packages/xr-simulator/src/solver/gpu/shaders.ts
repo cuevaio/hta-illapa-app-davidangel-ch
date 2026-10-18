@@ -1,4 +1,4 @@
-import { MAX_EMITTERS } from '../params';
+import { MAX_EMITTERS } from "../params";
 
 /**
  * WGSL kernels of the GPU solver. The numerics mirror src/solver/numerics.ts
@@ -16,19 +16,44 @@ export const WORKGROUP = 16;
 
 /** Float offsets inside the params uniform (see `Params` below). */
 export const PARAMS_LAYOUT = {
-  n: 0, dx: 1, g: 2, cfl: 3,
-  dtMax: 4, hDry: 5, model: 6, mu: 7,
-  xi: 8, yieldOverRho: 9, consistencyOverRho: 10, flowIndex: 11,
-  advance: 12, colorMode: 13, depthScale: 14, speedScale: 15,
-  hVisible: 16, dryOffset: 17,
-  floats: 20,
+	n: 0,
+	dx: 1,
+	g: 2,
+	cfl: 3,
+	dtMax: 4,
+	hDry: 5,
+	model: 6,
+	mu: 7,
+	xi: 8,
+	yieldOverRho: 9,
+	consistencyOverRho: 10,
+	flowIndex: 11,
+	advance: 12,
+	colorMode: 13,
+	depthScale: 14,
+	speedScale: 15,
+	hVisible: 16,
+	dryOffset: 17,
+	floats: 20,
 } as const;
 
 /** Floats per origin in the emitters uniform (see `Emitter` below), after a 4-float header. */
 export const EMITTER_FLOATS = 40;
 export const EMITTERS_HEADER_FLOATS = 4;
 /** Byte offsets inside the ctrl storage buffer. */
-export const CTRL_LAYOUT = { speedBits: 0, steps: 8, t: 16, dt: 20, tgt: 24, injected: 28, q: 36, editRemoved: 40, cells: 48, qs: 80, bytes: 112 } as const;
+export const CTRL_LAYOUT = {
+	speedBits: 0,
+	steps: 8,
+	t: 16,
+	dt: 20,
+	tgt: 24,
+	injected: 28,
+	q: 36,
+	editRemoved: 40,
+	cells: 48,
+	qs: 80,
+	bytes: 112,
+} as const;
 /** Fluid removed by edits is tallied as an integer number of litres (atomics are integer-only). */
 export const EDIT_REMOVED_UNIT = 1e-3;
 
@@ -71,14 +96,18 @@ fn inEmitter(e: u32, i: u32, j: u32) -> bool {
 }
 `;
 
-export const BEGIN_FRAME_WGSL = COMMON + /* wgsl */ `
+export const BEGIN_FRAME_WGSL =
+	COMMON +
+	/* wgsl */ `
 @compute @workgroup_size(1)
 fn main() {
   ctrl.tgt = ctrl.t + params.advance;
 }
 `;
 
-export const COMPUTE_DT_WGSL = COMMON + /* wgsl */ `
+export const COMPUTE_DT_WGSL =
+	COMMON +
+	/* wgsl */ `
 fn hpt(e: u32, k: u32) -> vec2<f32> {
   let v = emitters.e[e].pts[k / 2u];
   if ((k & 1u) == 0u) { return v.xy; }
@@ -129,14 +158,18 @@ fn main() {
 
 // Clearing on the GPU keeps it ordered with the count dispatch. A queue.writeBuffer
 // would run before every dispatch of the frame, so two recounts in one frame would add up.
-export const CLEAR_EMITTER_WGSL = COMMON + /* wgsl */ `
+export const CLEAR_EMITTER_WGSL =
+	COMMON +
+	/* wgsl */ `
 @compute @workgroup_size(1)
 fn main() {
   for (var e = 0u; e < ${MAX_EMITTERS}u; e++) { atomicStore(&ctrl.cells[e], 0u); }
 }
 `;
 
-export const COUNT_EMITTER_WGSL = COMMON + /* wgsl */ `
+export const COUNT_EMITTER_WGSL =
+	COMMON +
+	/* wgsl */ `
 @compute @workgroup_size(${WORKGROUP}, ${WORKGROUP})
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (gid.x >= params.n || gid.y >= params.n) { return; }
@@ -146,7 +179,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 `;
 
-export const UPDATE_WGSL = COMMON + /* wgsl */ `
+export const UPDATE_WGSL =
+	COMMON +
+	/* wgsl */ `
 @group(0) @binding(3) var<storage, read> terrain: array<f32>;
 @group(0) @binding(4) var<storage, read> stateIn: array<vec4<f32>>;
 @group(0) @binding(5) var<storage, read_write> stateOut: array<vec4<f32>>;
@@ -293,7 +328,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
 }
 `;
 
-export const STATS_WGSL = COMMON + /* wgsl */ `
+export const STATS_WGSL =
+	COMMON +
+	/* wgsl */ `
 @group(0) @binding(3) var<storage, read> state: array<vec4<f32>>;
 @group(0) @binding(4) var<storage, read_write> partials: array<vec4<f32>>;
 
@@ -347,7 +384,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
  * then removes the fluid the raised bed now occupies and tallies its volume.
  * Mirrored by applyEditCpu (src/edit/walls.ts).
  */
-export const EDIT_WGSL = COMMON + /* wgsl */ `
+export const EDIT_WGSL =
+	COMMON +
+	/* wgsl */ `
 struct EditHeader { mode: u32, count: u32, i0: u32, j0: u32, ni: u32, nj: u32, _a: u32, _b: u32 };
 
 @group(0) @binding(3) var<storage, read_write> terrain: array<f32>;
@@ -415,7 +454,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
 `;
 
 /** Writes the flow-surface vertex buffers (positions, normals, colours) for the renderer. */
-export const SURFACE_WGSL = COMMON + /* wgsl */ `
+export const SURFACE_WGSL =
+	COMMON +
+	/* wgsl */ `
 @group(0) @binding(3) var<storage, read> terrain: array<f32>;
 @group(0) @binding(4) var<storage, read> state: array<vec4<f32>>;
 @group(0) @binding(5) var<storage, read_write> positions: array<vec4<f32>>;

@@ -1,8 +1,8 @@
-import { Color3 } from '@babylonjs/core/Maths/math.color';
-import type { LocalFrame } from './lod/quadtree';
-import type { TerrainLook } from './lod/terrainMaterial';
-import type { Hole } from './lod/terrainRenderer';
-import { lonLatToWorld, metresPerWorldUnit, worldToLonLat } from './tileMath';
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import type { LocalFrame } from "./lod/quadtree";
+import type { TerrainLook } from "./lod/terrainMaterial";
+import type { Hole } from "./lod/terrainRenderer";
+import { lonLatToWorld, metresPerWorldUnit, worldToLonLat } from "./tileMath";
 
 /**
  * Map context of a "Simular aquí" simulation (S1), pure rules; drawn by MapContextView.
@@ -15,8 +15,8 @@ import { lonLatToWorld, metresPerWorldUnit, worldToLonLat } from './tileMath';
 
 /** Ground location of a simulated terrain (the "Simular aquí" point = patch centre). */
 export interface MapSite {
-  lon: number;
-  lat: number;
+	lon: number;
+	lat: number;
 }
 
 /** Root metres per context km. */
@@ -44,66 +44,97 @@ const PATCH_MAX_Z = 50_000;
 
 /** Context frame: origin at the site, scene km at the site's latitude (as buildLocalGrid). */
 export function contextFrame(site: MapSite): LocalFrame {
-  const o = lonLatToWorld(site.lon, site.lat);
-  return { ox: o.x, oy: o.y, k: metresPerWorldUnit(site.lat) / 1000 };
+	const o = lonLatToWorld(site.lon, site.lat);
+	return { ox: o.x, oy: o.y, k: metresPerWorldUnit(site.lat) / 1000 };
 }
 
 /** Lon/lat of the simulator terrain-local point (x east, z north; metres from the grid corner). */
-export function patchToLonLat(site: MapSite, size: number, x: number, z: number): { lon: number; lat: number } {
-  const o = lonLatToWorld(site.lon, site.lat);
-  const m = metresPerWorldUnit(site.lat);
-  return worldToLonLat(o.x + (x - size / 2) / m, o.y - (z - size / 2) / m);
+export function patchToLonLat(
+	site: MapSite,
+	size: number,
+	x: number,
+	z: number,
+): { lon: number; lat: number } {
+	const o = lonLatToWorld(site.lon, site.lat);
+	const m = metresPerWorldUnit(site.lat);
+	return worldToLonLat(o.x + (x - size / 2) / m, o.y - (z - size / 2) / m);
 }
 
-export function lonLatToPatch(site: MapSite, size: number, lon: number, lat: number): [number, number] {
-  const o = lonLatToWorld(site.lon, site.lat);
-  const w = lonLatToWorld(lon, lat);
-  const m = metresPerWorldUnit(site.lat);
-  return [(w.x - o.x) * m + size / 2, -(w.y - o.y) * m + size / 2];
+export function lonLatToPatch(
+	site: MapSite,
+	size: number,
+	lon: number,
+	lat: number,
+): [number, number] {
+	const o = lonLatToWorld(site.lon, site.lat);
+	const w = lonLatToWorld(lon, lat);
+	const m = metresPerWorldUnit(site.lat);
+	return [(w.x - o.x) * m + size / 2, -(w.y - o.y) * m + size / 2];
 }
 
 /** Context local km of a terrain-local point. */
-export function patchToContext(size: number, x: number, z: number): [number, number] {
-  return [(x - size / 2) / CONTEXT_SCALE, (z - size / 2) / CONTEXT_SCALE];
+export function patchToContext(
+	size: number,
+	x: number,
+	z: number,
+): [number, number] {
+	return [(x - size / 2) / CONTEXT_SCALE, (z - size / 2) / CONTEXT_SCALE];
 }
 
 /** Root-local position of the context node (scaled by CONTEXT_SCALE). */
 export function contextNodePosition(size: number): [number, number, number] {
-  return [size / 2, 0, size / 2];
+	return [size / 2, 0, size / 2];
 }
 
 /** Root metres of a context height (scene km, already exaggerated). */
 export function contextToRootY(km: number): number {
-  return km * CONTEXT_SCALE;
+	return km * CONTEXT_SCALE;
 }
 
 /** The patch mesh spans the cell centres; the context draws nothing there (context km). */
 export function patchHole(t: { size: number; cellSize: number }): Hole {
-  const half = (t.size / 2 - t.cellSize / 2) / CONTEXT_SCALE;
-  return [-half, -half, half, half];
+	const half = (t.size / 2 - t.cellSize / 2) / CONTEXT_SCALE;
+	return [-half, -half, half, half];
 }
 
 export function contextLook(): TerrainLook {
-  return { exaggeration: CONTEXT_EXAGGERATION, fogColor: CONTEXT_FOG, fogDensity: CONTEXT_FOG_DENSITY, hillshadeZ: CONTEXT_HILLSHADE_Z };
+	return {
+		exaggeration: CONTEXT_EXAGGERATION,
+		fogColor: CONTEXT_FOG,
+		fogDensity: CONTEXT_FOG_DENSITY,
+		hillshadeZ: CONTEXT_HILLSHADE_Z,
+	};
 }
 
 export function contextSseScale(simulating: boolean): number {
-  return simulating ? SIMULATING_SSE_SCALE : 1;
+	return simulating ? SIMULATING_SSE_SCALE : 1;
 }
 
 /** Orbit limits of the simulator camera: as before without a context, wider with one. */
-export function contextCamera(size: number, hasContext: boolean): { upperRadiusLimit: number; maxZ: number } {
-  const patch = size * PATCH_RADIUS_FACTOR;
-  if (!hasContext) return { upperRadiusLimit: patch, maxZ: PATCH_MAX_Z };
-  return { upperRadiusLimit: Math.max(patch, CONTEXT_MAX_RADIUS), maxZ: CONTEXT_MAX_Z };
+export function contextCamera(
+	size: number,
+	hasContext: boolean,
+): { upperRadiusLimit: number; maxZ: number } {
+	const patch = size * PATCH_RADIUS_FACTOR;
+	if (!hasContext) return { upperRadiusLimit: patch, maxZ: PATCH_MAX_Z };
+	return {
+		upperRadiusLimit: Math.max(patch, CONTEXT_MAX_RADIUS),
+		maxZ: CONTEXT_MAX_Z,
+	};
 }
 
 /** Only "Simular aquí" terrains have a real location; the synthetic ravine and DEM files do not. */
-export function mapSiteOf(source: { kind: 'synthetic' } | { kind: 'dem'; site?: MapSite }): MapSite | null {
-  return source.kind === 'dem' && source.site ? { lon: source.site.lon, lat: source.site.lat } : null;
+export function mapSiteOf(
+	source: { kind: "synthetic" } | { kind: "dem"; site?: MapSite },
+): MapSite | null {
+	return source.kind === "dem" && source.site
+		? { lon: source.site.lon, lat: source.site.lat }
+		: null;
 }
 
 /** HUD line of the context state. */
 export function contextBadge(site: MapSite | null): string {
-  return site ? `Contexto: relieve del Perú alrededor (escala vertical ×${CONTEXT_EXAGGERATION})` : 'Sin contexto de mapa (terreno sin ubicación real)';
+	return site
+		? `Contexto: relieve del Perú alrededor (escala vertical ×${CONTEXT_EXAGGERATION})`
+		: "Sin contexto de mapa (terreno sin ubicación real)";
 }
