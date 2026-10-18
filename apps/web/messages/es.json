@@ -83,6 +83,7 @@
 	"route_review_duration": "{hours} h {minutes} min",
 	"route_review_minutes": "{minutes} min",
 	"route_review_initial_title": "Elige un vehículo y pulsa Revisar",
+	"route_review_initial_ready_title": "Pulsa Revisar",
 	"route_review_initial_description": "Comparamos la Carretera Central y los 5 desvíos oficiales de SUTRAN.",
 	"route_review_no_vehicles": "Aún no tienes vehículos",
 	"route_review_departure_error": "Elige una hora dentro de las próximas 24 h.",

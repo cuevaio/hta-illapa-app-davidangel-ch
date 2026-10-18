@@ -523,7 +523,11 @@ function RouteReviewPage() {
 					) : (
 						<Empty>
 							<EmptyHeader>
-								<EmptyTitle>{m.route_review_initial_title()}</EmptyTitle>
+								<EmptyTitle>
+									{vehicle
+										? m.route_review_initial_ready_title()
+										: m.route_review_initial_title()}
+								</EmptyTitle>
 								<EmptyDescription>
 									{m.route_review_initial_description()}
 								</EmptyDescription>

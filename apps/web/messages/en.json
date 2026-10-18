@@ -83,6 +83,7 @@
 	"route_review_duration": "{hours} h {minutes} min",
 	"route_review_minutes": "{minutes} min",
 	"route_review_initial_title": "Choose a vehicle and select Review",
+	"route_review_initial_ready_title": "Select Review",
 	"route_review_initial_description": "Compare the Carretera Central and the 5 official SUTRAN detours.",
 	"route_review_no_vehicles": "You have no vehicles yet",
 	"route_review_departure_error": "Choose a time within the next 24 hours.",
