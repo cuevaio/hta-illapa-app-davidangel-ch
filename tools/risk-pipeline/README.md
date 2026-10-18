@@ -13,7 +13,7 @@ uv run python -m illapa_risk.load         # replace the risk tables in MySQL
 
 `build` reads OpenStreetMap from the Geofabrik Peru extract (`peru-YYMMDD.osm.pbf`, about 250 MB), downloaded once per day into `output/cache/geofabrik/`. The public Overpass servers throttle and block the ~25 sub-queries the pilot area needs, so the extract replaces them. Every other HTTP response is cached under `output/cache/http/`. Delete `output/cache/` to force fresh data.
 
-`load` reads `DATABASE_URL` from `packages/db/.env`. In one transaction it replaces `road_segment`, `road_node` and `road_edge`, deletes assessments of segments that no longer exist, and records a `risk_pipeline_run`. It touches no other table. Run `pnpm db:push` first so the tables exist.
+`load` reads `DATABASE_URL` from `packages/db/.env`. In one transaction it replaces `road_segment`, `road_node` and `road_edge`, deletes assessments of segments that no longer exist, and records a `risk_pipeline_run`. It touches no other table. Run `pnpm db:migrate` first so the tables exist.
 
 ## Sources
 

@@ -1,5 +1,5 @@
 # DB
-When working with drizzle, never write inside the migrations folder, instead, write inside the schema folder.
+When working with drizzle, change the schema folder, then run `pnpm db:generate --name <change>` and commit the migration it writes in the same PR. Never hand-write or edit files in the migrations folder, and never `db:push` to a shared database.
 # Code rules
 
 - Never write a function that will be called only once and is small enough to be inlined. Prefer legibility over encapsulation.
