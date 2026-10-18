@@ -9,12 +9,27 @@ catalogs:
     '@ai-sdk/typesafe-ai':
       specifier: ^3.0.21
       version: 3.0.21
+    '@babylonjs/core':
+      specifier: 9.29.0
+      version: 9.29.0
+    '@babylonjs/gui':
+      specifier: 9.29.0
+      version: 9.29.0
+    '@babylonjs/materials':
+      specifier: 9.29.0
+      version: 9.29.0
     '@better-auth/expo':
       specifier: 1.7.7
       version: 1.7.7
     '@cloudflare/workers-types':
       specifier: ^5.20260906.1
       version: 5.20261016.1
+    '@iwer/devui':
+      specifier: 2.5.0
+      version: 2.5.0
+    '@iwer/sem':
+      specifier: 2.5.0
+      version: 2.5.0
     '@orpc/client':
       specifier: ^1.15.6
       version: 1.15.7
@@ -105,6 +120,9 @@ catalogs:
     hono:
       specifier: ^4.13.7
       version: 4.13.13
+    iwer:
+      specifier: 2.5.0
+      version: 2.5.0
     maplibre-gl:
       specifier: 6.14.0
       version: 6.14.0
@@ -844,6 +862,9 @@ importers:
 
   packages/terrain:
     dependencies:
+      '@babylonjs/core':
+        specifier: 'catalog:'
+        version: 9.29.0
       three:
         specifier: 0.186.1
         version: 0.186.1
@@ -863,6 +884,15 @@ importers:
 
   packages/ui:
     dependencies:
+      '@babylonjs/core':
+        specifier: 'catalog:'
+        version: 9.29.0
+      '@babylonjs/gui':
+        specifier: 'catalog:'
+        version: 9.29.0(@babylonjs/core@9.29.0)
+      '@babylonjs/materials':
+        specifier: 'catalog:'
+        version: 9.29.0(@babylonjs/core@9.29.0)
       '@base-ui/react':
         specifier: ^1.8.0
         version: 1.9.0(@date-fns/tz@1.5.0)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -878,6 +908,12 @@ importers:
       '@hack-the-andes-project/terrain':
         specifier: workspace:*
         version: link:../terrain
+      '@iwer/devui':
+        specifier: 'catalog:'
+        version: 2.5.0(@types/react@19.3.0)(immer@11.1.21)(iwer@2.5.0)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(use-sync-external-store@1.7.0(react@19.3.1))
+      '@iwer/sem':
+        specifier: 'catalog:'
+        version: 2.5.0(iwer@2.5.0)
       '@react-three/drei':
         specifier: 'catalog:'
         version: 10.7.9(aab187fd8e2d2609a94358b5960e7ff6)
@@ -908,6 +944,9 @@ importers:
       input-otp:
         specifier: ^1.5.0
         version: 1.5.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      iwer:
+        specifier: 'catalog:'
+        version: 2.5.0
       lucide-react:
         specifier: ^1.41.0
         version: 1.57.0(@types/react@19.3.0)(react@19.3.1)
@@ -1578,6 +1617,19 @@ packages:
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
+
+  '@babylonjs/core@9.29.0':
+    resolution: {integrity: sha512-qWrtTRsZF0DO6IouYTEZrcQtUEJzlKbc3i/7Ek2T1INFJ+zp9fxO+CIRJ9HRInOG6HYjQl1i6RhxXVyUbx8yxQ==}
+
+  '@babylonjs/gui@9.29.0':
+    resolution: {integrity: sha512-9nuImQPkIKw5OhE1lptGPo4JoYcwzczsi9XKDN2wO5jldgTi7iV7kaeb4+hT4OsUX1w1o8SLrgkQyU4gY/DwGA==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
+
+  '@babylonjs/materials@9.29.0':
+    resolution: {integrity: sha512-F6x7icr8gpLej94QGF9X9pPUlXNheIvPqQnkQemcsuyGywWq20YlYVimGTZ5hdrGYv9i6kDLJxR7C6n90I5Mhg==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
 
   '@base-ui/react@1.9.0':
     resolution: {integrity: sha512-S8CSYosASBKtpL8SWUfS78rFElfLijiCgA7oHOK22jCJ95FULsYyKwBNFOgudt0RA+/7yNc7F81bOvQnRgbBiQ==}
@@ -2893,10 +2945,20 @@ packages:
     peerDependencies:
       iwer: ^2.0.1
 
+  '@iwer/devui@2.5.0':
+    resolution: {integrity: sha512-SckR1tyOkfCx/X4wmZiZomPXNqlDnl39jZXvNY4y9cCJ1ZS/OX+ZYdcB5dXEi/N0YmIl5rxfkTW6iHZ/4oo6mw==}
+    peerDependencies:
+      iwer: ^2.5.0
+
   '@iwer/sem@0.2.5':
     resolution: {integrity: sha512-vMCfpu/7Qqc+hkBiGD9pxjeObgrhXOrL0KX94CA3yzJaU0dq0y49HXZT6fC+6X/jOmjaM3hjyE1m2h7ZmLzzyA==}
     peerDependencies:
       iwer: ^2.0.0
+
+  '@iwer/sem@2.5.0':
+    resolution: {integrity: sha512-xg7MAoxPjreKNMhAKha1yD0340ADt7PkrTQ7Q9VBFhMO/Yn1Kp2/GG2ZFeBzY0YcWW6FYVmu0ovu0tfEluW20g==}
+    peerDependencies:
+      iwer: ^2.3.0
 
   '@jest/schemas@29.6.3':
     resolution: {integrity: sha512-mo5j5X+jIZmJQveBKeS/clAueipV7KgiX1vMgCxam1RNYiqE1w62n0/tJJnHtjW8ZHcQco5gY85jA3mi0L+nSA==}
@@ -7262,6 +7324,9 @@ packages:
     peerDependencies:
       react: ^19.0.0
 
+  iwer@2.5.0:
+    resolution: {integrity: sha512-grq7iMyWo4s2DYnATKLPPoAByhcNuwLjMHHOILrFU9q8EGHIEzHyUuq1mz+9Xqy6+xrYPn3Ho8Z9eymZCE+D6w==}
+
   iwer@2.6.0:
     resolution: {integrity: sha512-DNihqCixizrNjPKScTt0aOy9+YP1pn0Jxj1V6tBOV0ceRm6YrEMLo8QhEwYspPYJ9QZjDJShDMdZAaPXDPaSAw==}
 
@@ -11113,6 +11178,16 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
+  '@babylonjs/core@9.29.0': {}
+
+  '@babylonjs/gui@9.29.0(@babylonjs/core@9.29.0)':
+    dependencies:
+      '@babylonjs/core': 9.29.0
+
+  '@babylonjs/materials@9.29.0(@babylonjs/core@9.29.0)':
+    dependencies:
+      '@babylonjs/core': 9.29.0
+
   '@base-ui/react@1.9.0(@date-fns/tz@1.5.0)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 8.0.7
@@ -12767,9 +12842,35 @@ snapshots:
       - immer
       - react-native
 
+  '@iwer/devui@2.5.0(@types/react@19.3.0)(immer@11.1.21)(iwer@2.5.0)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(use-sync-external-store@1.7.0(react@19.3.1))':
+    dependencies:
+      '@pmndrs/handle': 6.6.32(@types/react@19.3.0)(immer@11.1.21)(react@19.3.1)
+      '@pmndrs/pointer-events': 6.6.32
+      iwer: 2.5.0
+      lucide-react: 1.57.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+      styled-components: 6.6.0(react-dom@19.3.1(react@19.3.1))(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
+      three: 0.186.1
+      zustand: 5.0.15(@types/react@19.3.0)(immer@11.1.21)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
+    transitivePeerDependencies:
+      - '@types/react'
+      - css-to-react-native
+      - immer
+      - react-native
+      - use-sync-external-store
+
   '@iwer/sem@0.2.5(iwer@2.6.0)':
     dependencies:
       iwer: 2.6.0
+      three: 0.186.1
+      ts-proto: 2.15.3
+
+  '@iwer/sem@2.5.0(iwer@2.5.0)':
+    dependencies:
+      '@bufbuild/protobuf': 2.16.0
+      gl-matrix: 3.4.4
+      iwer: 2.5.0
       three: 0.186.1
       ts-proto: 2.15.3
 
@@ -17682,6 +17783,11 @@ snapshots:
       react: 19.3.1
     transitivePeerDependencies:
       - '@types/react'
+
+  iwer@2.5.0:
+    dependencies:
+      gl-matrix: 3.4.4
+      webxr-layers-polyfill: 1.1.0
 
   iwer@2.6.0:
     dependencies:

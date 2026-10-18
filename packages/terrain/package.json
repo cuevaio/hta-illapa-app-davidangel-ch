@@ -11,6 +11,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"@babylonjs/core": "catalog:",
 		"three": "catalog:"
 	},
 	"devDependencies": {

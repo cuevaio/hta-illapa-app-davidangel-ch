@@ -55,6 +55,12 @@ catalog:
   "@react-three/fiber": 9.8.1
   "@react-three/drei": 10.7.9
   "@react-three/xr": 6.6.31
+  "@babylonjs/core": 9.29.0
+  "@babylonjs/gui": 9.29.0
+  "@babylonjs/materials": 9.29.0
+  iwer: 2.5.0
+  "@iwer/devui": 2.5.0
+  "@iwer/sem": 2.5.0
 minimumReleaseAgeExclude:
   - '@ai-sdk/provider-utils@5.0.62'
   - '@ai-sdk/provider@4.0.29'
