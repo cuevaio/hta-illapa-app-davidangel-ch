@@ -1,6 +1,7 @@
 import {
 	type AbstractEngine,
 	ArcRotateCamera,
+	type Camera,
 	Color3,
 	Color4,
 	Matrix,
@@ -19,6 +20,7 @@ import {
 } from "../ui/sections";
 import { ImageryToggle } from "../ui/web/ImageryToggle";
 import { WeatherPanel } from "../ui/web/WeatherPanel";
+import { FOG_DENSITY_PER_KM, FOG_UPDATE_RATIO } from "./constants";
 import {
 	type Bounds,
 	easeInOut,
@@ -31,6 +33,7 @@ import {
 	ZoomTween,
 	zoomTarget,
 } from "./flight";
+import { fogDensityAt } from "./fog";
 import {
 	IMAGERY_HINTS,
 	type ImageryAvailability,
@@ -121,7 +124,6 @@ export interface OverviewActions {
 /** Hillshade slope exaggeration (as the former static z6 overview): real slopes look flat from afar. */
 const HILLSHADE_Z = 5;
 const FOG_COLOR = new Color3(0.62, 0.7, 0.78);
-const FOG_DENSITY = 0.00015;
 const HUD_INTERVAL_MS = 250;
 /** Closest orbit distance (scene km); was 30 before the satellite imagery. */
 const ORBIT_MIN_RADIUS = 2;
@@ -192,6 +194,8 @@ export class PeruOverview implements FlightHost {
 	private readonly fly: OverviewFly;
 	private mode: CameraMode = "orbit";
 	private terrain: LodTerrain | null = null;
+	/** Follows the view distance (S11), shared by the scene fog and the relief shader. */
+	private fogDensity = FOG_DENSITY_PER_KM;
 	private readonly frame = peruFrame();
 	private localBounds: Bounds;
 	/** The Peru bbox itself (no flight margin), framed top-down by the web overview (S7). */
@@ -270,7 +274,7 @@ export class PeruOverview implements FlightHost {
 			1,
 		);
 		this.scene.fogMode = Scene.FOGMODE_EXP2;
-		this.scene.fogDensity = FOG_DENSITY;
+		this.scene.fogDensity = this.fogDensity;
 		this.scene.fogColor = FOG_COLOR;
 		const sw = lonLatToWorld(PERU_BBOX.west, PERU_BBOX.south);
 		const ne = lonLatToWorld(PERU_BBOX.east, PERU_BBOX.north);
@@ -583,7 +587,7 @@ export class PeruOverview implements FlightHost {
 		return {
 			exaggeration: this.exaggeration,
 			fogColor: FOG_COLOR,
-			fogDensity: FOG_DENSITY,
+			fogDensity: this.fogDensity,
 			hillshadeZ: HILLSHADE_Z,
 		};
 	}
@@ -843,6 +847,28 @@ export class PeruOverview implements FlightHost {
 		this.hide();
 	}
 
+	/**
+	 * Fog by view distance (S11): the orbit radius, or the eye height over the relief in flight
+	 * (web or VR). The VR maquette is metres across, where the fog is negligible anyway.
+	 */
+	private adaptFog(cam: Camera): void {
+		const eye = cam.globalPosition;
+		const viewKm = this.mapPlaced
+			? 0
+			: !this.inVr && this.mode === "orbit"
+				? this.camera.radius
+				: eye.y - this.groundAt(eye.x, eye.z);
+		const density = fogDensityAt(viewKm);
+		if (
+			Math.abs(density - this.fogDensity) <=
+			this.fogDensity * FOG_UPDATE_RATIO
+		)
+			return;
+		this.fogDensity = density;
+		this.scene.fogDensity = density;
+		this.terrain?.setFogDensity(density);
+	}
+
 	render(): void {
 		const engine = this.scene.getEngine();
 		if (!this.inVr) this.stepZoom(Math.min(engine.getDeltaTime() / 1000, 0.1));
@@ -854,6 +880,7 @@ export class PeruOverview implements FlightHost {
 				Math.max(0.05, this.camera.radius / ORBIT_NEAR_RATIO),
 			);
 		const cam = this.scene.activeCamera;
+		if (cam) this.adaptFog(cam);
 		if (this.weather && this.terrain) {
 			this.weather.gpu.update(performance.now(), this.weatherFocus());
 			this.cloudSheet?.update();

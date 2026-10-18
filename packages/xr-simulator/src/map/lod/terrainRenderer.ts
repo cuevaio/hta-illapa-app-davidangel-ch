@@ -198,6 +198,12 @@ export class TerrainRenderer {
 		return keys;
 	}
 
+	/** Fog only (S11): a uniform per material, no tile re-placement. */
+	setFogDensity(fogDensity: number): void {
+		this.look = { ...this.look, fogDensity };
+		for (const p of this.pool) p.material.setFloat("uFogDensity", fogDensity);
+	}
+
 	setLook(look: TerrainLook): void {
 		this.look = look;
 		for (const a of this.active.values()) this.place(a);
