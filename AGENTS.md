@@ -38,10 +38,10 @@ When working with drizzle, change the schema folder, then run `pnpm db:generate 
 
 # Architecture
 
-- Server env is the Worker bindings declared in `packages/infra/server.ts` (typed via `ServerEnv`). Read it through `apps/server/src/env.server.ts`, never `process.env` or `c.env`. Add a variable in three places: the app's `.env.schema`, its `.env` (secret) or `.env.production` (public URL), and the alchemy `env` map.
+- Server env is read through `apps/server/src/env.server.ts`, never `process.env` or `c.env`. It imports `env` from `cloudflare:workers`, which the Node bundles alias to `process.env` (`packages/node-runtime`). Add a variable in four places: the app's `.env.schema`, its `.env` (secret) or `.env.production` (public URL), the alchemy `env` map in `packages/infra` (local `pnpm dev`), and the Dokploy env of both the staging and production service. The Node images don't run varlock, so `.env.schema` defaults never apply on Dokploy.
 - Every server route is protected by the global auth guard in `apps/server/src/index.ts`. Public routes must be added explicitly to `PUBLIC_PATHS` (server) or `PUBLIC_PROCEDURE_PATHS` (`packages/api/src/constants.ts`).
 - Trusted origins (CORS + better-auth) come from the comma-separated `ALLOWED_ORIGINS`.
 - db, auth and session are built once per request in the guard middleware and shared via `c.set`/oRPC context. Never create a db connection or auth instance in module scope.
 - Logging is evlog: one wide event per request. Use `context.log.set({ <domain>: {...} })` in procedures and `c.get("log")` in Hono routes; never `console.log`.
-- The MySQL database (`fierros` on vero, shared through the `fierro_db` Hyperdrive) is shared with other projects: every table goes through `mysqlTable` from `packages/db/src/schema/_table.ts` (`hack_the_andes_` prefix) and has no FOREIGN KEY constraints.
+- The MySQL 8.4 on the Dokploy server holds `illapa` (production) and `illapa_staging`. Every table goes through `mysqlTable` from `packages/db/src/schema/_table.ts` (`hack_the_andes_` prefix) and has no FOREIGN KEY constraints.
 - mysql2 batching shares one connection per request: never use `db.transaction()` in app code.

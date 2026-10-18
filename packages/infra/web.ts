@@ -11,8 +11,7 @@ import {
 } from "./constants.ts";
 
 // VITE_SERVER_URL comes from apps/web/.env(.production) instead of the server
-// Worker's output on purpose: web never depends on server in the graph, so
-// `deploy:web` ships the SPA without touching the API Worker.
+// Worker's output on purpose: web never depends on server in the graph.
 export const web = Cloudflare.Website.Vite("web", {
 	name: WEB_WORKER_NAME,
 	workersDev: true,

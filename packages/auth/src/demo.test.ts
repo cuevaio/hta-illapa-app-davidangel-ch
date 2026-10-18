@@ -100,7 +100,7 @@ afterAll(async () => database.$client.end());
 
 describe("demo access", () => {
 	it.each([...DEMO_BLOCKED_AUTH_PATHS])(
-		"blocks demo mutations at %s",
+		"blocks demo access at %s",
 		async (path) => {
 			const hook = demoAccess.hooks.before[0];
 			if (!hook) throw new Error("Demo guard missing");
@@ -116,6 +116,71 @@ describe("demo access", () => {
 			});
 		},
 	);
+
+	it.each([
+		"/list-sessions",
+		"/list-accounts",
+		"/account-info",
+		"/organization/get-full-organization",
+		"/organization/list-members",
+		"/organization/get-invitation",
+		"/organization/list-invitations",
+		"/organization/list-user-invitations",
+	])(
+		"returns HTTP 403 before disclosing shared account data at %s",
+		async (path) => {
+			vi.spyOn(
+				unthrottledContext.internalAdapter,
+				"findSession",
+			).mockResolvedValue({ user, session });
+			const listSessions = vi.spyOn(
+				unthrottledContext.internalAdapter,
+				"listSessions",
+			);
+			const response = await unthrottledAuth.handler(
+				new Request(`https://api.example.com/api/auth${path}`, {
+					headers: { cookie: sessionCookie, origin: "https://app.example.com" },
+				}),
+			);
+			expect(response.status).toBe(403);
+			expect(await response.json()).toMatchObject({
+				message: DEMO_CHANGE_FORBIDDEN_MESSAGE,
+			});
+			expect(listSessions).not.toHaveBeenCalled();
+		},
+	);
+
+	it("still lists sessions for ordinary users", async () => {
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findSession",
+		).mockResolvedValue({
+			user: { ...user, email: "owner@example.com" },
+			session: { ...session, createdAt: new Date() },
+		});
+		const listSessions = vi
+			.spyOn(unthrottledContext.internalAdapter, "listSessions")
+			.mockResolvedValue([]);
+		const response = await unthrottledAuth.handler(
+			new Request("https://api.example.com/api/auth/list-sessions", {
+				headers: {
+					cookie: sessionCookie
+						.split("; ")
+						.filter((cookie) =>
+							cookie.startsWith(
+								`${unthrottledContext.authCookies.sessionToken.name}=`,
+							),
+						)
+						.join("; "),
+				},
+			}),
+		);
+		expect(await response.json()).toEqual([]);
+		expect(response.status).toBe(200);
+		expect(listSessions).toHaveBeenCalledWith(user.id, {
+			onlyActiveSessions: true,
+		});
+	});
 
 	it("allows ordinary users through the mutation hook and leaves sign-out available", async () => {
 		const hook = demoAccess.hooks.before[0];

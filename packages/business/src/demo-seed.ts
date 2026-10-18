@@ -1,4 +1,5 @@
 import type { Database } from "@hack-the-andes-project/db";
+import { TEXT_LENGTH_CHARS } from "@hack-the-andes-project/db/schema/constants";
 import {
 	alert,
 	gpsConnection,
@@ -84,7 +85,7 @@ export async function prepareDemo(input: PrepareDemoInput) {
 							: "Demo: ruta despejada",
 					origin,
 					destination: plan.destination,
-					destinationName: plan.incident?.title,
+					destinationName: plan.incident?.title.slice(0, TEXT_LENGTH_CHARS),
 					route,
 				});
 				break;

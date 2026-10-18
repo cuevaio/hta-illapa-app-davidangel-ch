@@ -24,6 +24,11 @@ export const DEMO_CHANGE_FORBIDDEN_MESSAGE =
 export const DEMO_SESSION_CONFLICT_MESSAGE =
 	"Ya tienes una sesión abierta con otra cuenta. Cierra sesión para abrir la demo.";
 export const DEMO_BLOCKED_AUTH_PATHS: ReadonlySet<string> = new Set([
+	"/list-sessions",
+	"/list-accounts",
+	"/account-info",
+	"/get-access-token",
+	"/refresh-token",
 	"/change-password",
 	"/change-email",
 	"/set-password",
@@ -40,4 +45,13 @@ export const DEMO_BLOCKED_AUTH_PATHS: ReadonlySet<string> = new Set([
 	"/organization/remove-member",
 	"/organization/update-member-role",
 	"/organization/set-active",
+	"/organization/get-full-organization",
+	"/organization/list-members",
+	"/organization/get-active-member-role",
+	"/organization/get-invitation",
+	"/organization/list-invitations",
+	"/organization/list-user-invitations",
+	"/organization/accept-invitation",
+	"/organization/reject-invitation",
+	"/organization/cancel-invitation",
 ]);

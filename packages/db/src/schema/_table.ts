@@ -1,7 +1,7 @@
 import { mysqlTableCreator } from "drizzle-orm/mysql-core";
 
-// The `fierros` MySQL database behind the shared `fierro_db` Hyperdrive config
-// is used by several projects, each namespacing its tables by prefix.
+// Production and staging use separate MySQL databases on Dokploy.
+// Keep the table prefix so existing tables retain their names.
 // drizzle.config.ts scopes push/introspect to this prefix so foreign tables
 // are never treated as deleted.
 export const TABLE_PREFIX = "hack_the_andes_";
