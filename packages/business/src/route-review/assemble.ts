@@ -36,11 +36,12 @@ import {
 	recommendRoute,
 	routeRiskLevelForScore,
 } from "./recommend";
-import type {
-	RouteCandidateSource,
-	RouteRiskHorizon,
-	RouteRiskLevel,
-	RouteSignalKind,
+import {
+	ROUTE_RISK_LEVELS,
+	type RouteCandidateSource,
+	type RouteRiskHorizon,
+	type RouteRiskLevel,
+	type RouteSignalKind,
 } from "./risk";
 
 const REVIEW_HORIZONS: RouteRiskHorizon[] = [
@@ -85,7 +86,7 @@ export interface ReviewRoute {
 	roadCodes: string[] | null;
 	eligibility: ReviewEligibility;
 	edges: ReviewEdge[];
-	// Listed only when its risk is lower than this route's in some horizon.
+	// Listed only when its risk level is lower than this route's in some horizon.
 	saferAlternativeTo: string | null;
 }
 
@@ -565,10 +566,12 @@ export function assembleRouteReview({
 		const comparedDraft =
 			comparedRoute && draftsByRouteKey.get(routeKey(comparedRoute));
 		return comparedDraft &&
-			!draft.risk.some(({ horizon, score }) =>
+			!draft.risk.some(({ horizon, level }) =>
 				comparedDraft.risk.some(
 					(assessment) =>
-						assessment.horizon === horizon && score < assessment.score,
+						assessment.horizon === horizon &&
+						ROUTE_RISK_LEVELS.indexOf(level) <
+							ROUTE_RISK_LEVELS.indexOf(assessment.level),
 				),
 			)
 			? []
