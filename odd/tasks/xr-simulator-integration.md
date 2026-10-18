@@ -10,6 +10,9 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 - **S3** "el visor del proyecto xr-simulator es el que tiene prioridad, así que acopla el simulador de estrucuturas actual al visor de xr-simulator".
 - **S4** "solo el rol de civil/servidor publico puede acceder a ambos simuladores (de huayco y de puentes)". Decision (user, L3): that role is the existing `engineer`. Enforced on web routes and server-side (procedures and proxy routes).
 
+- **S5** (L11) Structures can be opened from the VR map card too, not only from the screen, with an in-headset way back to the Peru map.
+- **S6** (L11) The header and sidebar label for the engineering area names both simulators instead of "Estructuras". Assumption: "Simuladores" (es) / "Simulators" (en).
+
 ## Tasks
 
 | ID | Specs | Route | Status | Commit |
@@ -22,6 +25,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T6 | S3 | delegated (context backstop) | done | 377289c, a8a00c2 |
 | T7 | S1, S3, S4 | delegated (context backstop) | done | a8a00c2, 92e360c |
 | T8 | S1, S2 | inline | partial (deploy docs) | 540d335 |
+| T9 | S5 | delegated (same writer) | pending | |
+| T10 | S6 | delegated (same writer) | pending | |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -47,4 +52,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L9** T5-T7 (writer): `XrViewer` shell + `SimulatorMode` seam; huayco → `modes/huayco/HuaycoMode.ts`; structures → `packages/ui/.../structure-scene-babylon/mode.ts` on `SiteTerrain` (z11 grid, z-mirror node converts left-handed grid to right-handed +x east/-z north); structure XR joins the viewer's shared session; `/ingenieria` hosts both via `xr-viewer.tsx`; guards use `canUseSimulators`. Removed `BabylonStructureScene` and `packages/terrain`. Not checked in a browser or on a Quest.
 - **L10** Parent fixes: biome was not clean after T1 (condensed output hid 331 errors; my T1 claim was wrong) → fb4b730, 83381a0, 9e35fdf; LOD test timeout (O(n²) expects under parallel load) → 5858cc6, 337/337 x3; CORS exposes `X-Tile-*` → 01aa380. Suites: xr-simulator 337/337, ui 50/50, web 27/27, api 70/70, tiles pytest 71 passed, check-types ok.
 - Open questions (writer): structures entry from the VR map card; header label still "Estructuras" (`m.engineering_title`).
-- Next: independent verifier for the whole feature.
+- **L11** (2026-10-18, user): "si, si" — answering "¿Lo agregamos?" (structures from the VR map card) and "¿Le cambiamos el nombre?" (header/sidebar still "Estructuras").
+- Next: independent verifier running; T9, T10.
