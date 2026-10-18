@@ -11,11 +11,11 @@ import {
 	GRIP_TURN_RATE,
 	gazeVelocity,
 	gripStickMove,
-	ReliefSampler,
 	OVERVIEW_VIEW,
+	ReliefSampler,
 	SNAP_TURN,
-	topDownView,
 	snapTurnStep,
+	topDownView,
 	vrStartPose,
 	vrTiltAxis,
 } from "../../src/map/flight";
