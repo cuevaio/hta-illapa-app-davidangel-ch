@@ -49,6 +49,8 @@ export const MIN_ROUTE_RISK_SCORE = 0;
 export const MAX_ROUTE_RISK_SCORE = 100;
 export const MIN_VEHICLE_AXLE_COUNT = 2;
 export const MAX_VEHICLE_AXLE_COUNT = 9;
+// SUTRAN writes some limits as "hasta camiones doble eje" instead of a count.
+export const DOUBLE_AXLE_TRUCK_AXLE_COUNT = 2;
 export const MINUTES_PER_HOUR = 60;
 export const HOURS_PER_DAY = 24;
 export const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
