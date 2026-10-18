@@ -18,10 +18,10 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T2 | S1, S2 | inline | done | 7103dbd |
 | T3 | S4 | inline | merged into T4 | 170d38e |
 | T4 | S2, S4 | inline | done (env files pending, user) | 170d38e |
-| T5 | S3 | inline | pending | |
-| T6 | S3 | inline | pending | |
-| T7 | S1, S3, S4 | inline | pending | |
-| T8 | S1, S2 | inline | pending | |
+| T5 | S3 | delegated (context backstop) | done | 60b4f8a, 7c6ec9a, 179c0bb |
+| T6 | S3 | delegated (context backstop) | done | 377289c, a8a00c2 |
+| T7 | S1, S3, S4 | delegated (context backstop) | done | a8a00c2, 92e360c |
+| T8 | S1, S2 | inline | partial (deploy docs) | 540d335 |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -43,4 +43,8 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L5** T1: vitest 318/318 in packages/xr-simulator (lod.test.ts "refines towards the camera" is flaky, also fails intermittently at source 46ae0ab). Dropped: three.js feasibility page, validation export tool and 13 MB validation DEMs.
 - **L6** T2: pytest tiles 70 passed/2 skipped (test_resilience circuit test flaky, passes on rerun and at source), weather 116 passed/2 skipped.
 - **L7** T3 merged into T4: no oRPC procedure needs the role yet (structures are fixture-backed), so an `engineerProcedure` would be unused code. Role rule lives in `packages/business/src/simulators.ts` (`canUseSimulators`). T4: proxy tests 5/5, api suite 70/70. `.env*` edits are blocked by permissions: user must add `TILES_API_URL`/`WEATHER_API_URL` to `apps/server/.env.schema` and production URLs to `.env.production`.
-- Next: T5.
+- **L8** (2026-10-18, user): prod servers "estarán en dokploy" → no `.env.production` change; server gets `TILES_API_URL`/`WEATHER_API_URL` in Dokploy (internal hostnames). Documented in `deploy/README.md` (540d335). `.env.schema` entries added by the user, committed a6c073c.
+- **L9** T5-T7 (writer): `XrViewer` shell + `SimulatorMode` seam; huayco → `modes/huayco/HuaycoMode.ts`; structures → `packages/ui/.../structure-scene-babylon/mode.ts` on `SiteTerrain` (z11 grid, z-mirror node converts left-handed grid to right-handed +x east/-z north); structure XR joins the viewer's shared session; `/ingenieria` hosts both via `xr-viewer.tsx`; guards use `canUseSimulators`. Removed `BabylonStructureScene` and `packages/terrain`. Not checked in a browser or on a Quest.
+- **L10** Parent fixes: biome was not clean after T1 (condensed output hid 331 errors; my T1 claim was wrong) → fb4b730, 83381a0, 9e35fdf; LOD test timeout (O(n²) expects under parallel load) → 5858cc6, 337/337 x3; CORS exposes `X-Tile-*` → 01aa380. Suites: xr-simulator 337/337, ui 50/50, web 27/27, api 70/70, tiles pytest 71 passed, check-types ok.
+- Open questions (writer): structures entry from the VR map card; header label still "Estructuras" (`m.engineering_title`).
+- Next: independent verifier for the whole feature.
