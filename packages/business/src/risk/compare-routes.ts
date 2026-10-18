@@ -30,7 +30,7 @@ export interface CompareRiskAwareRoutesInput {
 	now: Date;
 }
 
-export interface ClosureCandidateEdge {
+export interface ClosureCandidateEdge extends LatLng {
 	id: string;
 	roadCode: string | null;
 	geometry: LineString;
@@ -142,6 +142,15 @@ export function routingBounds(origin: LatLng, destination: LatLng): Bounds {
 	};
 }
 
+// Edges are short and located by their midpoint, so one this far from a
+// closure cannot reach it and its geometry is never measured.
+function isNearClosure(edge: LatLng, closure: LatLng) {
+	return (
+		Math.abs(edge.lat - closure.lat) <= CLOSURE_CANDIDATE_RADIUS_DEG &&
+		Math.abs(edge.lng - closure.lng) <= CLOSURE_CANDIDATE_RADIUS_DEG
+	);
+}
+
 // A closure on a coded road (SUTRAN reports PE-xx) must not close a nearby
 // street or bridge with another code. Edges without a code stay blockable:
 // OSM sometimes lacks the ref on the very road that is closed, and routing
@@ -155,6 +164,7 @@ export function closedEdgeIds(
 			.filter((edge) =>
 				closures.some(
 					(closure) =>
+						isNearClosure(edge, closure) &&
 						(closure.roadCode === null ||
 							edge.roadCode === null ||
 							closure.roadCode === edge.roadCode) &&
@@ -200,11 +210,7 @@ export async function blockClosedEdges(
 	closures: RouteClosure[],
 ): Promise<Set<string>> {
 	const candidateEdges = edges.filter((edge) =>
-		closures.some(
-			(closure) =>
-				Math.abs(edge.lat - closure.lat) <= CLOSURE_CANDIDATE_RADIUS_DEG &&
-				Math.abs(edge.lng - closure.lng) <= CLOSURE_CANDIDATE_RADIUS_DEG,
-		),
+		closures.some((closure) => isNearClosure(edge, closure)),
 	);
 	const candidateGeometries = await fetchEdgeGeometries(
 		db,

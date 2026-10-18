@@ -1,26 +1,18 @@
+import { AccountMenu } from "@hack-the-andes-project/ui/components/account-menu";
 import {
 	Avatar,
 	AvatarFallback,
 } from "@hack-the-andes-project/ui/components/avatar";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@hack-the-andes-project/ui/components/dropdown-menu";
-import {
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-} from "@hack-the-andes-project/ui/components/sidebar";
+import { SidebarMenuButton } from "@hack-the-andes-project/ui/components/sidebar";
 import { Skeleton } from "@hack-the-andes-project/ui/components/skeleton";
+import { useFontSize } from "@hack-the-andes-project/ui/hooks/use-font-size";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useTheme } from "next-themes";
+import { useState } from "react";
 import { USER_INITIALS_CHARACTER_COUNT } from "@/constants";
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
+import { getLocale, locales, setLocale } from "@/paraglide/runtime";
 
 interface UserMenuProps {
 	collapsed?: boolean;
@@ -29,6 +21,11 @@ interface UserMenuProps {
 export default function UserMenu({ collapsed = false }: UserMenuProps) {
 	const navigate = useNavigate();
 	const { data: session, isPending } = authClient.useSession();
+	const { theme, setTheme } = useTheme();
+	const { fontSize, setFontSize } = useFontSize();
+	const [isSigningOut, setIsSigningOut] = useState(false);
+	const [hasSignOutError, setHasSignOutError] = useState(false);
+	const currentLocale = getLocale();
 
 	if (isPending) {
 		return (
@@ -57,59 +54,66 @@ export default function UserMenu({ collapsed = false }: UserMenuProps) {
 		.join("")
 		.slice(0, USER_INITIALS_CHARACTER_COUNT)
 		.toUpperCase();
+
 	return (
-		<SidebarMenu>
-			<SidebarMenuItem>
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<SidebarMenuButton
-								size="lg"
-								tooltip={session.user.name}
-								aria-label={m.account_menu({ name: session.user.name })}
-								className={collapsed ? "justify-center p-0!" : undefined}
-							/>
-						}
-					>
-						<Avatar>
-							<AvatarFallback>{initials}</AvatarFallback>
-						</Avatar>
-						{!collapsed && (
-							<span className="flex min-w-0 flex-col gap-0.5 text-left">
-								<span className="truncate font-medium">
-									{session.user.name}
-								</span>
-								<span className="truncate text-muted-foreground text-xs">
-									{session.user.email}
-								</span>
-							</span>
-						)}
-					</DropdownMenuTrigger>
-					<DropdownMenuContent side={collapsed ? "right" : "top"} align="start">
-						<DropdownMenuGroup>
-							<DropdownMenuLabel>{m.account_title()}</DropdownMenuLabel>
-							<DropdownMenuLabel>{session.user.email}</DropdownMenuLabel>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								variant="destructive"
-								onClick={() => {
-									authClient.signOut({
-										fetchOptions: {
-											onSuccess: () => {
-												navigate({
-													to: "/login",
-												});
-											},
-										},
-									});
-								}}
-							>
-								{m.account_sign_out()}
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</SidebarMenuItem>
-		</SidebarMenu>
+		<AccountMenu
+			collapsed={collapsed}
+			name={session.user.name}
+			email={session.user.email}
+			initials={initials}
+			theme={theme === "dark" || theme === "system" ? theme : "light"}
+			onThemeChange={setTheme}
+			language={currentLocale}
+			languages={locales.map((locale) => ({
+				value: locale,
+				label: locale.toUpperCase(),
+				accessibleLabel:
+					new Intl.DisplayNames([locale], { type: "language" }).of(locale) ??
+					locale,
+			}))}
+			onLanguageChange={(locale) => {
+				if (locale !== currentLocale) setLocale(locale);
+			}}
+			fontSize={fontSize}
+			setFontSize={setFontSize}
+			labels={{
+				trigger: m.account_menu({ name: session.user.name }),
+				preferences: m.account_preferences(),
+				theme: m.account_theme(),
+				themes: {
+					light: m.account_theme_light(),
+					dark: m.account_theme_dark(),
+					system: m.account_theme_system(),
+				},
+				language: m.account_language(),
+				fontSize: m.account_font_size(),
+				fontSizes: {
+					sm: m.account_font_size_small(),
+					md: m.account_font_size_medium(),
+					lg: m.account_font_size_large(),
+				},
+				signOut: m.account_sign_out(),
+				signingOut: m.account_signing_out(),
+				signOutError: m.account_sign_out_error(),
+			}}
+			isSigningOut={isSigningOut}
+			hasSignOutError={hasSignOutError}
+			onSignOut={async () => {
+				setIsSigningOut(true);
+				setHasSignOutError(false);
+				try {
+					const { error } = await authClient.signOut();
+					if (error) {
+						setHasSignOutError(true);
+						return;
+					}
+					await navigate({ to: "/login" });
+				} catch {
+					setHasSignOutError(true);
+				} finally {
+					setIsSigningOut(false);
+				}
+			}}
+		/>
 	);
 }

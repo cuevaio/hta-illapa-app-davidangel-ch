@@ -14,7 +14,6 @@ import {
 	useMatch,
 } from "@tanstack/react-router";
 
-import { SidebarPreferences } from "@/components/sidebar-preferences";
 import { StructureEditor } from "@/components/structure-editor";
 import {
 	StructureEditorProvider,
@@ -72,16 +71,9 @@ function EngineeringLayout() {
 						active: true,
 					},
 				]}
-				homeLink={<Link to="/ingenieria" />}
-				preferences={(collapsed) => (
-					<SidebarPreferences collapsed={collapsed} />
-				)}
 				account={(collapsed) => <UserMenu collapsed={collapsed} />}
 				expandLabel={m.sidebar_expand()}
 				collapseLabel={m.sidebar_collapse()}
-				preferencesLabel={m.sidebar_preferences()}
-				groupLabel={m.engineering_group()}
-				tagline={m.engineering_tagline()}
 				navigationLabel={m.engineering_navigation()}
 			/>
 			<SidebarInset className="min-w-0 overflow-hidden">

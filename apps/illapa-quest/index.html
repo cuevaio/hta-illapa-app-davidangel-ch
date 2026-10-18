@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<title>Illapa Quest · Carretera Central PE-22</title>
+		<style>
+			:root {
+				--color-teal: #0b6e78;
+				--color-starlight: #8a6a1f;
+				--color-text: #0a2530;
+				--color-muted-text: #4d6b74;
+				--color-bg: #f2f7f8;
+				--color-card: rgba(255, 255, 255, 0.94);
+				--color-muted: #e4eff1;
+				--color-border: rgba(10, 37, 48, 0.13);
+				--color-low: #3e7d18;
+				--color-moderate: #e8bc00;
+				--color-high: #d96200;
+				--color-critical: #c92a22;
+				--color-risk-ink-dark: #0a090b;
+				--radius-sm: 6px;
+				--radius-md: 10px;
+				--radius-lg: 14px;
+				--font-sans: "Archivo Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+				--font-mono: "JetBrains Mono Variable", "SFMono-Regular", Consolas, Menlo, monospace;
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: var(--font-sans);
+				background-color: var(--color-bg);
+				background-image: radial-gradient(rgba(11, 110, 120, 0.14) 1px, transparent 1px);
+				background-size: 24px 24px;
+				color: var(--color-text);
+				overflow: hidden;
+				width: 100vw;
+				height: 100vh;
+			}
+
+			#app-container {
+				position: relative;
+				width: 100%;
+				height: 100%;
+			}
+
+			#webgl-canvas {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				display: block;
+				cursor: grab;
+			}
+
+			#webgl-canvas:active {
+				cursor: grabbing;
+			}
+
+			.hud-header {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				right: 16px;
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				pointer-events: none;
+				z-index: 10;
+				gap: 16px;
+			}
+
+			.hud-card {
+				background: var(--color-card);
+				backdrop-filter: blur(12px);
+				border: 1px solid var(--color-border);
+				border-radius: var(--radius-lg);
+				padding: 14px 16px;
+				pointer-events: auto;
+				position: relative;
+			}
+
+			.hud-brand-kicker {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				margin-bottom: 6px;
+			}
+
+			.brand-lockup {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding-right: 8px;
+				border-right: 1px solid var(--color-border);
+			}
+
+			.brand-mark {
+				width: 18px;
+				height: 18px;
+				flex-shrink: 0;
+			}
+
+			.brand-wordmark {
+				font-family: var(--font-sans);
+				font-weight: 800;
+				font-stretch: 125%;
+				font-size: 0.92rem;
+				letter-spacing: -0.01em;
+				color: var(--color-text);
+				line-height: 1;
+			}
+
+			.hud-tag {
+				font-family: var(--font-mono);
+				font-size: 0.6875rem;
+				font-weight: 600;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--color-teal);
+			}
+
+			.hud-title-row {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			.hud-title-row h1 {
+				font-family: var(--font-sans);
+				font-size: 1.0625rem;
+				font-weight: 800;
+				font-stretch: 125%;
+				text-transform: uppercase;
+				color: var(--color-text);
+				letter-spacing: 0.005em;
+				line-height: 1.2;
+			}
+
+			.decision-pill {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				background: var(--color-high);
+				color: var(--color-risk-ink-dark);
+				font-family: var(--font-mono);
+				font-weight: 600;
+				font-size: 0.6875rem;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				padding: 4px 10px;
+				border-radius: var(--radius-md);
+			}
+
+			.decision-dot {
+				width: 6px;
+				height: 6px;
+				border-radius: 9999px;
+				background: var(--color-risk-ink-dark);
+			}
+
+			.carrier-bar {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				margin-top: 10px;
+				padding-top: 10px;
+				border-top: 1px solid var(--color-border);
+				flex-wrap: wrap;
+			}
+
+			.carrier-label {
+				font-family: var(--font-mono);
+				font-size: 0.6875rem;
+				font-weight: 600;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--color-muted-text);
+			}
+
+			.carrier-chip {
+				font-family: var(--font-mono);
+				font-size: 0.75rem;
+				font-weight: 500;
+				font-variant-numeric: tabular-nums;
+				background: var(--color-muted);
+				color: var(--color-text);
+				border: 1px solid var(--color-border);
+				padding: 4px 9px;
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+			}
+
+			.carrier-chip:focus-visible,
+			.preset-btn:focus-visible,
+			.xr-action-button:focus-visible {
+				outline: 2px solid var(--color-teal);
+				outline-offset: 2px;
+			}
+
+			.carrier-chip.active {
+				background: var(--color-text);
+				color: #ffffff;
+				border-color: var(--color-text);
+			}
+
+			.carrier-status {
+				font-size: 0.8125rem;
+				color: var(--color-muted-text);
+				width: 100%;
+				margin-top: 2px;
+				line-height: 1.45;
+			}
+
+			.camera-presets {
+				display: flex;
+				gap: 6px;
+				margin-top: 10px;
+				flex-wrap: wrap;
+			}
+
+			.preset-btn {
+				font-family: var(--font-sans);
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+				color: var(--color-text);
+				background: var(--color-bg);
+				border: 1px solid var(--color-border);
+				padding: 6px 10px;
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+			}
+
+			.preset-btn:hover,
+			.preset-btn.active {
+				background: var(--color-teal);
+				color: #ffffff;
+				border-color: var(--color-teal);
+			}
+
+			.hud-xr-box {
+				display: flex;
+				flex-direction: column;
+				align-items: flex-end;
+				gap: 8px;
+				max-width: 300px;
+			}
+
+			.xr-action-button {
+				font-family: var(--font-sans);
+				background: var(--color-teal);
+				color: #ffffff;
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+				padding: 9px 16px;
+				border-radius: var(--radius-md);
+				border: 1px solid var(--color-teal);
+				cursor: pointer;
+				transition: background-color 0.15s ease;
+			}
+
+			.xr-action-button:hover:not(:disabled) {
+				background: #08555d;
+			}
+
+			.xr-action-button:disabled {
+				background: var(--color-muted);
+				color: var(--color-muted-text);
+				border-color: var(--color-border);
+				cursor: default;
+			}
+
+			.xr-support-notice {
+				font-size: 0.75rem;
+				color: var(--color-muted-text);
+				text-align: right;
+				line-height: 1.4;
+			}
+
+			.hud-bottom-dock {
+				position: absolute;
+				bottom: 16px;
+				left: 16px;
+				right: 16px;
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-end;
+				pointer-events: none;
+				z-index: 10;
+				gap: 16px;
+			}
+
+			.legend-panel {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+
+			.legend-items {
+				display: flex;
+				gap: 14px;
+				flex-wrap: wrap;
+				font-size: 0.8125rem;
+			}
+
+			.legend-item {
+				display: flex;
+				align-items: center;
+				gap: 7px;
+				font-weight: 600;
+			}
+
+			.legend-swatch {
+				width: 18px;
+				height: 8px;
+				border-radius: var(--radius-sm);
+				border: 1px solid rgba(10, 37, 48, 0.25);
+			}
+
+			.signals-row {
+				display: flex;
+				gap: 8px;
+				flex-wrap: wrap;
+				margin-top: 2px;
+				padding-top: 8px;
+				border-top: 1px solid var(--color-border);
+				font-family: var(--font-mono);
+				font-size: 0.6875rem;
+				font-variant-numeric: tabular-nums;
+				color: var(--color-muted-text);
+			}
+
+			.signal-badge {
+				background: var(--color-bg);
+				border: 1px solid var(--color-border);
+				padding: 3px 8px;
+				border-radius: var(--radius-sm);
+				cursor: pointer;
+			}
+
+			.signal-badge:hover {
+				border-color: var(--color-teal);
+				color: var(--color-teal);
+			}
+
+			.elevation-panel {
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				min-width: 340px;
+			}
+
+			.elevation-svg {
+				width: 340px;
+				height: 54px;
+				display: block;
+				cursor: pointer;
+			}
+
+			@media (max-width: 900px) {
+				.hud-header,
+				.hud-bottom-dock {
+					flex-direction: column;
+					align-items: stretch;
+				}
+				.hud-xr-box {
+					align-items: flex-start;
+					max-width: 100%;
+				}
+				.xr-support-notice {
+					text-align: left;
+				}
+				.elevation-panel {
+					display: none;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app-container">
+			<canvas id="webgl-canvas"></canvas>
+
+			<header class="hud-header">
+				<div class="hud-card">
+					<div class="hud-brand-kicker">
+						<span class="brand-lockup">
+							<svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+								<path
+									d="M32 5C32 5 13 27.5 13 40.5C13 51 21.5 59 32 59C42.5 59 51 51 51 40.5C51 27.5 32 5 32 5Z"
+									fill="#0B6E78"
+								/>
+								<path
+									d="M35.6 20.5L24.4 39.6H31.4L27.8 53.4L40.6 33.4H33.6L37.8 20.5Z"
+									fill="#8A6A1F"
+									stroke="#8A6A1F"
+									stroke-width="0.8"
+									stroke-linejoin="round"
+								/>
+							</svg>
+							<span class="brand-wordmark">illapa</span>
+						</span>
+						<span class="hud-tag">01 // REVISAR RUTA · CORREDOR CENTRAL PE-22</span>
+					</div>
+					<div class="hud-title-row">
+						<h1>Lima – Huancayo</h1>
+						<span class="decision-pill">
+							<span class="decision-dot"></span>
+							Retrasar la salida 18 horas
+						</span>
+					</div>
+
+					<div class="carrier-bar">
+						<span class="carrier-label">PERFIL UNIDAD:</span>
+						<button type="button" class="carrier-chip active" data-carrier="scania">
+							Scania R450 · C4P-512 (T2S3 · 5 ejes)
+						</button>
+						<button type="button" class="carrier-chip" data-carrier="volvo">
+							Volvo FH 540 · F7K-829 (T3S3 · 6 ejes)
+						</button>
+						<button type="button" class="carrier-chip" data-carrier="hino">
+							Hino 500 · B9X-301 (C3 · 3 ejes)
+						</button>
+						<p class="carrier-status" id="carrier-eligibility-text">
+							Elegible en PE-22 y en Desvío SUTRAN Ruta 3 (máx. 5 ejes · 43 t). Recomendación: Retrasar 18 h.
+						</p>
+					</div>
+
+					<div class="camera-presets">
+						<button type="button" class="preset-btn active" data-view="overview">Vista general</button>
+						<button type="button" class="preset-btn" data-view="hazard">Huarochirí km 70–115</button>
+						<button type="button" class="preset-btn" data-view="chosica">Chosica km 35–80</button>
+						<button type="button" class="preset-btn" data-view="ticlio">Abra Ticlio (4 818 m)</button>
+						<button type="button" class="preset-btn" data-view="detour">Desvío SUTRAN Ruta 3</button>
+					</div>
+				</div>
+
+				<div class="hud-card hud-xr-box" id="xr-controls-container">
+					<div class="hud-tag">02 // REALIDAD MIXTA · META QUEST 3</div>
+					<button type="button" id="xr-toggle-btn" class="xr-action-button" disabled>Ver en la mesa</button>
+					<p id="xr-support-notice" class="xr-support-notice">
+						En este navegador se ve la maqueta. En el Quest, colócala en la mesa.
+					</p>
+				</div>
+			</header>
+
+			<footer class="hud-bottom-dock">
+				<div class="hud-card legend-panel">
+					<div class="hud-tag">03 // CINTAS Y SEÑALES SEPARADAS (PRONÓSTICO · BASE · DESVÍO)</div>
+					<div class="legend-items">
+						<div class="legend-item">
+							<span class="legend-swatch" style="background-color: var(--color-high);"></span>
+							<span>Lluvia SENAMHI · ahora (km 70 a 115 · Alto)</span>
+						</div>
+						<div class="legend-item">
+							<span class="legend-swatch" style="background-color: var(--color-moderate);"></span>
+							<span>Salida +18 h · Moderado (mismo tramo)</span>
+						</div>
+						<div class="legend-item">
+							<span class="legend-swatch" style="background-color: var(--color-teal);"></span>
+							<span>Ruta 3 · Lima – Canta – Huayllay – Unish – Dv. Pasco</span>
+						</div>
+					</div>
+					<div class="signals-row">
+						<span class="signal-badge" data-view="hazard">
+							PRONÓSTICO · SENAMHI km 70–115 (25–40 mm)
+						</span>
+						<span class="signal-badge" data-view="chosica">
+							BASE · INGEMMET km 35–80 (Quebradas Chosica–Matucana)
+						</span>
+						<span class="signal-badge" data-view="ticlio">
+							BASE · MTC km 120–140 (Abra Ticlio 4 818 m)
+						</span>
+					</div>
+				</div>
+
+				<div class="hud-card elevation-panel" id="elevation-profile-card" title="Haz clic para enfocar Huarochirí (km 70 a 115)">
+					<div class="hud-tag">04 // PERFIL ALTITUDINAL · LIMA (150 M) → TICLIO (4 818 M) → HUANCAYO (3 250 M)</div>
+					<svg class="elevation-svg" viewBox="0 0 340 54">
+						<title>Perfil altitudinal Lima a Huancayo</title>
+						<path
+							d="M 8 48 L 48 41 L 85 28 L 128 16 L 152 6 L 195 15 L 265 19 L 332 20 L 332 50 L 8 50 Z"
+							fill="rgba(216, 204, 168, 0.45)"
+						/>
+						<polyline
+							points="8,48 48,41 85,28 128,16 152,6 195,15 265,19 332,20"
+							fill="none"
+							stroke="#1b333c"
+							stroke-width="2"
+						/>
+						<polyline
+							points="85,28 106,22 128,16"
+							fill="none"
+							stroke="#d96200"
+							stroke-width="4"
+						/>
+						<polyline
+							points="85,33 106,27 128,21"
+							fill="none"
+							stroke="#e8bc00"
+							stroke-width="3"
+							stroke-dasharray="4 2"
+						/>
+						<circle cx="8" cy="48" r="2.5" fill="#0a2530" />
+						<circle cx="48" cy="41" r="2.5" fill="#0a2530" />
+						<circle cx="106" cy="22" r="3.5" fill="#d96200" />
+						<circle cx="152" cy="6" r="2.5" fill="#0b6e78" />
+						<circle cx="332" cy="20" r="2.5" fill="#0a2530" />
+						<text x="10" y="44" font-size="8" font-family="monospace" fill="#0a2530">Lima</text>
+						<text x="38" y="36" font-size="7.5" font-family="monospace" fill="#4d6b74">Chosica</text>
+						<text x="76" y="13" font-size="8" font-weight="bold" font-family="monospace" fill="#d96200">km 70–115</text>
+						<text x="142" y="18" font-size="8" font-family="monospace" fill="#0b6e78">Ticlio</text>
+						<text x="290" y="15" font-size="8" font-family="monospace" fill="#0a2530">Huancayo</text>
+					</svg>
+				</div>
+			</footer>
+		</div>
+
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

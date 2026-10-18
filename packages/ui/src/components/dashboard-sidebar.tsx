@@ -17,7 +17,6 @@ import {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuBadge,
@@ -39,27 +38,17 @@ export interface DashboardNavigationItem {
 
 export interface DashboardSidebarProps {
 	items: DashboardNavigationItem[];
-	homeLink: ReactElement;
-	preferences: (collapsed: boolean) => ReactNode;
 	account: (collapsed: boolean) => ReactNode;
 	expandLabel: string;
 	collapseLabel: string;
-	preferencesLabel: string;
-	groupLabel?: string;
-	tagline?: string;
 	navigationLabel?: string;
 }
 
 export function DashboardSidebar({
 	items,
-	homeLink,
-	preferences,
 	account,
 	expandLabel,
 	collapseLabel,
-	preferencesLabel,
-	groupLabel = "Centro de operaciones · Perú",
-	tagline = "Clima, vías y flota en un solo lugar.",
 	navigationLabel = "Navegación principal",
 }: DashboardSidebarProps) {
 	const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
@@ -93,31 +82,19 @@ export function DashboardSidebar({
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarHeader className="flex-row items-center gap-1 p-2 group-data-[collapsible=icon]:flex-col">
-				<SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:flex-none">
-					<SidebarMenuItem>
-						<SidebarMenuButton
-							size="lg"
-							render={homeLink}
-							tooltip="illapa"
-							aria-label="illapa"
-							className="h-16 group-data-[collapsible=icon]:justify-center"
-							onClick={() => setOpenMobile(false)}
-						>
-							{collapsed ? (
-								<IllapaMark className="size-8!" />
-							) : (
-								<span className="flex min-w-0 flex-col gap-0.5">
-									<IllapaLockup markClassName="size-6!" />
-									<span className="type-label pl-8 text-muted-foreground">
-										Inteligencia en ruta
-									</span>
-								</span>
-							)}
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				</SidebarMenu>
-				<SidebarMenu className="w-auto">
+			{/* Collapsed, the toggle sits on top of the mark and cross-fades in
+			    while the rail is hovered or holds keyboard focus. has-[:focus-visible]
+			    rather than focus-within, so focus left behind by a click does not
+			    keep the toggle showing. */}
+			<SidebarHeader className="relative flex-row items-center justify-between gap-2 p-2">
+				<div className="flex h-8 min-w-0 items-center pl-2 transition-opacity duration-150 group-data-[collapsible=icon]:pl-0 group-data-[collapsible=icon]:group-has-[:focus-visible]:opacity-0 group-data-[collapsible=icon]:group-hover:opacity-0 motion-reduce:transition-none">
+					{collapsed ? (
+						<IllapaMark className="size-8" />
+					) : (
+						<IllapaLockup markClassName="size-6!" />
+					)}
+				</div>
+				<SidebarMenu className="w-auto transition-opacity duration-150 group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:inset-2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:group-has-[:focus-visible]:opacity-100 group-data-[collapsible=icon]:group-hover:opacity-100 motion-reduce:transition-none">
 					<SidebarMenuItem>
 						<SidebarMenuButton
 							aria-label={toggleLabel}
@@ -135,9 +112,6 @@ export function DashboardSidebar({
 			<SidebarSeparator />
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel className="type-label!">
-						{groupLabel}
-					</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<nav aria-label={navigationLabel}>
 							<SidebarMenu>
@@ -184,20 +158,9 @@ export function DashboardSidebar({
 						</nav>
 					</SidebarGroupContent>
 				</SidebarGroup>
-				<SidebarGroup className="mt-auto">
-					<SidebarGroupLabel className="type-label!">
-						{preferencesLabel}
-					</SidebarGroupLabel>
-					<SidebarGroupContent>{preferences(collapsed)}</SidebarGroupContent>
-				</SidebarGroup>
 			</SidebarContent>
 			<SidebarSeparator />
-			<SidebarFooter className="gap-3 p-2">
-				<p className="type-label text-muted-foreground group-data-[collapsible=icon]:hidden">
-					{tagline}
-				</p>
-				{account(collapsed)}
-			</SidebarFooter>
+			<SidebarFooter className="p-2">{account(collapsed)}</SidebarFooter>
 			{!isMobile && (
 				<SidebarRail aria-label={toggleLabel} title={toggleLabel} />
 			)}
