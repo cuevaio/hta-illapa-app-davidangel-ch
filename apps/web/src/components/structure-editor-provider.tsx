@@ -1,5 +1,4 @@
 import { StructureEditorConfirmDialog } from "@hack-the-andes-project/ui/components/structure-editor-dialogs";
-import { createStructureXrStore } from "@hack-the-andes-project/ui/components/structure-xr";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import {
@@ -45,8 +44,6 @@ function useEditorSession(userId: string) {
 			editorSession.mergeRemote(cachedStructures, editorSession.version);
 		return editorSession;
 	});
-	const [xrStore] = useState(createStructureXrStore);
-	useEffect(() => () => xrStore.destroy(), [xrStore]);
 	const snapshot = useSyncExternalStore(
 		session.subscribe,
 		session.getSnapshot,
@@ -94,7 +91,6 @@ function useEditorSession(userId: string) {
 		() => ({
 			session,
 			snapshot,
-			xrStore,
 			query: {
 				hasData: Boolean(data),
 				isPending,
@@ -107,7 +103,6 @@ function useEditorSession(userId: string) {
 		[
 			session,
 			snapshot,
-			xrStore,
 			data,
 			isPending,
 			isLoadingError,

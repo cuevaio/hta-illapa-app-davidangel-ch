@@ -11,11 +11,10 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"three": "catalog:"
+		"@babylonjs/core": "catalog:"
 	},
 	"devDependencies": {
 		"@hack-the-andes-project/config": "workspace:*",
-		"@types/three": "catalog:",
 		"typescript": "^6.0.3",
 		"vitest": "catalog:"
 	}
