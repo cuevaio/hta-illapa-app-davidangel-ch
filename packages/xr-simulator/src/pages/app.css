@@ -497,6 +497,7 @@
 	color: var(--xr-muted-foreground);
 }
 .xr-viewer .peru-pick {
+	font-family: var(--xr-font-sans);
 	font-size: 14px;
 	line-height: 1.5;
 	font-variant-numeric: tabular-nums;
