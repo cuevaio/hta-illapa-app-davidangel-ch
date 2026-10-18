@@ -1,4 +1,17 @@
-# Node services (Dokploy)
+# Dokploy deployment
+
+## Static sites
+
+Build with the repository root as the context. Both images serve static files through nginx on port `80`. Dokploy runs one app per environment for each site; build a separate image with that environment's public URLs.
+
+| Site | Dockerfile | Build args |
+| --- | --- | --- |
+| Dashboard (`web`) | `deploy/web.Dockerfile` | `VITE_SERVER_URL` |
+| Marketing (`illapa`) | `deploy/illapa.Dockerfile` | `PUBLIC_APP_URL` (dashboard origin), `PUBLIC_API_URL` (API origin) |
+
+The URLs are baked in at build time. Empty or omitted build args use the site's `.env.production` values. The marketing form posts to `${PUBLIC_API_URL}/api/demo-requests` on the API server; include the marketing origin in that server's `ALLOWED_ORIGINS`.
+
+## Node services
 
 `server`, `scraper` and `fleet-sync` are Cloudflare Workers that Alchemy deploys from `packages/infra`. The same code also runs as a plain Node 24 process. Each app gets its own Docker image, built from `deploy/node-service.Dockerfile`, and Dokploy serves it behind Traefik. The Workers build and deploy are unchanged.
 
