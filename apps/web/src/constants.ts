@@ -178,9 +178,21 @@ interface SincePreset extends IncidentTimePreset {
 }
 
 export const INCIDENT_SINCE_PRESETS: SincePreset[] = [
-	{ value: "24h", label: "Últimas 24 h", durationMs: LAST_DAY_DURATION_MS },
-	{ value: "7d", label: "Últimos 7 días", durationMs: LAST_WEEK_DURATION_MS },
-	{ value: DEFAULT_SINCE_PRESET, label: "Todo el período", durationMs: null },
+	{
+		value: "24h",
+		label: m.dashboard_since_day(),
+		durationMs: LAST_DAY_DURATION_MS,
+	},
+	{
+		value: "7d",
+		label: m.dashboard_since_week(),
+		durationMs: LAST_WEEK_DURATION_MS,
+	},
+	{
+		value: DEFAULT_SINCE_PRESET,
+		label: m.dashboard_since_all(),
+		durationMs: null,
+	},
 ];
 
 export const EMPTY_INCIDENTS: Incident[] = [];
@@ -228,7 +240,8 @@ export const ROUTE_REVIEW_MAP_SELECTED_WIDTH_PX = 6;
 export const ROUTE_REVIEW_MAP_CASING_WIDTH_PX = 8;
 
 export const ROUTE_REVIEW_DEPARTURE_STEP_MS = 15 * MS_PER_MINUTE;
-export const ROUTE_REVIEW_MAP_FIT_PADDING_PX = 32;
+export const ROUTE_REVIEW_DEPARTURE_LEAD_MS = 15 * MS_PER_MINUTE;
+export const ROUTE_REVIEW_MAP_FIT_PADDING_PX = 72;
 export const ROUTE_REVIEW_MAP_LEGEND_PADDING_PX = 144;
 export const ROUTE_REVIEW_MAP_COMPACT_LEGEND_PADDING_PX = 72;
 export const ROUTE_REVIEW_MAP_COMPACT_HEIGHT_PX = 240;

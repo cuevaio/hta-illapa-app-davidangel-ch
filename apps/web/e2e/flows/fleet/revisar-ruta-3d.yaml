@@ -1,0 +1,33 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Revisar ruta 3D view
+tags:
+  - fleet
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "Revisar ruta"
+    timeout: 30000
+- tapOn: "Revisar ruta"
+- extendedWaitUntil:
+    visible: "Elige un vehículo"
+    timeout: 30000
+- tapOn: "Elige un vehículo"
+- tapOn: "Tracto 02 · Ate · DEM-102.*"
+- tapOn: "Revisar"
+- extendedWaitUntil:
+    visible: ".*rutas · Tracto 02 · Ate · 6 ejes.*"
+    timeout: 60000
+- tapOn: "Ver en 3D"
+- extendedWaitUntil:
+    visible: ".*MAQUETA 3D.*"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: 01-3d-view
+- assertNotVisible: ".*NOT SUPPORTED.*|.*NOT AVAILABLE.*"
+- tapOn: "Mapa 2D"
+- extendedWaitUntil:
+    visible: "Leyenda|Riesgo · Ahora"
+    timeout: 20000
+- takeScreenshot: 02-back-to-2d

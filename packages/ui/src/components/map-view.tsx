@@ -22,6 +22,7 @@ export type {
 	MapRef,
 } from "react-map-gl/maplibre";
 export {
+	AttributionControl,
 	Layer,
 	Marker,
 	NavigationControl,

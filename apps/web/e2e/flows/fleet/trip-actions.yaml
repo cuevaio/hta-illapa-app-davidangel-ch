@@ -1,0 +1,59 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Planned trip actions
+tags:
+  - fleet
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "Revisar ruta"
+    timeout: 30000
+- tapOn: "Revisar ruta"
+- extendedWaitUntil:
+    visible: "Elige un vehículo"
+    timeout: 30000
+- tapOn: "Elige un vehículo"
+- tapOn: "Tracto 03 · Lurín · DEM-103.*"
+# Chrome's datetime-local takes typed digits segment by segment (MM DD YYYY hh mm AM/PM), in Lima time.
+- evalScript: "${output.departure = (function () { var lima = new Date(Date.now() + 3 * 3600000 - 5 * 3600000); function pad(value) { return (value < 10 ? '0' : '') + value; } var hours = lima.getUTCHours(); return pad(lima.getUTCMonth() + 1) + pad(lima.getUTCDate()) + lima.getUTCFullYear() + pad(hours % 12 || 12) + pad(lima.getUTCMinutes()) + (hours >= 12 ? 'PM' : 'AM'); })()}"
+- tapOn:
+    point: "290,304"
+- inputText: ${output.departure}
+- takeScreenshot: 01-later-departure
+- tapOn: "Revisar"
+- extendedWaitUntil:
+    visible: ".*rutas · Tracto 03 · Lurín · 5 ejes.*"
+    timeout: 60000
+- tapOn:
+    text: "Planificar viaje"
+    index: 0
+- extendedWaitUntil:
+    visible: "Planificado"
+    timeout: 30000
+- takeScreenshot: 02-planned
+- tapOn: "Volver a evaluar"
+- extendedWaitUntil:
+    visible: ".*Evaluado.*hace unos segundos.*"
+    timeout: 60000
+- takeScreenshot: 03-rescored
+- tapOn:
+    id: "route-review-candidate-sutran:quebrada-honda.*"
+    index: 0
+- tapOn: "Usar esta ruta"
+- extendedWaitUntil:
+    visible: ".*Elegida: Emp.*|.*Elegida: PE-3SZ.*"
+    timeout: 30000
+- takeScreenshot: 04-switched-route
+- tapOn:
+    text: "Cancelar viaje"
+    index: 0
+- extendedWaitUntil:
+    visible: "¿Cancelar este viaje?"
+    timeout: 10000
+- tapOn:
+    text: "Cancelar viaje"
+    index: 1
+- extendedWaitUntil:
+    visible: "Cancelado"
+    timeout: 20000
+- takeScreenshot: 05-cancelled

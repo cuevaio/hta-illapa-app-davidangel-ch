@@ -169,7 +169,8 @@ function PlannedTripPage() {
 				{
 					action: {
 						label: m.route_review_trip_start_map(),
-						onClick: () => navigate({ to: "/dashboard" }),
+						onClick: () =>
+							navigate({ to: "/dashboard", search: { flota: true } }),
 					},
 				},
 			);

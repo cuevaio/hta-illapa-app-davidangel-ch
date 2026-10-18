@@ -44,6 +44,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+	ROUTE_REVIEW_DEPARTURE_LEAD_MS,
 	ROUTE_REVIEW_DEPARTURE_STEP_MS,
 	ROUTE_REVIEW_LAST_VEHICLE_KEY,
 	ROUTE_REVIEW_MAP_CASING_WIDTH_PX,
@@ -119,8 +120,10 @@ function RouteReviewPage() {
 			vehicleId,
 			departureLocal: formatRouteReviewLocalInput(
 				new Date(
-					(Math.floor(Date.now() / ROUTE_REVIEW_DEPARTURE_STEP_MS) + 1) *
-						ROUTE_REVIEW_DEPARTURE_STEP_MS,
+					Math.ceil(
+						(Date.now() + ROUTE_REVIEW_DEPARTURE_LEAD_MS) /
+							ROUTE_REVIEW_DEPARTURE_STEP_MS,
+					) * ROUTE_REVIEW_DEPARTURE_STEP_MS,
 				),
 			),
 		};
@@ -520,7 +523,11 @@ function RouteReviewPage() {
 					) : (
 						<Empty>
 							<EmptyHeader>
-								<EmptyTitle>{m.route_review_initial_title()}</EmptyTitle>
+								<EmptyTitle>
+									{vehicle
+										? m.route_review_initial_ready_title()
+										: m.route_review_initial_title()}
+								</EmptyTitle>
 								<EmptyDescription>
 									{m.route_review_initial_description()}
 								</EmptyDescription>
