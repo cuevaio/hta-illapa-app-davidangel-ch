@@ -6,6 +6,7 @@ import {
 	verifyDemoResetSecret,
 } from "@hack-the-andes-project/api/demo-reset";
 import { appRouter } from "@hack-the-andes-project/api/routers/index";
+import { proxySimulatorRequest } from "@hack-the-andes-project/api/simulator-proxy";
 import {
 	type Auth,
 	createAuth,
@@ -18,6 +19,10 @@ import {
 	DEMO_RESET_SECRET_HEADER,
 } from "@hack-the-andes-project/business/demo-account";
 import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
+import {
+	TILES_API_PATH,
+	WEATHER_API_PATH,
+} from "@hack-the-andes-project/business/simulators";
 import { createDb, type Database } from "@hack-the-andes-project/db";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -249,6 +254,28 @@ app.post(DEMO_RESET_PATH, async (context) => {
 	context.get("log").set({ demo: { reset: true, ...result } });
 	return context.json(result);
 });
+
+app.get(`${TILES_API_PATH}/*`, (c) =>
+	proxySimulatorRequest({
+		request: c.req.raw,
+		role: c.get("session")?.user.role,
+		pathPrefix: TILES_API_PATH,
+		upstreamBaseUrl: ENV.TILES_API_URL,
+		service: "tiles",
+		log: c.get("log"),
+	}),
+);
+
+app.get(`${WEATHER_API_PATH}/*`, (c) =>
+	proxySimulatorRequest({
+		request: c.req.raw,
+		role: c.get("session")?.user.role,
+		pathPrefix: WEATHER_API_PATH,
+		upstreamBaseUrl: ENV.WEATHER_API_URL,
+		service: "weather",
+		log: c.get("log"),
+	}),
+);
 
 app.get("/", (c) => c.text("OK"));
 
