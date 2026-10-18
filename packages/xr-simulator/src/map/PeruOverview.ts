@@ -12,13 +12,19 @@ import {
 	TransformNode,
 	Vector3,
 } from "@babylonjs/core";
-import { type WeatherCardContent, weatherCardContent } from "../ui/sections";
+import {
+	type WeatherMenuContent,
+	weatherMenuAction,
+	weatherMenuContent,
+} from "../ui/sections";
 import { ImageryToggle } from "../ui/web/ImageryToggle";
 import { WeatherPanel } from "../ui/web/WeatherPanel";
 import {
 	type Bounds,
 	easeInOut,
 	FLY,
+	OVERVIEW_VIEW,
+	topDownView,
 	type Vec3,
 	vrStartPose,
 	ZOOM,
@@ -54,7 +60,6 @@ import {
 	DEFAULT_ATTRIBUTION,
 	type TilesClient,
 } from "./tilesClient";
-import type { WeatherLayerId } from "./weather/catalog";
 import { viewFocus } from "./weather/region";
 import type { WeatherController } from "./weather/WeatherController";
 import type {
@@ -120,6 +125,8 @@ const FOG_DENSITY = 0.00015;
 const HUD_INTERVAL_MS = 250;
 /** Closest orbit distance (scene km); was 30 before the satellite imagery. */
 const ORBIT_MIN_RADIUS = 2;
+/** Farthest orbit zoom-out (km), raised when a narrow viewport needs more to frame Peru. */
+const ORBIT_MAX_RADIUS = 6000;
 /** Orbit near plane: radius / ORBIT_NEAR_RATIO, between 0.05 and 1 km (depth precision far away). */
 const ORBIT_NEAR_RATIO = 40;
 
@@ -150,8 +157,9 @@ export interface FlightHost {
 	/** Imagery attribution (and prototype notice) while Satélite is visible, for the VR card; else null. */
 	imageryCredit(): { text: string; notice: string | null } | null;
 	/** Weather section of the VR card at the marked point (S8); null without weather. */
-	weatherCard(): WeatherCardContent | null;
-	/** A weather button of the VR card: "wx:<layer>" toggles it, "wx:prev" / "wx:next" step the forecast time. */
+	/** The VR weather menu (S8), null without a weather client. */
+	weatherMenu(): WeatherMenuContent | null;
+	/** A button of the VR weather menu (weatherMenuAction ids). */
 	weatherAction(id: string): void;
 	/** Attribution of the enabled weather layers (VR label); null when none is on. */
 	weatherCredit(): string | null;
@@ -186,6 +194,8 @@ export class PeruOverview implements FlightHost {
 	private terrain: LodTerrain | null = null;
 	private readonly frame = peruFrame();
 	private localBounds: Bounds;
+	/** The Peru bbox itself (no flight margin), framed top-down by the web overview (S7). */
+	private readonly peruBounds: Bounds;
 	private xrEyePixels = 1680;
 	private lastHud = 0;
 	private inVr = false;
@@ -266,6 +276,7 @@ export class PeruOverview implements FlightHost {
 		const ne = lonLatToWorld(PERU_BBOX.east, PERU_BBOX.north);
 		const [minX, minZ] = worldToLocal(this.frame, sw.x, sw.y);
 		const [maxX, maxZ] = worldToLocal(this.frame, ne.x, ne.y);
+		this.peruBounds = { minX, maxX, minZ, maxZ };
 		this.localBounds = {
 			minX: minX - FLY.boundsMargin,
 			maxX: maxX + FLY.boundsMargin,
@@ -273,12 +284,12 @@ export class PeruOverview implements FlightHost {
 			maxZ: maxZ + FLY.boundsMargin,
 		};
 
-		// Looking north from the south, Peru framed.
+		// Framed top-down by frameTopDown() once the engine knows the viewport.
 		this.camera = new ArcRotateCamera(
 			"peru-orbit",
 			-Math.PI / 2,
-			0.7,
-			3400,
+			OVERVIEW_VIEW.topDownBeta,
+			ORBIT_MAX_RADIUS,
 			Vector3.Zero(),
 			this.scene,
 		);
@@ -288,7 +299,8 @@ export class PeruOverview implements FlightHost {
 		this.camera.upperBetaLimit = 1.4;
 		// Close enough to read streets and houses on the satellite imagery (S7); the near plane follows the radius.
 		this.camera.lowerRadiusLimit = ORBIT_MIN_RADIUS;
-		this.camera.upperRadiusLimit = 6000;
+		this.camera.lowerBetaLimit = OVERVIEW_VIEW.topDownBeta;
+		this.camera.upperRadiusLimit = ORBIT_MAX_RADIUS;
 		this.camera.panningSensibility = 2;
 		this.camera.minZ = 1;
 		this.camera.maxZ = 20_000;
@@ -496,8 +508,7 @@ export class PeruOverview implements FlightHost {
 			this.weather?.gpu.binding(this.scene, "shadow") ?? null,
 		);
 		this.applyImagery();
-		// Frame the Peru bbox centre (the local origin).
-		this.camera.setTarget(Vector3.Zero());
+		this.frameTopDown();
 		await this.terrain.ready;
 		this.loaded = true;
 		this.setStatus(null);
@@ -519,23 +530,19 @@ export class PeruOverview implements FlightHost {
 		return s.credit ? { text: s.credit, notice: s.notice } : null;
 	}
 
-	weatherCard(): WeatherCardContent | null {
+	weatherMenu(): WeatherMenuContent | null {
 		const w = this.weather?.controller;
 		if (!w) return null;
-		const s = w.snapshot();
 		const p = this.pickedPoint;
-		return weatherCardContent({
-			...s,
-			lines: p && w.available ? w.pointLines(p.lon, p.lat) : [],
-		});
+		return weatherMenuContent(
+			w.snapshot(),
+			p && w.available ? w.pointLines(p.lon, p.lat) : [],
+		);
 	}
 
 	weatherAction(id: string): void {
 		const w = this.weather?.controller;
-		if (!w) return;
-		if (id === "wx:prev") w.step(-1);
-		else if (id === "wx:next") w.step(1);
-		else if (id.startsWith("wx:")) w.toggle(id.slice(3) as WeatherLayerId);
+		if (w) weatherMenuAction(w, id);
 	}
 
 	weatherCredit(): string | null {
@@ -581,7 +588,12 @@ export class PeruOverview implements FlightHost {
 		};
 	}
 
+	/** Every return to the map starts again from the whole of Peru seen from above (S7). */
 	show(): void {
+		if (!this.inVr) {
+			this.setCameraMode("orbit");
+			this.frameTopDown();
+		}
 		this.active = true;
 		if (this.mode === "orbit") this.camera.attachControl(this.canvas, true);
 		else this.fly.enabled = true;
@@ -638,6 +650,19 @@ export class PeruOverview implements FlightHost {
 
 	get cameraMode(): CameraMode {
 		return this.mode;
+	}
+
+	private frameTopDown(): void {
+		const view = topDownView(
+			this.peruBounds,
+			this.camera.fov,
+			this.scene.getEngine().getAspectRatio(this.camera),
+		);
+		this.camera.upperRadiusLimit = Math.max(ORBIT_MAX_RADIUS, view.radius);
+		this.camera.setTarget(new Vector3(...view.target));
+		this.camera.alpha = view.alpha;
+		this.camera.beta = view.beta;
+		this.camera.radius = view.radius;
 	}
 
 	/** "Órbita" ↔ "Vuelo libre", keeping the view: the fly camera starts where the orbit camera is. */

@@ -20,6 +20,7 @@ import type { Terrain } from "../scenario/terrain";
 import type { SolverStats } from "../solver/Solver";
 import type { AppState } from "../state/appState";
 import type { Store } from "../state/store";
+import type { WeatherMenuContent } from "../ui/sections";
 import { VrPanel } from "../ui/vr/VrPanel";
 import {
 	controllerYaw,
@@ -51,6 +52,11 @@ export interface XrHost {
 	backToMap?(): void;
 	/** Whether the Peru map can be shown (its relief loaded). */
 	mapAvailable?(): boolean;
+	/** The weather menu page of the panel (S8). */
+	weather?: {
+		content(): WeatherMenuContent | null;
+		action(id: string): void;
+	};
 }
 
 /** Table top in front of the user for the maquette (metres, XR local-floor space). */
@@ -201,6 +207,7 @@ export class XrController {
 			backToMap:
 				back && this.mode === "immersive-vr" ? () => back() : undefined,
 			mapAvailable: () => this.host.mapAvailable?.() ?? false,
+			weather: this.host.weather,
 		});
 		this.place(true);
 		this.unwatch.push(
@@ -350,6 +357,7 @@ export class XrController {
 	/** Per XR frame: summon the panel, grab manipulation and thumbstick snap turns of the maquette. */
 	private manipulate(): void {
 		if (!this.inXr || !this.active) return;
+		this.panel?.refreshWeather();
 		const summon = this.pointers.summonPressed();
 		if (summon && this.summonArmed) this.summonPanel();
 		this.summonArmed = !summon;

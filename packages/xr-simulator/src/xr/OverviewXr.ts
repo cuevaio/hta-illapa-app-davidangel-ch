@@ -10,7 +10,11 @@ import {
 	type WebXRInputSource,
 	WebXRState,
 } from "@babylonjs/core";
-import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
+import {
+	AdvancedDynamicTexture,
+	Control,
+	type TextBlock,
+} from "@babylonjs/gui";
 import {
 	clampAltitude,
 	clampToBounds,
@@ -34,7 +38,10 @@ import {
 	yawAbout,
 } from "../map/rig";
 import { entryActions, pointCardContent } from "../ui/sections";
+import { readVrTheme, type VrTheme } from "../ui/vr/theme";
+import { themedSurface, themedText } from "../ui/vr/themeGui";
 import { VrPointCard } from "../ui/vr/VrPointCard";
+import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
 import {
 	type GrabHand,
 	mapRootFromPose,
@@ -61,6 +68,11 @@ const STICK_DEAD_ZONE = 0.15;
 /** "Simular aquí" card: distance along the gaze and drop below it (m). */
 const CARD_DISTANCE = 0.6;
 const CARD_DROP = 0.08;
+/** Attribution label under the controls card (texture px): small print, as on the web map. */
+const CREDIT_TEXT_PX = 22;
+/** Weather menu (X): distance along the gaze and shift to the left of it, beside the card (m). */
+const WEATHER_MENU_DISTANCE = 0.9;
+const WEATHER_MENU_LEFT = 0.45;
 
 /** The app's VR state (src/xr/vrMode.ts), shared with the simulator's VR in the same session. */
 export interface VrMapLink {
@@ -86,6 +98,7 @@ export class OverviewXr {
 	/** After a pause (the simulator had the session) the first frame only records button states. */
 	private primeButtons = false;
 	private card: VrPointCard | null = null;
+	private weatherMenu: VrWeatherMenu | null = null;
 	private cardShown = "";
 	private cardBusy = false;
 	private cardError: string | null = null;
@@ -96,7 +109,12 @@ export class OverviewXr {
 	private readonly tableGrab = new TableGrab();
 	private tableSnap = { armed: true };
 	/** Imagery attribution (+ prototype notice) under the hint card while Satélite is visible (S7). */
-	private credit: { mesh: Mesh; text: TextBlock; shown: string } | null = null;
+	private credit: {
+		mesh: Mesh;
+		text: TextBlock;
+		shown: string;
+		theme: VrTheme;
+	} | null = null;
 	private readonly ray = new BabylonRay(Vector3.Zero(), Vector3.Forward());
 	private zoom: ZoomTween | null = null;
 	private readonly gripTap = new DoubleTap();
@@ -130,12 +148,16 @@ export class OverviewXr {
 						simulate: () => this.simulateFromCard(),
 						cancel: () => this.closeCard(true),
 						setView: (view) => this.link.dispatch({ type: "set-view", view }),
-						weather: (id) => this.host.weatherAction(id),
 						openEntry: (id) => this.openEntryFromCard(id),
 					},
-					this.host.weatherCard() !== null,
 					entryActions(this.host.entries()),
 				);
+				const weather = this.host.weatherMenu();
+				this.weatherMenu = weather
+					? new VrWeatherMenu(this.host.scene, weather, (id) =>
+							this.host.weatherAction(id),
+						)
+					: null;
 				// Eye buffer height (WebGL layer); the LOD measures its screen-space error in it.
 				const layer = xr.baseExperience.sessionManager.session?.renderState
 					.baseLayer as XRWebGLLayer | undefined;
@@ -149,6 +171,8 @@ export class OverviewXr {
 				this.hintText = null;
 				this.card?.dispose();
 				this.card = null;
+				this.weatherMenu?.dispose();
+				this.weatherMenu = null;
 				this.cardShown = "";
 				this.cardBusy = false;
 				this.cardError = null;
@@ -225,6 +249,7 @@ export class OverviewXr {
 					["xr-standard-squeeze", "squeeze"],
 					["a-button"],
 					["b-button"],
+					["x-button"],
 					["y-button"],
 				] as const)
 					this.pressedOnce(c, id, type);
@@ -237,14 +262,16 @@ export class OverviewXr {
 		if (wanted !== this.view) this.applyView(wanted);
 		if (left && this.pressedOnce(left, "y-button"))
 			this.link.dispatch({ type: "toggle-view" });
+		if (left && this.pressedOnce(left, "x-button")) this.toggleWeatherMenu();
 		// Trigger: on the card it presses the card's buttons (pointer selection); otherwise the view decides.
 		const triggered: WebXRInputSource[] = [];
 		for (const c of [left, right]) {
 			if (!c || !this.pressedOnce(c, "xr-standard-trigger", "trigger"))
 				continue;
 			c.getWorldPointerRayToRef(this.ray);
-			const cardHit =
-				!!this.card?.visible && this.ray.intersectsMesh(this.card.mesh).hit;
+			const cardHit = [this.card, this.weatherMenu].some(
+				(panel) => panel?.visible && this.ray.intersectsMesh(panel.mesh).hit,
+			);
 			if (triggerUse(this.view, cardHit) === "zoom") triggered.push(c);
 		}
 		if (gripUse(this.view) === "table") this.tableFrame(left, right);
@@ -262,6 +289,27 @@ export class OverviewXr {
 		if (right && this.pressedOnce(right, "b-button"))
 			void this.xr.baseExperience.exitXRAsync();
 		this.syncCard();
+		const weather = this.weatherMenu?.visible ? this.host.weatherMenu() : null;
+		if (weather) this.weatherMenu?.update(weather);
+	}
+
+	/** X: the weather menu (S8) opens beside the gaze, or closes. */
+	private toggleWeatherMenu(): void {
+		const menu = this.weatherMenu;
+		if (!menu) return;
+		if (menu.visible) {
+			menu.hide();
+			return;
+		}
+		const cam = this.xr.baseExperience.camera;
+		const head = cam.position;
+		const gaze = cam.getDirection(Vector3.Forward());
+		const left = cam.getDirection(Vector3.Left());
+		menu.showAt([
+			head.x + gaze.x * WEATHER_MENU_DISTANCE + left.x * WEATHER_MENU_LEFT,
+			head.y + gaze.y * WEATHER_MENU_DISTANCE + left.y * WEATHER_MENU_LEFT,
+			head.z + gaze.z * WEATHER_MENU_DISTANCE + left.z * WEATHER_MENU_LEFT,
+		]);
 	}
 
 	/** Flight ("Vuelo"): stick flight, grip climb/turn, snap turn, trigger zoom (unchanged controls). */
@@ -487,7 +535,6 @@ export class OverviewXr {
 			busy: this.cardBusy,
 			error: this.cardError,
 			view: this.view,
-			weather: this.host.weatherCard(),
 			entries: this.host.entries(),
 			opening: this.cardOpening,
 		});
@@ -606,12 +653,12 @@ export class OverviewXr {
 		plane.parent = input.grip ?? input.pointer;
 		plane.position.set(0, 0.09, 0.02);
 		plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+		const theme = readVrTheme();
 		const ui = AdvancedDynamicTexture.CreateForMesh(plane, 960, 400, false);
-		ui.background = "rgba(15, 18, 22, 0.85)";
-		const text = new TextBlock("hint", controlsHint(this.view));
-		text.color = "white";
-		text.fontSize = 34;
-		text.textWrapping = true;
+		themedSurface(ui, theme);
+		const text = themedText(theme, "body", controlsHint(this.view), 34);
+		text.height = "100%";
+		text.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 		text.paddingLeft =
 			text.paddingRight =
 			text.paddingTop =
@@ -632,15 +679,14 @@ export class OverviewXr {
 		label.position.set(0, 0.09 - 0.05 - 0.037, 0.02);
 		label.billboardMode = Mesh.BILLBOARDMODE_ALL;
 		const lui = AdvancedDynamicTexture.CreateForMesh(label, 960, 280, false);
-		lui.background = "rgba(15, 18, 22, 0.85)";
-		const ltext = new TextBlock("credit", "");
-		ltext.color = "#c6ced8";
-		ltext.fontSize = 22;
-		ltext.textWrapping = true;
+		themedSurface(lui, theme);
+		const ltext = themedText(theme, "body", "", CREDIT_TEXT_PX);
+		ltext.height = "100%";
+		ltext.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 		ltext.paddingLeft = ltext.paddingRight = "16px";
 		lui.addControl(ltext);
 		label.setEnabled(false);
-		this.credit = { mesh: label, text: ltext, shown: "" };
+		this.credit = { mesh: label, text: ltext, shown: "", theme };
 	}
 
 	/** Shows the imagery attribution (+ prototype notice) and the weather attribution whenever they are visible. */
@@ -657,7 +703,9 @@ export class OverviewXr {
 		if (text === this.credit.shown) return;
 		this.credit.shown = text;
 		this.credit.text.text = text;
-		this.credit.text.color = c?.notice ? "#ffcf70" : "#c6ced8";
+		this.credit.text.color = c?.notice
+			? this.credit.theme.error
+			: this.credit.theme.inkMuted;
 		this.credit.mesh.setEnabled(!!text);
 	}
 }

@@ -1,23 +1,28 @@
 import { Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
 import {
 	AdvancedDynamicTexture,
-	Button,
+	type Button,
 	Control,
 	Grid,
 	Image,
 	StackPanel,
-	TextBlock,
+	type TextBlock,
 } from "@babylonjs/gui";
 import type { VrView } from "../../xr/vrMode";
-import { type IconName, iconDataUrl } from "../icons";
+import type { IconName } from "../icons";
 import type { CardAction, PointCardContent } from "../sections";
+import { readVrTheme } from "./theme";
+import {
+	paintButton,
+	themedButton,
+	themedSurface,
+	themedText,
+} from "./themeGui";
 
 export interface VrPointCardActions {
 	simulate(): void;
 	cancel(): void;
 	setView(view: VrView): void;
-	/** Weather buttons (S8): "wx:<layer>" toggles, "wx:prev" / "wx:next" step the forecast time. */
-	weather?(id: string): void;
 	/** A button of the viewer's other simulators (S5), by mode id. */
 	openEntry?(id: string): void;
 }
@@ -27,22 +32,9 @@ const TEX_W = 920;
 /** Texture px per metre of card (the card is CARD_W wide). */
 const PX_PER_M = TEX_W / CARD_W;
 const TEX_H = 680;
-/** Extra height of the weather section (toggles, time step, values, attribution). */
-const WEATHER_TEX_H = 470;
+const BUTTON_TEXT_PX = 30;
 /** Extra height of the row of the viewer's other simulators. */
 const ENTRIES_TEX_H = 112;
-/** VR card icons of the weather toggles (in the order of the panel). */
-const WEATHER_ICONS: Record<string, IconName> = {
-	"wx:clouds": "cloud",
-	"wx:rain": "rain",
-	"wx:lightning": "bolt",
-	"wx:cape": "storm",
-	"wx:wind": "wind",
-	"wx:temperature": "thermo",
-};
-const ACCENT = "#e8913a";
-const BUTTON_BG = "#2a3038";
-const MUTED = "#9aa4b1";
 
 /**
  * VR card over the Peru map (S2): the point marked with A, "Simular aquí" / "Cancelar" and the
@@ -52,6 +44,7 @@ const MUTED = "#9aa4b1";
 export class VrPointCard {
 	readonly mesh: Mesh;
 	private readonly ui: AdvancedDynamicTexture;
+	private readonly theme = readVrTheme();
 	private readonly coords: TextBlock;
 	private readonly status: TextBlock;
 	private readonly buttons = new Map<
@@ -64,24 +57,17 @@ export class VrPointCard {
 			src: string;
 		}
 	>();
-	private readonly wxTime: TextBlock | null = null;
-	private readonly wxValues: TextBlock | null = null;
-	private readonly wxCredit: TextBlock | null = null;
 
 	/**
-	 * `weather`: adds the weather section (S8); `entries`: a row opening the viewer's other
-	 * simulators (S5). Without them the card is exactly as before.
+	 * `entries`: a row opening the viewer's other simulators (S5). Without them the card is
+	 * exactly as before.
 	 */
 	constructor(
 		scene: Scene,
 		private readonly actions: VrPointCardActions,
-		weather = false,
 		entries: CardAction[] = [],
 	) {
-		const texH =
-			TEX_H +
-			(weather ? WEATHER_TEX_H : 0) +
-			(entries.length ? ENTRIES_TEX_H : 0);
+		const texH = TEX_H + (entries.length ? ENTRIES_TEX_H : 0);
 		this.mesh = MeshBuilder.CreatePlane(
 			"peru-vr-card",
 			{
@@ -100,16 +86,16 @@ export class VrPointCard {
 			texH,
 			false,
 		);
-		this.ui.background = "rgba(15,18,22,0.92)";
+		themedSurface(this.ui, this.theme);
 		const root = new StackPanel("card");
 		root.width = "94%";
 		root.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 		root.paddingTop = "16px";
 		this.ui.addControl(root);
-		root.addControl(this.label("Punto marcado", 44, "white", true));
-		this.coords = this.label("", 32, "white");
+		root.addControl(themedText(this.theme, "heading", "Punto marcado"));
+		this.coords = themedText(this.theme, "data");
 		root.addControl(this.coords);
-		this.status = this.label("", 28, MUTED);
+		this.status = themedText(this.theme, "body");
 		this.status.height = "84px";
 		root.addControl(this.status);
 		root.addControl(
@@ -119,45 +105,13 @@ export class VrPointCard {
 			]),
 		);
 		if (entries.length) root.addControl(this.row(entries));
-		root.addControl(this.label("Vista del mapa", 28, MUTED));
+		root.addControl(themedText(this.theme, "label", "Vista del mapa"));
 		root.addControl(
 			this.row([
 				{ id: "vuelo", icon: "fly", text: "Vuelo" },
 				{ id: "maqueta", icon: "maquette", text: "Maqueta" },
 			]),
 		);
-		if (weather) {
-			root.addControl(this.label("Capas meteorológicas", 28, MUTED));
-			const toggles = new Grid();
-			toggles.height = "96px";
-			const ids = Object.keys(WEATHER_ICONS);
-			ids.forEach(() => {
-				toggles.addColumnDefinition(1 / ids.length);
-			});
-			ids.forEach((id, k) => {
-				toggles.addControl(this.iconButton(id, WEATHER_ICONS[id]), 0, k);
-			});
-			root.addControl(toggles);
-			const time = new Grid();
-			time.height = "96px";
-			time.addColumnDefinition(0.2);
-			time.addColumnDefinition(0.6);
-			time.addColumnDefinition(0.2);
-			time.addControl(this.iconButton("wx:prev", "stepBack"), 0, 0);
-			this.wxTime = this.label("", 26, "white");
-			this.wxTime.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-			this.wxTime.height = "96px";
-			time.addControl(this.wxTime, 0, 1);
-			time.addControl(this.iconButton("wx:next", "stepForward"), 0, 2);
-			root.addControl(time);
-			this.wxValues = this.label("", 24, "white");
-			this.wxValues.height = "170px";
-			this.wxValues.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-			root.addControl(this.wxValues);
-			this.wxCredit = this.label("", 20, MUTED);
-			this.wxCredit.height = "60px";
-			root.addControl(this.wxCredit);
-		}
 		this.mesh.setEnabled(false);
 	}
 
@@ -178,53 +132,24 @@ export class VrPointCard {
 	update(c: PointCardContent): void {
 		this.coords.text = c.coords;
 		this.status.text = c.status ?? "";
-		// Downloading (both actions off): accent; a failure: warning yellow.
-		this.status.color = !c.simulate && !c.cancel ? ACCENT : "#ffcf70";
-		this.sync("simulate", false, !c.simulate);
+		// Downloading (both actions off): the action colour; a failure: the error colour.
+		this.status.color =
+			!c.simulate && !c.cancel ? this.theme.action : this.theme.error;
+		// "Simular aquí" is the card's one primary action.
+		this.sync("simulate", true, !c.simulate);
 		this.sync("cancel", false, !c.cancel);
 		for (const v of c.views) this.sync(v.id, v.active, false);
 		for (const e of c.entries) this.sync(e.id, false, !e.enabled);
-		const w = c.weather;
-		if (!w || !this.wxValues) return;
-		for (const t of w.toggles) this.sync(t.id, t.active, t.disabled);
-		this.sync("wx:prev", false, !w.time);
-		this.sync("wx:next", false, !w.time);
-		this.wxTime!.text = w.time ?? "Sin pronóstico";
-		this.wxValues.text = w.values.length
-			? w.values.join("\n")
-			: "Activa una capa para ver sus valores en el punto.";
-		this.wxCredit!.text = w.credit ? `Datos: ${w.credit}` : "";
 	}
 
 	private sync(id: string, active: boolean, disabled: boolean): void {
 		const e = this.buttons.get(id);
 		if (!e) return;
-		const color = active ? "#111111" : "#ffffff";
-		e.b.background = active ? ACCENT : BUTTON_BG;
-		if (e.text) e.text.color = color;
-		const src = iconDataUrl(e.icon, color);
-		if (src !== e.src) {
-			e.img.source = src;
-			e.src = src;
-		}
-		e.b.isEnabled = !disabled;
-		e.b.alpha = disabled ? 0.35 : 1;
-	}
-
-	private label(
-		text: string,
-		size: number,
-		color: string,
-		bold = false,
-	): TextBlock {
-		const t = new TextBlock(undefined, text);
-		t.color = color;
-		t.fontSize = size;
-		t.fontWeight = bold ? "bold" : "normal";
-		t.height = `${Math.round(size * 1.6)}px`;
-		t.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-		t.textWrapping = true;
-		return t;
+		e.src = paintButton(
+			this.theme,
+			{ button: e.b, label: e.text, image: e.img, icon: e.icon, source: e.src },
+			{ active, disabled },
+		);
 	}
 
 	private row(items: CardAction[]): Grid {
@@ -240,12 +165,7 @@ export class VrPointCard {
 	}
 
 	private button(it: CardAction): Button {
-		const b = new Button();
-		b.background = BUTTON_BG;
-		b.cornerRadius = 14;
-		b.thickness = 0;
-		b.paddingLeft = b.paddingRight = "6px";
-		b.paddingTop = b.paddingBottom = "8px";
+		const b = themedButton(this.theme);
 		const content = new Grid();
 		const ICON = 56;
 		content.addColumnDefinition(ICON + 20, true);
@@ -256,9 +176,8 @@ export class VrPointCard {
 		img.stretch = Image.STRETCH_UNIFORM;
 		img.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
 		content.addControl(img, 0, 0);
-		const text = new TextBlock(undefined, it.text);
-		text.fontSize = 32;
-		text.color = "white";
+		const text = themedText(this.theme, "button", it.text, BUTTON_TEXT_PX);
+		text.height = "100%";
 		text.paddingLeft = "12px";
 		text.paddingRight = "8px";
 		text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -274,28 +193,7 @@ export class VrPointCard {
 			else this.actions.setView(it.id as VrView);
 		});
 		this.buttons.set(it.id, { b, img, text, icon: it.icon, src: "" });
-		this.sync(it.id, false, false);
-		return b;
-	}
-
-	/** Icon-only button (weather toggles and the time step). */
-	private iconButton(id: string, icon: IconName): Button {
-		const b = new Button();
-		b.background = BUTTON_BG;
-		b.cornerRadius = 14;
-		b.thickness = 0;
-		b.paddingLeft = b.paddingRight = "6px";
-		b.paddingTop = b.paddingBottom = "8px";
-		const img = new Image();
-		img.width = "52px";
-		img.height = "52px";
-		img.stretch = Image.STRETCH_UNIFORM;
-		b.addControl(img);
-		b.onPointerClickObservable.add(() => {
-			if (b.isEnabled) this.actions.weather?.(id);
-		});
-		this.buttons.set(id, { b, img, text: null, icon, src: "" });
-		this.sync(id, false, false);
+		this.sync(it.id, it.id === "simulate", false);
 		return b;
 	}
 

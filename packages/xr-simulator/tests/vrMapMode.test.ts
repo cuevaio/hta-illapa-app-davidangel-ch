@@ -118,5 +118,7 @@ describe("VR map controls per mode", () => {
 		expect(controlsHint("vuelo")).toMatch(/Y: maqueta/);
 		expect(controlsHint("maqueta")).toMatch(/Grip/);
 		expect(controlsHint("maqueta")).toMatch(/Y: vuelo/);
+		for (const view of ["vuelo", "maqueta"] as const)
+			expect(controlsHint(view)).toMatch(/X: capas meteorológicas/);
 	});
 });

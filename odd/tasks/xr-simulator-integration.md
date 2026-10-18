@@ -13,6 +13,11 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 - **S5** (L11) Structures can be opened from the VR map card too, not only from the screen, with an in-headset way back to the Peru map.
 - **S6** (L11) The header and sidebar label for the engineering area names both simulators instead of "Estructuras". Assumption: "Simuladores" (es) / "Simulators" (en).
 
+- **S7** (L14) "me tiene que aparecer el mapa desde el inicio, el mapa completo visto desde arriba como estaba en /Users/owex/Developer/phoenix/peru-simulator" and "quita lo de la inclinación del mapa". Assumption: the Peru overview opens straight top-down (no tilt), framing all of Peru in the viewport (portrait and landscape); users can still orbit afterwards.
+- **S8** (L14) "que todas las opciones de mostrar nubes, vientos y demás aparezcan dentro del menu en la experiencia VR": every weather layer/option the web weather panel offers is also available from the VR menu.
+
+- **S9** (L15) "cambia el diseño de las interfaces/menu de la experiencia VR a los que ya de por si usa la web": the VR panels/menus follow the web design system (Mayu, `docs/DESIGN.md`, tokens in `packages/ui/src/styles/globals.css`).
+
 ## Tasks
 
 | ID | Specs | Route | Status | Commit |
@@ -27,6 +32,9 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T8 | S1, S2 | inline | partial (deploy docs) | 540d335 |
 | T9 | S5 | delegated (same writer) | done | ff5e3e3, 6b5bedf |
 | T10 | S6 | delegated (same writer) | done | b416331, 5d4cf68 |
+| T11 | S7 | delegated (same writer) | done | 70b143f, c230c28 |
+| T12 | S8 | delegated (same writer) | done | cc8d62c |
+| T13 | S9 | delegated (same writer) | done | 1153531, 7ddf2d9 |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -55,4 +63,7 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L11** (2026-10-18, user): "si, si" — answering "¿Lo agregamos?" (structures from the VR map card) and "¿Le cambiamos el nombre?" (header/sidebar still "Estructuras").
 - **L12** Independent verifier (c23ca58..0ad9d40): S1-S4 met, no blockers; 144-case proxy probe (fleet/no-role never reach upstream). Advisories acted on: proxy allowlist (3229300, 554e289); structures route after mount (6b5bedf).
 - **L13** T9: VR map card lists other simulators; structures uses its table maquette in immersive-vr (placed in front, opaque background) with "Volver al mapa del Perú" inside the headset. T10: area label "Simuladores"/"Simulators"; structures list keeps "Estructuras". Spot check at 554e289: check-types 0 errors, xr-simulator 340/340, ui 53/53, web 27/27, api 74/74; biome clean for tracked files.
+- **L14** (2026-10-18, user): "me tiene que aparecer el mapa desde el inicio, el mapa completo visto desde arriba como estaba en /Users/owex/Developer/phoenix/peru-simulator" / "quita lo de la inclinación del mapa. Luego que todas las opciones de mostrar nubes, vientos y demás aparezcan dentro del menu en la experiencia VR". Staging deployed (tiles/weather apps healthy, server env set). Current overview camera: alpha -π/2, beta 0.7, radius 3400 (`PeruOverview.ts:277`); peru-simulator: ~35° tilt at ~1580 km.
+- **L15** (2026-10-18, user): "cuando termine súbelo a develop" / "por cierto cambia el diseño de las interfaces/menu de la experiencia VR a los que ya de por si usa la web".
+- **L16** T11: `topDownView(bounds, fovY, aspect)` frames Peru top-down (beta 0.01, north up), also on every return to the map. T12: VR weather menu (X button on the map, "Meteorología" in the huayco panel) has every web panel option; map card's old weather toggles removed; structures has no weather overlay in XR. T13: `src/ui/vr/theme.ts` maps Mayu tokens (read from the page CSS) to Babylon GUI. Checks at 7ddf2d9: check-types 0, xr-simulator 355/355, ui 53/53, web build ok, biome clean (tracked). Writer open questions: VR flight keeps a 25° tilt; fog density fixed at large radius; Archivo expanded width unavailable in Babylon GUI.
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.

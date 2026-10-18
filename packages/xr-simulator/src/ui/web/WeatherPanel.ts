@@ -2,8 +2,16 @@ import { pointLabel } from "../../map/overviewState";
 import { CAPE_CATEGORIES, CAPE_NOTE } from "../../map/weather/cape";
 import type { WeatherLayerId } from "../../map/weather/catalog";
 import {
+	CLOUDS_NOTE,
+	LEGEND_TITLE,
+	LIGHTNING_TICKS,
+	RAIN_NOTE,
+	TEMPERATURE_TICKS,
+	WIND_NOTE,
+	WIND_TICKS,
+} from "../../map/weather/legend";
+import {
 	cssGradient,
-	legendTicks,
 	TEMPERATURE_PALETTE,
 	WIND_PALETTE,
 } from "../../map/weather/palette";
@@ -26,15 +34,6 @@ import type {
  * layer is on). Used over the Peru overview and over the simulator's map context.
  */
 
-const LEGEND_TITLE: Record<WeatherLayerId, string> = {
-	clouds: "Nubes (observado) — GOES-19 ABI",
-	rain: "Precipitación (pronóstico) — GFS",
-	lightning: "Rayos (observado) — GOES-19 GLM",
-	cape: "Potencial convectivo (pronóstico) — GFS CAPE, J/kg",
-	wind: "Viento a 10 m (pronóstico) — GFS, km/h",
-	temperature: "Temperatura a 2 m (pronóstico) — GFS, °C",
-};
-
 const esc = (s: string) =>
 	s.replace(
 		/[&<>"]/g,
@@ -46,14 +45,11 @@ function legendHtml(id: WeatherLayerId, s: WeatherSnapshot): string {
 		`<div class="wx-bar" style="background:${gradient}"></div><div class="wx-ticks">${ticks.map((t) => `<span>${esc(t)}</span>`).join("")}</div>`;
 	let body = "";
 	if (id === "temperature")
-		body = bar(
-			cssGradient(TEMPERATURE_PALETTE),
-			legendTicks(-10, 40, 10).map(String),
-		);
+		body = bar(cssGradient(TEMPERATURE_PALETTE), TEMPERATURE_TICKS);
 	else if (id === "wind")
 		body =
-			bar(cssGradient(WIND_PALETTE), legendTicks(0, 100, 25).map(String)) +
-			'<p class="wx-note">Partículas animadas, velocidad acelerada para leer el movimiento.</p>';
+			bar(cssGradient(WIND_PALETTE), WIND_TICKS) +
+			`<p class="wx-note">${WIND_NOTE}</p>`;
 	else if (id === "rain") {
 		const mode = s.rainMode;
 		body =
@@ -62,18 +58,16 @@ function legendHtml(id: WeatherLayerId, s: WeatherSnapshot): string {
 				rainGradient(),
 				rainLegendStops(mode).map((t) => t.label),
 			) +
-			'<p class="wx-note">Pronóstico del modelo, no lluvia observada.</p>';
+			`<p class="wx-note">${RAIN_NOTE}</p>`;
 	} else if (id === "cape") {
 		body = `<div class="wx-swatches">${CAPE_CATEGORIES.map((c) => `<span><i style="background:rgb(${c.color.join(" ")})"></i>${c.label} ≥ ${c.min.toLocaleString("es")}</span>`).join("")}</div><p class="wx-note">${esc(CAPE_NOTE)}</p>`;
 	} else if (id === "lightning") {
 		body =
-			'<div class="wx-bar" style="background:linear-gradient(to right, rgb(255 255 225), rgb(255 215 60) 17%, rgb(255 160 40) 50%, rgb(230 110 40 / 0.3))"></div><div class="wx-ticks"><span>ahora</span><span>10 min</span><span>30 min</span><span>60 min</span></div>' +
+			`<div class="wx-bar" style="background:linear-gradient(to right, rgb(255 255 225), rgb(255 215 60) 17%, rgb(255 160 40) 50%, rgb(230 110 40 / 0.3))"></div><div class="wx-ticks">${LIGHTNING_TICKS.map((t) => `<span>${t}</span>`).join("")}</div>` +
 			(s.lightning
 				? `<p class="wx-note">${esc(s.lightning.window)} · ${esc(s.lightning.count)}</p>`
 				: "");
-	} else
-		body =
-			'<p class="wx-note">Brillo = topes de nube (IR); transparencia = probabilidad de nube. Una imagen cada 10 min.</p>';
+	} else body = `<p class="wx-note">${CLOUDS_NOTE}</p>`;
 	return `<div class="wx-legend"><p class="wx-legend-title">${esc(LEGEND_TITLE[id])}</p>${body}</div>`;
 }
 

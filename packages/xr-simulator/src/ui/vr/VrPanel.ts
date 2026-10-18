@@ -1,13 +1,13 @@
 import { type Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
 import {
 	AdvancedDynamicTexture,
-	Button,
+	type Button,
 	Control,
 	Grid,
 	Image,
 	Slider,
 	StackPanel,
-	TextBlock,
+	type TextBlock,
 } from "@babylonjs/gui";
 import { redo as redoHistory, undo as undoHistory } from "../../edit/commands";
 import type { ResultActions } from "../../playback/ResultActions";
@@ -19,8 +19,20 @@ import {
 	type XrViewMode,
 } from "../../state/appState";
 import type { Store } from "../../state/store";
-import { type IconName, iconDataUrl } from "../icons";
-import { panelFooter, panelSections } from "../sections";
+import type { IconName } from "../icons";
+import {
+	panelFooter,
+	panelSections,
+	type WeatherMenuContent,
+} from "../sections";
+import { readVrTheme } from "./theme";
+import {
+	paintButton,
+	themedButton,
+	themedSurface,
+	themedText,
+} from "./themeGui";
+import { VrWeatherSection, weatherScroller } from "./VrWeatherMenu";
 
 export interface VrPanelActions {
 	resetSimulation(): void;
@@ -30,15 +42,21 @@ export interface VrPanelActions {
 	backToMap?: () => void;
 	/** Whether the map can be shown right now (its relief loaded). */
 	mapAvailable?: () => boolean;
+	/** The weather menu page (S8); absent: no "Meteorología" button. */
+	weather?: {
+		content(): WeatherMenuContent | null;
+		action(id: string): void;
+	};
 }
 
 const PANEL_W = 0.5;
 const PANEL_H = 0.9;
 const TEX_W = 1000;
 const TEX_H = 1800;
-const ACCENT = "#e8913a";
-const BUTTON_BG = "#2a3038";
-const MUTED = "#9aa4b1";
+/** The panel title, a size up from the web heading (it names the whole panel). */
+const TITLE_PX = 44;
+/** Weather page height (texture px): the panel minus its title, stats and footer rows. */
+const WEATHER_PAGE_H_PX = 1450;
 
 interface ButtonSpec {
 	icon: IconName | ((s: AppState) => IconName);
@@ -59,6 +77,10 @@ export class VrPanel {
 	private readonly stats: TextBlock;
 	private readonly unsubscribe: () => void;
 	private readonly syncers: ((s: AppState) => void)[] = [];
+	private weatherShown = false;
+	private readonly theme = readVrTheme();
+	/** Re-reads the weather menu while its page is shown (called per frame by the controller). */
+	readonly refreshWeather: () => void;
 
 	constructor(
 		scene: Scene,
@@ -77,7 +99,7 @@ export class VrPanel {
 			TEX_H,
 			false,
 		);
-		this.ui.background = "rgba(15,18,22,0.92)";
+		themedSurface(this.ui, this.theme);
 
 		const root = new StackPanel("root");
 		root.width = "94%";
@@ -85,11 +107,16 @@ export class VrPanel {
 		root.paddingTop = "20px";
 		this.ui.addControl(root);
 
-		root.addControl(this.label("Simulador de huaicos", 50, "white", true));
-		this.stats = this.label("", 28, MUTED);
+		root.addControl(
+			themedText(this.theme, "heading", "Simulador de huaicos", TITLE_PX),
+		);
+		this.stats = themedText(this.theme, "data");
+		this.stats.color = this.theme.inkMuted;
 		this.stats.height = "90px";
 		root.addControl(this.stats);
 
+		// Simulator controls, or the weather menu page (S8) instead of them.
+		const simulatorPage = this.section(root);
 		// Tools.
 		const tool = (id: ToolId, icon: IconName, text: string): ButtonSpec => ({
 			icon,
@@ -97,7 +124,7 @@ export class VrPanel {
 			active: (s) => s.tool === id,
 			onClick: () => store.set({ tool: id }),
 		});
-		root.addControl(
+		simulatorPage.addControl(
 			this.row("Herramienta", [
 				tool("navigate", "navigate", "Navegar"),
 				tool("source", "source", "Origen"),
@@ -107,11 +134,14 @@ export class VrPanel {
 		);
 
 		// Options of the active tool.
-		const hint = this.label("", 30, MUTED);
+		const hint = themedText(this.theme, "body");
+		hint.color = this.theme.inkMuted;
 		hint.height = "96px";
-		root.addControl(hint);
-		const sourceBox = this.section(root);
-		sourceBox.addControl(this.label("Orígenes nuevos", 32, ACCENT));
+		simulatorPage.addControl(hint);
+		const sourceBox = this.section(simulatorPage);
+		const sourceTitle = themedText(this.theme, "label", "Orígenes nuevos");
+		sourceTitle.color = this.theme.action;
+		sourceBox.addControl(sourceTitle);
 		sourceBox.addControl(
 			this.slider(
 				"Volumen (m³)",
@@ -146,7 +176,7 @@ export class VrPanel {
 				(v) => v.toFixed(0),
 			),
 		);
-		const wallBox = this.section(root);
+		const wallBox = this.section(simulatorPage);
 		const material = (
 			m: "earth" | "concrete",
 			icon: IconName,
@@ -179,7 +209,7 @@ export class VrPanel {
 		);
 
 		// Simulation.
-		root.addControl(
+		simulatorPage.addControl(
 			this.row("Simulación", [
 				{
 					icon: (s) => (s.playback.playing ? "pause" : "play"),
@@ -207,7 +237,7 @@ export class VrPanel {
 				},
 			]),
 		);
-		root.addControl(
+		simulatorPage.addControl(
 			this.slider(
 				"Velocidad (× tiempo real)",
 				1,
@@ -218,7 +248,7 @@ export class VrPanel {
 				(v) => v.toFixed(0),
 			),
 		);
-		root.addControl(
+		simulatorPage.addControl(
 			this.slider(
 				"Fricción μ",
 				0.02,
@@ -245,8 +275,8 @@ export class VrPanel {
 				disabled: (s) => s.result.frames < 2,
 			},
 		]);
-		root.addControl(liveRow);
-		const resultBox = this.section(root);
+		simulatorPage.addControl(liveRow);
+		const resultBox = this.section(simulatorPage);
 		resultBox.addControl(
 			this.row("Resultado", [
 				{ icon: "stepBack", text: "", onClick: () => ra.step(-1) },
@@ -269,13 +299,13 @@ export class VrPanel {
 			active: (s) => s.xr.mode === m,
 			onClick: () => store.set((s) => ({ xr: { ...s.xr, mode: m } })),
 		});
-		root.addControl(
+		simulatorPage.addControl(
 			this.row("Vista", [
 				mode("maquette", "maquette", "Maqueta"),
 				mode("immersive", "immersive", "Inmersivo"),
 			]),
 		);
-		const maquetteBox = this.section(root);
+		const maquetteBox = this.section(simulatorPage);
 		maquetteBox.addControl(
 			this.slider(
 				"Tamaño de la maqueta (m)",
@@ -309,21 +339,58 @@ export class VrPanel {
 			),
 		);
 
+		const weatherContent = actions.weather?.content();
+		const weatherSection =
+			actions.weather && weatherContent
+				? new VrWeatherSection(
+						this.theme,
+						weatherContent,
+						actions.weather.action,
+					)
+				: null;
+		const weatherPage = weatherSection
+			? weatherScroller(this.theme, weatherSection, `${WEATHER_PAGE_H_PX}px`)
+			: null;
+		if (weatherPage) {
+			weatherPage.isVisible = false;
+			root.addControl(weatherPage);
+		}
+		const showWeather = (shown: boolean) => {
+			this.weatherShown = shown;
+			simulatorPage.isVisible = !shown;
+			if (weatherPage) weatherPage.isVisible = shown;
+			this.refresh();
+		};
+		this.refreshWeather = () => {
+			const content = actions.weather?.content();
+			if (this.weatherShown && content) weatherSection?.update(content);
+		};
+
 		// Footer: "Volver al mapa del Perú" (staying in VR) when offered, then "Salir de VR".
 		// One row, so the panel keeps its height.
 		root.addControl(
 			this.row(
 				"",
-				panelFooter({ backToMap: !!actions.backToMap }).map(
+				panelFooter({
+					backToMap: !!actions.backToMap,
+					weather: weatherSection !== null,
+				}).map(
 					(a): ButtonSpec =>
-						a.id === "backToMap"
+						a.id === "weather"
 							? {
 									icon: a.icon,
 									text: a.text,
-									onClick: () => actions.backToMap?.(),
-									disabled: () => !(actions.mapAvailable?.() ?? true),
+									onClick: () => showWeather(!this.weatherShown),
+									active: () => this.weatherShown,
 								}
-							: { icon: a.icon, text: a.text, onClick: actions.exitXr },
+							: a.id === "backToMap"
+								? {
+										icon: a.icon,
+										text: a.text,
+										onClick: () => actions.backToMap?.(),
+										disabled: () => !(actions.mapAvailable?.() ?? true),
+									}
+								: { icon: a.icon, text: a.text, onClick: actions.exitXr },
 				),
 			),
 		);
@@ -347,6 +414,10 @@ export class VrPanel {
 		this.unsubscribe = store.subscribe(sync);
 	}
 
+	private refresh(): void {
+		for (const syncer of this.syncers) syncer(this.store.get());
+	}
+
 	private section(parent: StackPanel): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
@@ -354,27 +425,11 @@ export class VrPanel {
 		return box;
 	}
 
-	private label(
-		text: string,
-		size: number,
-		color = "white",
-		bold = false,
-	): TextBlock {
-		const t = new TextBlock(undefined, text);
-		t.color = color;
-		t.fontSize = size;
-		t.fontWeight = bold ? "bold" : "normal";
-		t.height = `${Math.round(size * 1.6)}px`;
-		t.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-		t.textWrapping = true;
-		return t;
-	}
-
 	/** A titled row of icon buttons. */
 	private row(title: string, items: ButtonSpec[]): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
-		if (title) box.addControl(this.label(title, 30, MUTED));
+		if (title) box.addControl(themedText(this.theme, "label", title));
 		const grid = new Grid();
 		grid.height = "112px";
 		items.forEach(() => {
@@ -388,12 +443,7 @@ export class VrPanel {
 	}
 
 	private button(it: ButtonSpec, fontSize: number): Button {
-		const b = new Button();
-		b.background = BUTTON_BG;
-		b.cornerRadius = 14;
-		b.thickness = 0;
-		b.paddingLeft = b.paddingRight = "6px";
-		b.paddingTop = b.paddingBottom = "8px";
+		const b = themedButton(this.theme);
 		// Fixed grid inside the button: the icon cell has a bounded size and the label clips with an
 		// ellipsis, so neither can overflow the button whatever the device font measures.
 		const content = new Grid();
@@ -414,8 +464,8 @@ export class VrPanel {
 		content.addControl(img, 0, 0);
 		let text: TextBlock | null = null;
 		if (it.text) {
-			text = new TextBlock(undefined, it.text);
-			text.fontSize = fontSize;
+			text = themedText(this.theme, "button", it.text, fontSize);
+			text.height = "100%";
 			text.paddingLeft = "12px";
 			text.paddingRight = "8px";
 			text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -428,19 +478,20 @@ export class VrPanel {
 		});
 		let lastSrc = "";
 		this.syncers.push((s) => {
-			const active = it.active?.(s) ?? false;
-			const color = active ? "#111111" : "#ffffff";
-			b.background = active ? ACCENT : BUTTON_BG;
-			if (text) text.color = color;
-			const name = typeof it.icon === "function" ? it.icon(s) : it.icon;
-			const src = iconDataUrl(name, color);
-			if (src !== lastSrc) {
-				img.source = src;
-				lastSrc = src;
-			}
-			const off = it.disabled?.(s) ?? false;
-			b.isEnabled = !off;
-			b.alpha = off ? 0.35 : 1;
+			lastSrc = paintButton(
+				this.theme,
+				{
+					button: b,
+					label: text,
+					image: img,
+					icon: typeof it.icon === "function" ? it.icon(s) : it.icon,
+					source: lastSrc,
+				},
+				{
+					active: it.active?.(s) ?? false,
+					disabled: it.disabled?.(s) ?? false,
+				},
+			);
 		});
 		return b;
 	}
@@ -456,7 +507,7 @@ export class VrPanel {
 	): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
-		const text = this.label("", 30);
+		const text = themedText(this.theme, "body");
 		box.addControl(text);
 		const sl = new Slider();
 		sl.minimum = min;
@@ -464,8 +515,9 @@ export class VrPanel {
 		sl.step = step;
 		sl.height = "52px";
 		sl.width = "92%";
-		sl.color = ACCENT;
-		sl.background = BUTTON_BG;
+		sl.color = this.theme.action;
+		sl.background = this.theme.control;
+		sl.thumbColor = this.theme.action;
 		sl.thumbWidth = "44px";
 		sl.isThumbCircle = true;
 		sl.onValueChangedObservable.add((v) => {
@@ -484,13 +536,14 @@ export class VrPanel {
 	private timeSlider(ra: ResultActions): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
-		const text = this.label("", 30);
+		const text = themedText(this.theme, "body");
 		box.addControl(text);
 		const sl = new Slider();
 		sl.height = "52px";
 		sl.width = "92%";
-		sl.color = ACCENT;
-		sl.background = BUTTON_BG;
+		sl.color = this.theme.action;
+		sl.background = this.theme.control;
+		sl.thumbColor = this.theme.action;
 		sl.thumbWidth = "44px";
 		sl.isThumbCircle = true;
 		sl.onValueChangedObservable.add((v) => {

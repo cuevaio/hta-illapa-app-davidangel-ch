@@ -89,6 +89,7 @@ import {
 	type ToolId,
 } from "../../state/appState";
 import type { Store } from "../../state/store";
+import { weatherMenuAction, weatherMenuContent } from "../../ui/sections";
 import { ControlPanel } from "../../ui/web/ControlPanel";
 import { Hud, massError } from "../../ui/web/Hud";
 import { ImageryToggle } from "../../ui/web/ImageryToggle";
@@ -1353,6 +1354,10 @@ export class HuaycoMode implements SimulatorMode {
 			backToMap: () =>
 				void this.modeXr().then((xr) => this.host.vr.backToMap(xr)),
 			mapAvailable: () => this.host.overview.available,
+			weather: {
+				content: () => weatherMenuContent(this.host.weather.snapshot(), []),
+				action: (id) => weatherMenuAction(this.host.weather, id),
+			},
 		});
 		this.pointerHub.add(this.xr.pointers);
 		return this.xr;
