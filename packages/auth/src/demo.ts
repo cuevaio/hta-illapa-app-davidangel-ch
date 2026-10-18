@@ -18,6 +18,7 @@ import {
 	DEMO_CHANGE_FORBIDDEN_MESSAGE,
 	DEMO_RATE_LIMIT_MAX_REQUESTS,
 	DEMO_RATE_LIMIT_WINDOW_S,
+	DEMO_SESSION_CONFLICT_MESSAGE,
 } from "./constants";
 
 export interface DemoAuthPathContext {
@@ -32,6 +33,25 @@ export const demoAccess = {
 			{ method: "POST" },
 			async (context) => {
 				const adapter = context.context.internalAdapter;
+				// Not getSessionFromCtx: it reports a failed lookup as signed out and
+				// writes session cookies, which better-auth also sends with the 409.
+				const sessionToken = await context.getSignedCookie(
+					context.context.authCookies.sessionToken.name,
+					context.context.secret,
+				);
+				const currentSession = sessionToken
+					? await adapter.findSession(sessionToken)
+					: null;
+				if (currentSession && currentSession.session.expiresAt > new Date()) {
+					if (!isDemoAccountEmail(currentSession.user.email))
+						throw new APIError("CONFLICT", {
+							message: DEMO_SESSION_CONFLICT_MESSAGE,
+						});
+					// The server guard refreshes the session row but drops its Set-Cookie,
+					// so a reused demo session must re-issue the 7-day cookie here.
+					await setSessionCookie(context, currentSession);
+					return context.json({ success: true });
+				}
 				let user = (await adapter.findUserByEmail(DEMO_ACCOUNT_EMAIL))?.user;
 				if (!user) {
 					try {
