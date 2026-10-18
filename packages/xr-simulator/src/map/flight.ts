@@ -202,6 +202,44 @@ export function vrStartPose(
 	};
 }
 
+/** Web overview start and reset framing (S7). */
+export const OVERVIEW_VIEW = {
+	/**
+	 * Straight down, but not exactly 0: an ArcRotateCamera at beta 0 has no defined heading, so
+	 * it keeps a hair of south offset that pins north to the top of the screen.
+	 */
+	topDownBeta: 0.01,
+	/** Room around the bbox so the coast and the borders are not cut by the viewport edge. */
+	frameMargin: 1.08,
+} as const;
+
+/**
+ * The whole bbox seen from straight above, north up, for a camera with vertical field of view
+ * `fovY` (rad) and viewport `aspect` (width / height): the radius fits whichever extent
+ * (north-south or east-west) limits that viewport.
+ */
+export function topDownView(
+	bounds: Bounds,
+	fovY: number,
+	aspect: number,
+): { target: Vec3; radius: number; alpha: number; beta: number } {
+	const halfHeight = (bounds.maxZ - bounds.minZ) / 2;
+	const halfWidth = (bounds.maxX - bounds.minX) / 2;
+	const halfTan = Math.tan(fovY / 2);
+	return {
+		target: [
+			(bounds.minX + bounds.maxX) / 2,
+			0,
+			(bounds.minZ + bounds.maxZ) / 2,
+		],
+		radius:
+			(Math.max(halfHeight, halfWidth / aspect) / halfTan) *
+			OVERVIEW_VIEW.frameMargin,
+		alpha: -Math.PI / 2,
+		beta: OVERVIEW_VIEW.topDownBeta,
+	};
+}
+
 /** "Zoom hacia ahí" (VR trigger, web double-click). */
 export const ZOOM = {
 	/** The flight ends at this fraction of the current eye→hit distance. */

@@ -12,7 +12,9 @@ import {
 	gazeVelocity,
 	gripStickMove,
 	ReliefSampler,
+	OVERVIEW_VIEW,
 	SNAP_TURN,
+	topDownView,
 	snapTurnStep,
 	vrStartPose,
 	vrTiltAxis,
@@ -309,5 +311,35 @@ describe("VR map tilt", () => {
 	it("defaults to a moderate tilt", () => {
 		expect(FLY.vrTiltDeg).toBeGreaterThan(0);
 		expect(FLY.vrTiltDeg).toBeLessThanOrEqual(35);
+	});
+});
+
+describe("topDownView (Peru overview start and reset, S7)", () => {
+	const peru = { minX: -650, maxX: 650, minZ: -980, maxZ: 940 };
+	const fov = 0.8;
+	const halfTan = Math.tan(fov / 2);
+
+	it("looks straight down at the bbox centre with north up", () => {
+		const view = topDownView(peru, fov, 16 / 9);
+		expect(view.target).toEqual([0, 0, -20]);
+		expect(view.alpha).toBe(-Math.PI / 2);
+		expect(view.beta).toBe(OVERVIEW_VIEW.topDownBeta);
+		expect(view.beta).toBeLessThan(0.02);
+	});
+
+	it("fits the whole bbox in a landscape viewport, limited by the north-south extent", () => {
+		const aspect = 16 / 9;
+		const view = topDownView(peru, fov, aspect);
+		const halfHeight = view.radius * halfTan;
+		expect(halfHeight).toBeCloseTo(960 * OVERVIEW_VIEW.frameMargin, 6);
+		expect(halfHeight * aspect).toBeGreaterThanOrEqual(650);
+	});
+
+	it("fits the whole bbox in a portrait viewport, limited by the east-west extent", () => {
+		const aspect = 9 / 19.5;
+		const view = topDownView(peru, fov, aspect);
+		const halfWidth = view.radius * halfTan * aspect;
+		expect(halfWidth).toBeCloseTo(650 * OVERVIEW_VIEW.frameMargin, 6);
+		expect(view.radius * halfTan).toBeGreaterThanOrEqual(960);
 	});
 });
