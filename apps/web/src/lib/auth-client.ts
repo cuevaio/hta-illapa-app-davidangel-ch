@@ -12,7 +12,7 @@ export const authClient = createAuthClient({
 	plugins: [
 		organizationClient(),
 		inferAdditionalFields({
-			user: { role: { type: [...userRoleSchema.options], input: false } },
+			user: { role: { type: [...userRoleSchema.options], required: false } },
 		}),
 	],
 	fetchOptions: {

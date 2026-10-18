@@ -24,6 +24,7 @@ import { z } from "zod";
 import { fleetIdSchema, fleetNameSchema, latLngSchema } from "./schemas";
 
 export const userRoleSchema = z.enum(USER_ROLES);
+export type UserRole = z.infer<typeof userRoleSchema>;
 
 function rangeSchema(range: NumericRange) {
 	return z.number().min(range.min).max(range.max);

@@ -10,6 +10,7 @@ import * as schema from "@hack-the-andes-project/db/schema/auth";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { organization } from "better-auth/plugins";
+import { z } from "zod";
 
 import {
 	DEMO_CHANGE_FORBIDDEN_MESSAGE,
@@ -56,10 +57,12 @@ export function createAuth(env: AuthConfig, database: Database) {
 		},
 		user: {
 			additionalFields: {
+				// Null until the user picks a path on the profile page; better-auth
+				// only checks enum values through an explicit validator.
 				role: {
 					type: [...schema.USER_ROLES],
-					defaultValue: schema.DEFAULT_USER_ROLE,
-					input: false,
+					required: false,
+					validator: { input: z.enum(schema.USER_ROLES) },
 				},
 			},
 		},

@@ -756,5 +756,17 @@
 	"engineering_leaveTitle": "Leave without saving changes?",
 	"engineering_leaveDetail": "Your changes stay saved on this device.",
 	"engineering_leaveAnyway": "Leave anyway",
-	"engineering_sceneTerrainError": "We couldn't load the terrain. Check your connection and try again."
+	"engineering_sceneTerrainError": "We couldn't load the terrain. Check your connection and try again.",
+	"profile_page_title": "Profile · Illapa",
+	"profile_title": "How will you use ILLAPA?",
+	"profile_description": "Pick your profile. You can change it anytime from your account menu.",
+	"profile_fleet_title": "I plan fleet routes",
+	"profile_fleet_description": "Review routes against weather risk, track your trucks and get alerts with detours.",
+	"profile_engineer_title": "I manage road infrastructure",
+	"profile_engineer_description": "Model bridges, tunnels and bypasses on the real terrain of the Carretera Central and view them in XR.",
+	"profile_current": "Current",
+	"profile_saving": "Saving…",
+	"profile_error": "We couldn't save your profile. Try again.",
+	"profile_back": "Back",
+	"account_change_profile": "Change profile"
 }
