@@ -1,4 +1,5 @@
 import { isDemoAccountEmail } from "@hack-the-andes-project/business/demo-account";
+import { canUseSimulators } from "@hack-the-andes-project/business/simulators";
 import { DashboardSidebar } from "@hack-the-andes-project/ui/components/dashboard-sidebar";
 import { DemoBanner } from "@hack-the-andes-project/ui/components/demo-banner";
 import {
@@ -25,7 +26,7 @@ import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/ingenieria")({
 	beforeLoad: ({ context }) => {
-		if (context.session.data?.user.role !== "engineer")
+		if (!canUseSimulators(context.session.data?.user.role))
 			throw redirect({ to: "/dashboard" });
 	},
 	component: () => {
