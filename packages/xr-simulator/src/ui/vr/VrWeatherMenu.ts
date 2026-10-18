@@ -1,20 +1,25 @@
 import { Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
 import {
 	AdvancedDynamicTexture,
-	Button,
+	type Button,
 	Control,
 	Grid,
 	Image,
 	ScrollViewer,
 	StackPanel,
-	TextBlock,
+	type TextBlock,
 } from "@babylonjs/gui";
-import { type IconName, iconDataUrl } from "../icons";
+import type { IconName } from "../icons";
 import type { WeatherMenuContent } from "../sections";
+import { readVrTheme, type VrTextRole, type VrTheme } from "./theme";
+import {
+	paintButton,
+	themedButton,
+	themedCase,
+	themedSurface,
+	themedText,
+} from "./themeGui";
 
-const ACCENT = "#e8913a";
-const BUTTON_BG = "#2a3038";
-const MUTED = "#9aa4b1";
 const ROW_H_PX = 104;
 const ICON_PX = 52;
 const SCROLL_BAR_PX = 40;
@@ -57,12 +62,13 @@ export class VrWeatherSection {
 	private shownKey = "";
 
 	constructor(
+		private readonly theme: VrTheme,
 		initial: WeatherMenuContent,
 		private readonly onAction: (id: string) => void,
 	) {
 		this.root.width = "100%";
-		this.root.addControl(this.label("Capas meteorológicas", 40, "white", true));
-		this.notice = this.paragraph(26, "#ffcf70");
+		this.root.addControl(themedText(theme, "heading", "Capas meteorológicas"));
+		this.notice = this.paragraph("body", theme.error);
 		this.root.addControl(this.notice);
 		for (const layer of initial.layers) {
 			const row = new Grid();
@@ -83,7 +89,7 @@ export class VrWeatherSection {
 				"−",
 				ROW_H_PX,
 			);
-			const value = this.label("", 28);
+			const value = themedText(theme, "data");
 			value.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
 			const up = this.button(`wx:opacity-up:${layerId}`, null, "+", ROW_H_PX);
 			row.addControl(down, 0, 1);
@@ -92,11 +98,11 @@ export class VrWeatherSection {
 			this.opacityCells.set(layer.id, { down, value, up });
 			this.root.addControl(row);
 		}
-		this.status = this.paragraph(24, MUTED);
+		this.status = this.paragraph("label", theme.inkMuted);
 		this.root.addControl(this.status);
 
 		this.timeBox.width = "100%";
-		this.timeBox.addControl(this.label("Pronóstico", 28, MUTED));
+		this.timeBox.addControl(themedText(theme, "label", "Pronóstico"));
 		const timeRow = new Grid();
 		timeRow.height = `${ROW_H_PX}px`;
 		timeRow.addColumnDefinition(0.25);
@@ -114,12 +120,12 @@ export class VrWeatherSection {
 			2,
 		);
 		this.timeBox.addControl(timeRow);
-		this.timeLabel = this.paragraph(26, "white");
+		this.timeLabel = this.paragraph("data", theme.ink);
 		this.timeBox.addControl(this.timeLabel);
 		this.root.addControl(this.timeBox);
 
 		this.rainBox.width = "100%";
-		this.rainBox.addControl(this.label("Precipitación", 28, MUTED));
+		this.rainBox.addControl(themedText(theme, "label", "Precipitación"));
 		const rainRow = new Grid();
 		rainRow.height = `${ROW_H_PX}px`;
 		rainRow.addColumnDefinition(0.5);
@@ -134,10 +140,10 @@ export class VrWeatherSection {
 		this.rainBox.addControl(rainRow);
 		this.root.addControl(this.rainBox);
 
-		this.legends = this.paragraph(24, "white");
-		this.values = this.paragraph(26, "white");
-		this.provenance = this.paragraph(22, MUTED);
-		this.credit = this.paragraph(20, MUTED);
+		this.legends = this.paragraph("body", theme.ink);
+		this.values = this.paragraph("data", theme.ink);
+		this.provenance = this.paragraph("body", theme.inkMuted);
+		this.credit = this.paragraph("body", theme.inkMuted);
 		for (const block of [
 			this.legends,
 			this.values,
@@ -167,14 +173,19 @@ export class VrWeatherSection {
 			this.timeLabel.text = content.time.label;
 			const play = this.buttons.get("wx:play");
 			if (play?.text)
-				play.text.text = content.time.playing ? "Pausa" : "Reproducir";
+				play.text.text = themedCase(
+					"button",
+					this.theme,
+					content.time.playing ? "Pausa" : "Reproducir",
+				);
 			if (play) play.icon = content.time.playing ? "pause" : "play";
 			this.sync("wx:play", content.time.playing, false);
 		}
 		this.rainBox.isVisible = content.rain !== null;
 		for (const option of content.rain ?? []) {
 			const entry = this.buttons.get(option.id);
-			if (entry?.text) entry.text.text = option.text;
+			if (entry?.text)
+				entry.text.text = themedCase("button", this.theme, option.text);
 			this.sync(option.id, option.active, false);
 		}
 		this.setText(
@@ -204,39 +215,17 @@ export class VrWeatherSection {
 	private sync(id: string, active: boolean, disabled: boolean): void {
 		const entry = this.buttons.get(id);
 		if (!entry) return;
-		const color = active ? "#111111" : "#ffffff";
-		entry.button.background = active ? ACCENT : BUTTON_BG;
-		if (entry.text) entry.text.color = color;
-		if (entry.image && entry.icon) {
-			const source = iconDataUrl(entry.icon, color);
-			if (source !== entry.source) {
-				entry.image.source = source;
-				entry.source = source;
-			}
-		}
-		entry.button.isEnabled = !disabled;
-		entry.button.alpha = disabled ? 0.35 : 1;
-	}
-
-	private label(
-		text: string,
-		size: number,
-		color = "white",
-		bold = false,
-	): TextBlock {
-		const block = new TextBlock(undefined, text);
-		block.color = color;
-		block.fontSize = size;
-		block.fontWeight = bold ? "bold" : "normal";
-		block.height = `${Math.round(size * 1.6)}px`;
-		block.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-		return block;
+		entry.source = paintButton(
+			this.theme,
+			{ ...entry, label: entry.text },
+			{ active, disabled },
+		);
 	}
 
 	/** Multi-line text that grows with its content inside the stack. */
-	private paragraph(size: number, color: string): TextBlock {
-		const block = this.label("", size, color);
-		block.textWrapping = true;
+	private paragraph(role: VrTextRole, color: string): TextBlock {
+		const block = themedText(this.theme, role);
+		block.color = color;
 		block.resizeToFit = true;
 		block.paddingTop = "6px";
 		block.paddingBottom = "6px";
@@ -249,13 +238,8 @@ export class VrWeatherSection {
 		text: string,
 		heightPx: number,
 	): Button {
-		const button = new Button();
+		const button = themedButton(this.theme);
 		button.height = `${heightPx}px`;
-		button.background = BUTTON_BG;
-		button.cornerRadius = 14;
-		button.thickness = 0;
-		button.paddingLeft = button.paddingRight = "6px";
-		button.paddingTop = button.paddingBottom = "8px";
 		const content = new Grid();
 		let image: Image | null = null;
 		if (icon) {
@@ -272,9 +256,8 @@ export class VrWeatherSection {
 		let label: TextBlock | null = null;
 		if (text) {
 			content.addColumnDefinition(1);
-			label = new TextBlock(undefined, text);
-			label.fontSize = 30;
-			label.color = "white";
+			label = themedText(this.theme, "button", text);
+			label.height = "100%";
 			label.paddingLeft = "12px";
 			label.paddingRight = "8px";
 			label.textHorizontalAlignment = icon
@@ -298,6 +281,7 @@ export class VrWeatherSection {
  * that still fits the field of view. The bar is wide enough to drag with the controller ray.
  */
 export function weatherScroller(
+	theme: VrTheme,
 	section: VrWeatherSection,
 	height: string,
 ): ScrollViewer {
@@ -306,8 +290,8 @@ export function weatherScroller(
 	scroller.height = height;
 	scroller.thickness = 0;
 	scroller.barSize = SCROLL_BAR_PX;
-	scroller.barColor = ACCENT;
-	scroller.barBackground = BUTTON_BG;
+	scroller.barColor = theme.action;
+	scroller.barBackground = theme.control;
 	scroller.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 	section.root.width = "94%";
 	section.root.paddingTop = "16px";
@@ -343,9 +327,10 @@ export class VrWeatherMenu {
 			MENU_TEX_H,
 			false,
 		);
-		this.ui.background = "rgba(15,18,22,0.92)";
-		this.section = new VrWeatherSection(initial, onAction);
-		this.ui.addControl(weatherScroller(this.section, "100%"));
+		const theme = readVrTheme();
+		themedSurface(this.ui, theme);
+		this.section = new VrWeatherSection(theme, initial, onAction);
+		this.ui.addControl(weatherScroller(theme, this.section, "100%"));
 		this.mesh.setEnabled(false);
 	}
 

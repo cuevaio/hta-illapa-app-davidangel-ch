@@ -1,16 +1,23 @@
 import { Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
 import {
 	AdvancedDynamicTexture,
-	Button,
+	type Button,
 	Control,
 	Grid,
 	Image,
 	StackPanel,
-	TextBlock,
+	type TextBlock,
 } from "@babylonjs/gui";
 import type { VrView } from "../../xr/vrMode";
-import { type IconName, iconDataUrl } from "../icons";
+import type { IconName } from "../icons";
 import type { CardAction, PointCardContent } from "../sections";
+import { readVrTheme } from "./theme";
+import {
+	paintButton,
+	themedButton,
+	themedSurface,
+	themedText,
+} from "./themeGui";
 
 export interface VrPointCardActions {
 	simulate(): void;
@@ -25,11 +32,9 @@ const TEX_W = 920;
 /** Texture px per metre of card (the card is CARD_W wide). */
 const PX_PER_M = TEX_W / CARD_W;
 const TEX_H = 680;
+const BUTTON_TEXT_PX = 30;
 /** Extra height of the row of the viewer's other simulators. */
 const ENTRIES_TEX_H = 112;
-const ACCENT = "#e8913a";
-const BUTTON_BG = "#2a3038";
-const MUTED = "#9aa4b1";
 
 /**
  * VR card over the Peru map (S2): the point marked with A, "Simular aquí" / "Cancelar" and the
@@ -39,6 +44,7 @@ const MUTED = "#9aa4b1";
 export class VrPointCard {
 	readonly mesh: Mesh;
 	private readonly ui: AdvancedDynamicTexture;
+	private readonly theme = readVrTheme();
 	private readonly coords: TextBlock;
 	private readonly status: TextBlock;
 	private readonly buttons = new Map<
@@ -80,16 +86,16 @@ export class VrPointCard {
 			texH,
 			false,
 		);
-		this.ui.background = "rgba(15,18,22,0.92)";
+		themedSurface(this.ui, this.theme);
 		const root = new StackPanel("card");
 		root.width = "94%";
 		root.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 		root.paddingTop = "16px";
 		this.ui.addControl(root);
-		root.addControl(this.label("Punto marcado", 44, "white", true));
-		this.coords = this.label("", 32, "white");
+		root.addControl(themedText(this.theme, "heading", "Punto marcado"));
+		this.coords = themedText(this.theme, "data");
 		root.addControl(this.coords);
-		this.status = this.label("", 28, MUTED);
+		this.status = themedText(this.theme, "body");
 		this.status.height = "84px";
 		root.addControl(this.status);
 		root.addControl(
@@ -99,7 +105,7 @@ export class VrPointCard {
 			]),
 		);
 		if (entries.length) root.addControl(this.row(entries));
-		root.addControl(this.label("Vista del mapa", 28, MUTED));
+		root.addControl(themedText(this.theme, "label", "Vista del mapa"));
 		root.addControl(
 			this.row([
 				{ id: "vuelo", icon: "fly", text: "Vuelo" },
@@ -126,9 +132,11 @@ export class VrPointCard {
 	update(c: PointCardContent): void {
 		this.coords.text = c.coords;
 		this.status.text = c.status ?? "";
-		// Downloading (both actions off): accent; a failure: warning yellow.
-		this.status.color = !c.simulate && !c.cancel ? ACCENT : "#ffcf70";
-		this.sync("simulate", false, !c.simulate);
+		// Downloading (both actions off): the action colour; a failure: the error colour.
+		this.status.color =
+			!c.simulate && !c.cancel ? this.theme.action : this.theme.error;
+		// "Simular aquí" is the card's one primary action.
+		this.sync("simulate", true, !c.simulate);
 		this.sync("cancel", false, !c.cancel);
 		for (const v of c.views) this.sync(v.id, v.active, false);
 		for (const e of c.entries) this.sync(e.id, false, !e.enabled);
@@ -137,32 +145,11 @@ export class VrPointCard {
 	private sync(id: string, active: boolean, disabled: boolean): void {
 		const e = this.buttons.get(id);
 		if (!e) return;
-		const color = active ? "#111111" : "#ffffff";
-		e.b.background = active ? ACCENT : BUTTON_BG;
-		if (e.text) e.text.color = color;
-		const src = iconDataUrl(e.icon, color);
-		if (src !== e.src) {
-			e.img.source = src;
-			e.src = src;
-		}
-		e.b.isEnabled = !disabled;
-		e.b.alpha = disabled ? 0.35 : 1;
-	}
-
-	private label(
-		text: string,
-		size: number,
-		color: string,
-		bold = false,
-	): TextBlock {
-		const t = new TextBlock(undefined, text);
-		t.color = color;
-		t.fontSize = size;
-		t.fontWeight = bold ? "bold" : "normal";
-		t.height = `${Math.round(size * 1.6)}px`;
-		t.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-		t.textWrapping = true;
-		return t;
+		e.src = paintButton(
+			this.theme,
+			{ button: e.b, label: e.text, image: e.img, icon: e.icon, source: e.src },
+			{ active, disabled },
+		);
 	}
 
 	private row(items: CardAction[]): Grid {
@@ -178,12 +165,7 @@ export class VrPointCard {
 	}
 
 	private button(it: CardAction): Button {
-		const b = new Button();
-		b.background = BUTTON_BG;
-		b.cornerRadius = 14;
-		b.thickness = 0;
-		b.paddingLeft = b.paddingRight = "6px";
-		b.paddingTop = b.paddingBottom = "8px";
+		const b = themedButton(this.theme);
 		const content = new Grid();
 		const ICON = 56;
 		content.addColumnDefinition(ICON + 20, true);
@@ -194,9 +176,8 @@ export class VrPointCard {
 		img.stretch = Image.STRETCH_UNIFORM;
 		img.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
 		content.addControl(img, 0, 0);
-		const text = new TextBlock(undefined, it.text);
-		text.fontSize = 32;
-		text.color = "white";
+		const text = themedText(this.theme, "button", it.text, BUTTON_TEXT_PX);
+		text.height = "100%";
 		text.paddingLeft = "12px";
 		text.paddingRight = "8px";
 		text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
@@ -212,7 +193,7 @@ export class VrPointCard {
 			else this.actions.setView(it.id as VrView);
 		});
 		this.buttons.set(it.id, { b, img, text, icon: it.icon, src: "" });
-		this.sync(it.id, false, false);
+		this.sync(it.id, it.id === "simulate", false);
 		return b;
 	}
 
