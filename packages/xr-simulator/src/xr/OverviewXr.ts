@@ -35,6 +35,7 @@ import {
 } from "../map/rig";
 import { entryActions, pointCardContent } from "../ui/sections";
 import { VrPointCard } from "../ui/vr/VrPointCard";
+import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
 import {
 	type GrabHand,
 	mapRootFromPose,
@@ -61,6 +62,9 @@ const STICK_DEAD_ZONE = 0.15;
 /** "Simular aquí" card: distance along the gaze and drop below it (m). */
 const CARD_DISTANCE = 0.6;
 const CARD_DROP = 0.08;
+/** Weather menu (X): distance along the gaze and shift to the left of it, beside the card (m). */
+const WEATHER_MENU_DISTANCE = 0.9;
+const WEATHER_MENU_LEFT = 0.45;
 
 /** The app's VR state (src/xr/vrMode.ts), shared with the simulator's VR in the same session. */
 export interface VrMapLink {
@@ -86,6 +90,7 @@ export class OverviewXr {
 	/** After a pause (the simulator had the session) the first frame only records button states. */
 	private primeButtons = false;
 	private card: VrPointCard | null = null;
+	private weatherMenu: VrWeatherMenu | null = null;
 	private cardShown = "";
 	private cardBusy = false;
 	private cardError: string | null = null;
@@ -130,12 +135,16 @@ export class OverviewXr {
 						simulate: () => this.simulateFromCard(),
 						cancel: () => this.closeCard(true),
 						setView: (view) => this.link.dispatch({ type: "set-view", view }),
-						weather: (id) => this.host.weatherAction(id),
 						openEntry: (id) => this.openEntryFromCard(id),
 					},
-					this.host.weatherCard() !== null,
 					entryActions(this.host.entries()),
 				);
+				const weather = this.host.weatherMenu();
+				this.weatherMenu = weather
+					? new VrWeatherMenu(this.host.scene, weather, (id) =>
+							this.host.weatherAction(id),
+						)
+					: null;
 				// Eye buffer height (WebGL layer); the LOD measures its screen-space error in it.
 				const layer = xr.baseExperience.sessionManager.session?.renderState
 					.baseLayer as XRWebGLLayer | undefined;
@@ -149,6 +158,8 @@ export class OverviewXr {
 				this.hintText = null;
 				this.card?.dispose();
 				this.card = null;
+				this.weatherMenu?.dispose();
+				this.weatherMenu = null;
 				this.cardShown = "";
 				this.cardBusy = false;
 				this.cardError = null;
@@ -225,6 +236,7 @@ export class OverviewXr {
 					["xr-standard-squeeze", "squeeze"],
 					["a-button"],
 					["b-button"],
+					["x-button"],
 					["y-button"],
 				] as const)
 					this.pressedOnce(c, id, type);
@@ -237,14 +249,16 @@ export class OverviewXr {
 		if (wanted !== this.view) this.applyView(wanted);
 		if (left && this.pressedOnce(left, "y-button"))
 			this.link.dispatch({ type: "toggle-view" });
+		if (left && this.pressedOnce(left, "x-button")) this.toggleWeatherMenu();
 		// Trigger: on the card it presses the card's buttons (pointer selection); otherwise the view decides.
 		const triggered: WebXRInputSource[] = [];
 		for (const c of [left, right]) {
 			if (!c || !this.pressedOnce(c, "xr-standard-trigger", "trigger"))
 				continue;
 			c.getWorldPointerRayToRef(this.ray);
-			const cardHit =
-				!!this.card?.visible && this.ray.intersectsMesh(this.card.mesh).hit;
+			const cardHit = [this.card, this.weatherMenu].some(
+				(panel) => panel?.visible && this.ray.intersectsMesh(panel.mesh).hit,
+			);
 			if (triggerUse(this.view, cardHit) === "zoom") triggered.push(c);
 		}
 		if (gripUse(this.view) === "table") this.tableFrame(left, right);
@@ -262,6 +276,27 @@ export class OverviewXr {
 		if (right && this.pressedOnce(right, "b-button"))
 			void this.xr.baseExperience.exitXRAsync();
 		this.syncCard();
+		const weather = this.weatherMenu?.visible ? this.host.weatherMenu() : null;
+		if (weather) this.weatherMenu?.update(weather);
+	}
+
+	/** X: the weather menu (S8) opens beside the gaze, or closes. */
+	private toggleWeatherMenu(): void {
+		const menu = this.weatherMenu;
+		if (!menu) return;
+		if (menu.visible) {
+			menu.hide();
+			return;
+		}
+		const cam = this.xr.baseExperience.camera;
+		const head = cam.position;
+		const gaze = cam.getDirection(Vector3.Forward());
+		const left = cam.getDirection(Vector3.Left());
+		menu.showAt([
+			head.x + gaze.x * WEATHER_MENU_DISTANCE + left.x * WEATHER_MENU_LEFT,
+			head.y + gaze.y * WEATHER_MENU_DISTANCE + left.y * WEATHER_MENU_LEFT,
+			head.z + gaze.z * WEATHER_MENU_DISTANCE + left.z * WEATHER_MENU_LEFT,
+		]);
 	}
 
 	/** Flight ("Vuelo"): stick flight, grip climb/turn, snap turn, trigger zoom (unchanged controls). */
@@ -487,7 +522,6 @@ export class OverviewXr {
 			busy: this.cardBusy,
 			error: this.cardError,
 			view: this.view,
-			weather: this.host.weatherCard(),
 			entries: this.host.entries(),
 			opening: this.cardOpening,
 		});

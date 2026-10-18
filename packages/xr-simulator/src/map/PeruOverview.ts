@@ -12,7 +12,11 @@ import {
 	TransformNode,
 	Vector3,
 } from "@babylonjs/core";
-import { type WeatherCardContent, weatherCardContent } from "../ui/sections";
+import {
+	type WeatherMenuContent,
+	weatherMenuAction,
+	weatherMenuContent,
+} from "../ui/sections";
 import { ImageryToggle } from "../ui/web/ImageryToggle";
 import { WeatherPanel } from "../ui/web/WeatherPanel";
 import {
@@ -56,7 +60,6 @@ import {
 	DEFAULT_ATTRIBUTION,
 	type TilesClient,
 } from "./tilesClient";
-import type { WeatherLayerId } from "./weather/catalog";
 import { viewFocus } from "./weather/region";
 import type { WeatherController } from "./weather/WeatherController";
 import type {
@@ -154,8 +157,9 @@ export interface FlightHost {
 	/** Imagery attribution (and prototype notice) while Satélite is visible, for the VR card; else null. */
 	imageryCredit(): { text: string; notice: string | null } | null;
 	/** Weather section of the VR card at the marked point (S8); null without weather. */
-	weatherCard(): WeatherCardContent | null;
-	/** A weather button of the VR card: "wx:<layer>" toggles it, "wx:prev" / "wx:next" step the forecast time. */
+	/** The VR weather menu (S8), null without a weather client. */
+	weatherMenu(): WeatherMenuContent | null;
+	/** A button of the VR weather menu (weatherMenuAction ids). */
 	weatherAction(id: string): void;
 	/** Attribution of the enabled weather layers (VR label); null when none is on. */
 	weatherCredit(): string | null;
@@ -526,23 +530,19 @@ export class PeruOverview implements FlightHost {
 		return s.credit ? { text: s.credit, notice: s.notice } : null;
 	}
 
-	weatherCard(): WeatherCardContent | null {
+	weatherMenu(): WeatherMenuContent | null {
 		const w = this.weather?.controller;
 		if (!w) return null;
-		const s = w.snapshot();
 		const p = this.pickedPoint;
-		return weatherCardContent({
-			...s,
-			lines: p && w.available ? w.pointLines(p.lon, p.lat) : [],
-		});
+		return weatherMenuContent(
+			w.snapshot(),
+			p && w.available ? w.pointLines(p.lon, p.lat) : [],
+		);
 	}
 
 	weatherAction(id: string): void {
 		const w = this.weather?.controller;
-		if (!w) return;
-		if (id === "wx:prev") w.step(-1);
-		else if (id === "wx:next") w.step(1);
-		else if (id.startsWith("wx:")) w.toggle(id.slice(3) as WeatherLayerId);
+		if (w) weatherMenuAction(w, id);
 	}
 
 	weatherCredit(): string | null {

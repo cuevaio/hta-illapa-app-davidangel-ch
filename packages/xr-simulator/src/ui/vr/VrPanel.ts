@@ -20,7 +20,12 @@ import {
 } from "../../state/appState";
 import type { Store } from "../../state/store";
 import { type IconName, iconDataUrl } from "../icons";
-import { panelFooter, panelSections } from "../sections";
+import {
+	panelFooter,
+	panelSections,
+	type WeatherMenuContent,
+} from "../sections";
+import { VrWeatherSection, weatherScroller } from "./VrWeatherMenu";
 
 export interface VrPanelActions {
 	resetSimulation(): void;
@@ -30,12 +35,19 @@ export interface VrPanelActions {
 	backToMap?: () => void;
 	/** Whether the map can be shown right now (its relief loaded). */
 	mapAvailable?: () => boolean;
+	/** The weather menu page (S8); absent: no "Meteorología" button. */
+	weather?: {
+		content(): WeatherMenuContent | null;
+		action(id: string): void;
+	};
 }
 
 const PANEL_W = 0.5;
 const PANEL_H = 0.9;
 const TEX_W = 1000;
 const TEX_H = 1800;
+/** Weather page height (texture px): the panel minus its title, stats and footer rows. */
+const WEATHER_PAGE_H_PX = 1450;
 const ACCENT = "#e8913a";
 const BUTTON_BG = "#2a3038";
 const MUTED = "#9aa4b1";
@@ -59,6 +71,9 @@ export class VrPanel {
 	private readonly stats: TextBlock;
 	private readonly unsubscribe: () => void;
 	private readonly syncers: ((s: AppState) => void)[] = [];
+	private weatherShown = false;
+	/** Re-reads the weather menu while its page is shown (called per frame by the controller). */
+	readonly refreshWeather: () => void;
 
 	constructor(
 		scene: Scene,
@@ -90,6 +105,8 @@ export class VrPanel {
 		this.stats.height = "90px";
 		root.addControl(this.stats);
 
+		// Simulator controls, or the weather menu page (S8) instead of them.
+		const simulatorPage = this.section(root);
 		// Tools.
 		const tool = (id: ToolId, icon: IconName, text: string): ButtonSpec => ({
 			icon,
@@ -97,7 +114,7 @@ export class VrPanel {
 			active: (s) => s.tool === id,
 			onClick: () => store.set({ tool: id }),
 		});
-		root.addControl(
+		simulatorPage.addControl(
 			this.row("Herramienta", [
 				tool("navigate", "navigate", "Navegar"),
 				tool("source", "source", "Origen"),
@@ -109,8 +126,8 @@ export class VrPanel {
 		// Options of the active tool.
 		const hint = this.label("", 30, MUTED);
 		hint.height = "96px";
-		root.addControl(hint);
-		const sourceBox = this.section(root);
+		simulatorPage.addControl(hint);
+		const sourceBox = this.section(simulatorPage);
 		sourceBox.addControl(this.label("Orígenes nuevos", 32, ACCENT));
 		sourceBox.addControl(
 			this.slider(
@@ -146,7 +163,7 @@ export class VrPanel {
 				(v) => v.toFixed(0),
 			),
 		);
-		const wallBox = this.section(root);
+		const wallBox = this.section(simulatorPage);
 		const material = (
 			m: "earth" | "concrete",
 			icon: IconName,
@@ -179,7 +196,7 @@ export class VrPanel {
 		);
 
 		// Simulation.
-		root.addControl(
+		simulatorPage.addControl(
 			this.row("Simulación", [
 				{
 					icon: (s) => (s.playback.playing ? "pause" : "play"),
@@ -207,7 +224,7 @@ export class VrPanel {
 				},
 			]),
 		);
-		root.addControl(
+		simulatorPage.addControl(
 			this.slider(
 				"Velocidad (× tiempo real)",
 				1,
@@ -218,7 +235,7 @@ export class VrPanel {
 				(v) => v.toFixed(0),
 			),
 		);
-		root.addControl(
+		simulatorPage.addControl(
 			this.slider(
 				"Fricción μ",
 				0.02,
@@ -245,8 +262,8 @@ export class VrPanel {
 				disabled: (s) => s.result.frames < 2,
 			},
 		]);
-		root.addControl(liveRow);
-		const resultBox = this.section(root);
+		simulatorPage.addControl(liveRow);
+		const resultBox = this.section(simulatorPage);
 		resultBox.addControl(
 			this.row("Resultado", [
 				{ icon: "stepBack", text: "", onClick: () => ra.step(-1) },
@@ -269,13 +286,13 @@ export class VrPanel {
 			active: (s) => s.xr.mode === m,
 			onClick: () => store.set((s) => ({ xr: { ...s.xr, mode: m } })),
 		});
-		root.addControl(
+		simulatorPage.addControl(
 			this.row("Vista", [
 				mode("maquette", "maquette", "Maqueta"),
 				mode("immersive", "immersive", "Inmersivo"),
 			]),
 		);
-		const maquetteBox = this.section(root);
+		const maquetteBox = this.section(simulatorPage);
 		maquetteBox.addControl(
 			this.slider(
 				"Tamaño de la maqueta (m)",
@@ -309,21 +326,54 @@ export class VrPanel {
 			),
 		);
 
+		const weatherContent = actions.weather?.content();
+		const weatherSection =
+			actions.weather && weatherContent
+				? new VrWeatherSection(weatherContent, actions.weather.action)
+				: null;
+		const weatherPage = weatherSection
+			? weatherScroller(weatherSection, `${WEATHER_PAGE_H_PX}px`)
+			: null;
+		if (weatherPage) {
+			weatherPage.isVisible = false;
+			root.addControl(weatherPage);
+		}
+		const showWeather = (shown: boolean) => {
+			this.weatherShown = shown;
+			simulatorPage.isVisible = !shown;
+			if (weatherPage) weatherPage.isVisible = shown;
+			this.refresh();
+		};
+		this.refreshWeather = () => {
+			const content = actions.weather?.content();
+			if (this.weatherShown && content) weatherSection?.update(content);
+		};
+
 		// Footer: "Volver al mapa del Perú" (staying in VR) when offered, then "Salir de VR".
 		// One row, so the panel keeps its height.
 		root.addControl(
 			this.row(
 				"",
-				panelFooter({ backToMap: !!actions.backToMap }).map(
+				panelFooter({
+					backToMap: !!actions.backToMap,
+					weather: weatherSection !== null,
+				}).map(
 					(a): ButtonSpec =>
-						a.id === "backToMap"
+						a.id === "weather"
 							? {
 									icon: a.icon,
 									text: a.text,
-									onClick: () => actions.backToMap?.(),
-									disabled: () => !(actions.mapAvailable?.() ?? true),
+									onClick: () => showWeather(!this.weatherShown),
+									active: () => this.weatherShown,
 								}
-							: { icon: a.icon, text: a.text, onClick: actions.exitXr },
+							: a.id === "backToMap"
+								? {
+										icon: a.icon,
+										text: a.text,
+										onClick: () => actions.backToMap?.(),
+										disabled: () => !(actions.mapAvailable?.() ?? true),
+									}
+								: { icon: a.icon, text: a.text, onClick: actions.exitXr },
 				),
 			),
 		);
@@ -345,6 +395,10 @@ export class VrPanel {
 			});
 		sync(store.get());
 		this.unsubscribe = store.subscribe(sync);
+	}
+
+	private refresh(): void {
+		for (const syncer of this.syncers) syncer(this.store.get());
 	}
 
 	private section(parent: StackPanel): StackPanel {
