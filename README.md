@@ -14,9 +14,20 @@ pnpm monorepo: Hono + oRPC API on Cloudflare Workers (`apps/server`), Vite SPA (
    - `packages/db/.env` → `DATABASE_URL=mysql://…@vero:3306/fierros` (vero over Tailscale)
    - `apps/scraper/.env` → `SCRAPER_RUN_SECRET` (`openssl rand -base64 32`), `JEV_API_KEY`, and `B2_MEDIA_KEY_ID` / `B2_MEDIA_APPLICATION_KEY` (B2 key scoped to the `illapa-media` bucket)
 3. `pnpm infra:login` once to connect the `cloudflare-franz` Alchemy profile (`pnpm infra:refresh` when the token expires).
-4. `pnpm db:push` to create the `hack_the_andes_*` tables.
+4. `pnpm db:migrate` to create the `hack_the_andes_*` tables.
 
 Public URLs live in tracked files: `.env.schema` defaults are the localhost values and `.env.production` overrides them on deploy (`APP_ENV=production`).
+
+## Database changes
+
+Schema changes ship as versioned migrations in `packages/db/src/migrations`, one folder per change, applied in name order and recorded in the `__hack_the_andes_migrations` table.
+
+1. Change the tables in `packages/db/src/schema`.
+2. `pnpm db:generate --name <change>` writes the migration. Commit it with the schema change; never edit it by hand.
+3. `pnpm db:migrate` applies it to your local database.
+4. After rebasing onto a branch that brought its own migrations, run `pnpm db:generate` again. It stops with "Non-commutative migrations detected" when two branches changed the same thing; drop your migration, regenerate it on top, and commit that.
+
+On Dokploy the server applies pending migrations before it starts listening, so staging migrates when `develop` deploys and production when `main` does. A local database created with `db:push` before migrations existed has no history: drop it and run `pnpm db:migrate`. Keep `db:push` for throwaway databases.
 
 ## Production domains and deployment
 
@@ -40,7 +51,7 @@ For the first cutover, run `pnpm deploy:server`, wait until `https://api.illapa.
 | `pnpm build:native:android` / `:ios` | Local EAS build (preview profile) |
 | `pnpm build:native:cloud:android` / `:ios` | Remote EAS build (preview profile) |
 | `pnpm build:native:prod:android` / `:ios` | Remote EAS production build |
-| `pnpm db:push` / `db:generate` / `db:migrate` / `db:studio` | drizzle-kit against `DATABASE_URL` |
+| `pnpm db:generate` / `db:migrate` / `db:push` / `db:studio` | drizzle-kit against `DATABASE_URL` (see Database changes) |
 | `pnpm demo:reset` | Wipe and reseed the shared demo account (see Demo access) |
 
 ## Auth
@@ -75,4 +86,4 @@ Illapa scores road segments for the risk of rain-triggered hazards (huaicos, lan
 
 Scores are relative indices that support decisions, not calibrated probabilities. Every response carries a disclaimer and the assessment timestamps. When the weather fetch fails, the previous assessment is kept rather than scored as dry.
 
-To load the pipeline locally: `pnpm db:push`, then `uv run python -m illapa_risk.build` and `uv run python -m illapa_risk.load` in `tools/risk-pipeline`. After that, trigger a scoring run with `POST http://localhost:3002/risk` (header `x-scraper-secret`).
+To load the pipeline locally: `pnpm db:migrate`, then `uv run python -m illapa_risk.build` and `uv run python -m illapa_risk.load` in `tools/risk-pipeline`. After that, trigger a scoring run with `POST http://localhost:3002/risk` (header `x-scraper-secret`).

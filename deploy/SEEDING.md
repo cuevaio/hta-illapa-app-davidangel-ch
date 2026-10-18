@@ -1,6 +1,6 @@
 # Seeding a fresh database
 
-`pnpm db:push` creates the 22 `hack_the_andes_*` tables, all empty. Nothing in the repo copies rows from one database to another. Every row comes from one of three places: the running services, the offline risk pipeline, or people using the app. This file covers where each table's rows come from, the order that makes a new environment demo-ready, and what only the old database holds.
+The server's migrations create the 23 `hack_the_andes_*` tables, all empty. Nothing in the repo copies rows from one database to another. Every row comes from one of three places: the running services, the offline risk pipeline, or people using the app. This file covers where each table's rows come from, the order that makes a new environment demo-ready, and what only the old database holds.
 
 ## Where each table's rows come from
 
@@ -56,13 +56,7 @@ Order matters in three places:
 
 ### 1. Create the schema
 
-From a checkout of the deployed commit, after `pnpm install`:
-
-```sh
-DATABASE_URL='mysql://illapa:<password>@127.0.0.1:3307/illapa' pnpm db:push
-```
-
-Varlock gives a variable set in the shell priority over `packages/db/.env`. If MySQL is only reachable from the box, open a tunnel first, for example `ssh -N -L 3307:<mysql-host>:3306 <user>@<box>`. `<mysql-host>` is `127.0.0.1` if the port is published on the box; otherwise use the container's IP from `docker inspect`. When the push finishes, the database holds 22 `hack_the_andes_*` tables.
+Nothing to run: the server applies every migration in `packages/db/src/migrations` to its `DATABASE_URL` when it boots in step 2, leaving 23 `hack_the_andes_*` tables. To create them from a checkout instead, run `pnpm db:migrate` with `DATABASE_URL` set in the shell (varlock gives it priority over `packages/db/.env`). If MySQL is only reachable from the box, open a tunnel first, for example `ssh -N -L 3307:<mysql-host>:3306 <user>@<box>`. `<mysql-host>` is `127.0.0.1` if the port is published on the box; otherwise use the container's IP from `docker inspect`.
 
 ### 2. Start the services
 
