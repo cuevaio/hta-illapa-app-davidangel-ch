@@ -50,8 +50,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T15 | S11 | delegated (same writer) | done | 4ee8642 |
 | T16 | S12 | delegated (same writer) | done | cf551b3, c52fa81 |
 | T17 | S13 | delegated (same writer) | done | 9e5c59c |
-| T18 | S14 | delegated (same writer) | pending | |
-| T19 | S15 | delegated (same writer) | pending | |
+| T18 | S14 | delegated (same writer) | done | 99e98d0, dbd06d8 |
+| T19 | S15 | delegated (same writer) | done | 10eb834 |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -90,4 +90,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L21** T16: one scale (1 CSS px = 3 texture px = 1.25 mm), Mayu card anatomy/radii/type roles (expanded heading via canvas fontStretch), web button variants; dev page `packages/xr-simulator/vr-cards.html` (light/dark screenshots compared with `/design-system`). T17: `placePointCard` puts the card beside the marked point (clears the line of sight by 12 cm), leader line, trigger-drag on the title band. Checks at 9e5c59c: check-types 0, xr-simulator 378/378, ui 53/53, web build ok, biome clean (tracked). Not tried on a Quest.
 - **L22** (2026-10-18, user, with a screenshot of /ingenieria): "okey, ahora necesito que corrijas este diseño (los cards y elementos de "Perú en relieve") ya que no siguen el estilo de diseño de @docs/DESIGN.md". Screenshot shows the original xr-simulator CSS: dark fixed panels, orange buttons, native checkboxes, custom badge colours, debug LOD text, lavender scene background.
 - **L23** (2026-10-18, user): "okye, hay otro problema en el visor VR cuando entro a la simulación me aparecen las instrucciones de como usar el joystick y se quedan pegados siguiendo el control y obstaculizando mi vision, la idea es que solo aparezca unos segundos o q aparezca más al fondo y le pueda dar en un botón de cerrar para confirmar que he entendido las instrucciones".
+- **L24** T18: viewer DOM UI restyled to Mayu in `src/pages/app.css` under `.xr-viewer` (host tokens with DESIGN.md fallbacks; old `--accent/--muted/--bg` overrides removed); badges observado=success, pronóstico=info; scene background = `background` token; huayco UI and lil-gui restyled; screenshots in scratchpad/web-ui. Parent fix dbd06d8: the overview hint used the mono face, now body (Archivo). T19: VR controls card spawns once 1.3 m away, 25° off gaze, dismissed with «Entendido», reopened from «Controles»; huayco gets its own instructions card. Checks: check-types 0, xr-simulator 390/390, ui 53/53, web 27/27, web build ok, biome clean (tracked). Open: attribution card still on the right controller (40×14 cm); structures maquette placement hint still follows the head.
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
