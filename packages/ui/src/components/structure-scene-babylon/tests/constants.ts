@@ -56,3 +56,14 @@ export const TEST_XYZ_ROTATIONS_DEG = [
 	{ x: -170, y: -70, z: 130 },
 	{ x: 30, y: 90, z: 60 },
 ];
+export const TEST_CAMERA_SLOPE_RATIO = 2;
+export const TEST_CAMERA_BYPASS_HALF_LENGTH_M = 500;
+export const TEST_CAMERA_BYPASS_LANE_COUNT = 2;
+export const TEST_CAMERA_BYPASS_LANE_WIDTH_M = 3;
+export const TEST_CAMERA_FLIGHT_HALF_LENGTH_M = 1_000;
+export const TEST_CAMERA_FLIGHT_ALTITUDE_M = 500;
+export const TEST_CAMERA_RIDGE_HALF_WIDTH_M = 200;
+export const TEST_CAMERA_RIDGE_HEIGHT_M = 1_500;
+export const TEST_CAMERA_FLIGHT_STEPS_COUNT = 24;
+export const TEST_CAMERA_MIN_CLEARANCE_M = 30;
+export const TEST_CAMERA_CLEARANCE_RATIO = 0.1;

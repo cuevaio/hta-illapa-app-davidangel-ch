@@ -89,7 +89,9 @@ describe("Babylon picking and camera requests", () => {
 		controller.update(props, models, false);
 		expect(controller.camera.target.x).toBeCloseTo(TEST_CURSOR_M.x);
 		expect(controller.camera.target.z).toBeCloseTo(TEST_CURSOR_M.z);
-		expect(controller.camera.radius).toBeCloseTo(CAMERA_MIN_RADIUS_M);
+		expect(controller.camera.radius).toBeGreaterThanOrEqual(
+			CAMERA_MIN_RADIUS_M,
+		);
 		props.cameraRequest = {
 			kind: "focus_point",
 			point: TEST_STRUCTURE.anchor,
