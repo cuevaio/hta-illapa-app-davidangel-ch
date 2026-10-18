@@ -3,9 +3,8 @@ import type {
 	StructureInput,
 } from "@hack-the-andes-project/api/structure-schemas";
 
-import { ISO_DATE_PATTERN } from "@/fixtures/route-review/constants";
-
 import {
+	ISO_DATE_PATTERN,
 	STRUCTURE_FIXTURE_LATENCY_MS,
 	STRUCTURE_FIXTURE_STORAGE_KEY,
 	STRUCTURE_NOT_FOUND_MESSAGE,
