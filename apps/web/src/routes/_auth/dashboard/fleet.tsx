@@ -29,7 +29,7 @@ import {
 } from "@/lib/route-review-labels";
 import {
 	invalidateRouteReviewQueries,
-	routeReviewQueries,
+	useRouteReviewQueries,
 } from "@/lib/route-review-queries";
 import {
 	getVehicleProfileDialogLabels,
@@ -51,6 +51,7 @@ export const Route = createFileRoute("/_auth/dashboard/fleet")({
 });
 
 function FleetPage() {
+	const routeReviewQueries = useRouteReviewQueries();
 	const queryClient = useQueryClient();
 	const navigate = Route.useNavigate();
 	const { vehiculo } = Route.useSearch();

@@ -41,7 +41,7 @@ import { getRouteReviewLabels } from "@/lib/route-review-labels";
 import {
 	invalidateRouteReviewQueries,
 	routeReviewClient,
-	routeReviewQueries,
+	useRouteReviewQueries,
 } from "@/lib/route-review-queries";
 import { m } from "@/paraglide/messages";
 
@@ -50,6 +50,7 @@ export const Route = createFileRoute("/_auth/dashboard/fleet_/viajes/$tripId")({
 	remountDeps: ({ params }) => params.tripId,
 });
 function PlannedTripPage() {
+	const routeReviewQueries = useRouteReviewQueries();
 	const { tripId } = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();

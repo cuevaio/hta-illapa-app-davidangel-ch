@@ -67,6 +67,9 @@ const storedVehicle: typeof vehicle.$inferSelect = {
 	organizationId: connection.organizationId,
 	connectionId: connection.id,
 	externalId: "external-truck",
+	vehicleTypeId: null,
+	axleCount: null,
+	grossWeightKg: null,
 	name: "Camión",
 	plate: "ABC-123",
 	lastLat: LIMA[1],
@@ -79,6 +82,13 @@ const storedVehicle: typeof vehicle.$inferSelect = {
 	updatedAt: recordedAt,
 };
 const activeTrip: typeof trip.$inferSelect = {
+	reviewId: null,
+	chosenCandidateId: null,
+	chosenCandidate: null,
+	originPlaceId: null,
+	destinationPlaceId: null,
+	departureAt: null,
+	startedAt: null,
 	id: "trip",
 	organizationId: connection.organizationId,
 	vehicleId: storedVehicle.id,
@@ -282,6 +292,9 @@ describe("syncConnection with real Drizzle queries", () => {
 		const fleetQuery = query.mock.calls.find(([options]) =>
 			options.sql.includes("left join"),
 		);
+		expect(fleetQuery?.[0].sql).toContain(
+			"coalesce(`hack_the_andes_trip`.`started_at`, `hack_the_andes_trip`.`created_at`)",
+		);
 		expect(fleetQuery?.[1]).toEqual(
 			expect.arrayContaining(["active", connection.id]),
 		);
@@ -480,6 +493,20 @@ describe("evaluateTrip with real Drizzle queries", () => {
 			JSON.stringify(replacementGeometry),
 		);
 		expect(query.mock.calls[0]?.[0].sql).toContain("eta_at");
+	});
+
+	it("never evaluates or alerts on a planned trip", async () => {
+		const result = await evaluateTrip({
+			db: await testDatabase(),
+			osrmBaseUrl: "https://osrm.test",
+			trip: { ...activeTrip, status: "planned" },
+			vehicle: storedVehicle,
+			incidents: [],
+			now,
+			log: createLogger(),
+		});
+		expect(result).toMatchObject({ ok: true, skipped: "inactive_trip" });
+		expect(query).not.toHaveBeenCalled();
 	});
 
 	it("skips a vehicle with no position without writing or resolving alerts", async () => {
