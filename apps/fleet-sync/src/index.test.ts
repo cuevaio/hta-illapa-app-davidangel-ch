@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
 	pruneVehiclePositions: vi.fn(),
 	resolveObsoleteAlerts: vi.fn(),
 	loadAlertableIncidents: vi.fn(async () => []),
+	findDemoOrganizationId: vi.fn<() => Promise<string | null>>(async () => null),
+	restartFinishedDemo: vi.fn(),
 }));
 vi.mock("./env.server", () => ({
 	ENV: {
@@ -100,6 +102,96 @@ describe("fleet-sync run endpoint", () => {
 		expect(mocks.pruneVehiclePositions).toHaveBeenCalledTimes(1);
 		expect(end).toHaveBeenCalledTimes(1);
 	});
+
+	it("restarts the shared demo after evaluating its trips", async () => {
+		const query = {
+			from: vi.fn().mockReturnThis(),
+			innerJoin: vi.fn().mockReturnThis(),
+			where: vi
+				.fn()
+				.mockResolvedValueOnce([
+					{ id: "demo-connection", organizationId: "demo-organization" },
+					{ id: "fleet-connection", organizationId: "fleet-organization" },
+				])
+				.mockResolvedValueOnce([{ trip: { id: "demo-trip" }, vehicle: {} }]),
+		};
+		const database = { select: () => query, $client: { end: vi.fn() } };
+		mocks.createDb.mockResolvedValue(database);
+		mocks.syncConnection.mockImplementation(async ({ connection }) => ({
+			connectionId: connection.id,
+			ok: true,
+			vehiclesSynced: 0,
+			positionsInserted: 0,
+		}));
+		mocks.evaluateTrip.mockImplementation(async ({ trip }) => ({
+			tripId: trip.id,
+			ok: true,
+		}));
+		mocks.findDemoOrganizationId.mockResolvedValueOnce("demo-organization");
+		const response = await worker.fetch(
+			new Request("https://worker.test/run", {
+				method: "POST",
+				headers: { "x-fleet-sync-secret": "run-secret" },
+			}),
+		);
+		expect(response.status).toBe(200);
+		expect(mocks.restartFinishedDemo).toHaveBeenCalledExactlyOnceWith({
+			db: database,
+			organizationId: "demo-organization",
+			encryptionKey: "encryption-key",
+			osrmBaseUrl: "https://osrm.test",
+			log: expect.objectContaining({ set: expect.any(Function) }),
+		});
+		expect(mocks.evaluateTrip.mock.invocationCallOrder[0]).toBeLessThan(
+			mocks.restartFinishedDemo.mock.invocationCallOrder[0] ??
+				Number.NEGATIVE_INFINITY,
+		);
+	});
+
+	it.each<{ situation: string; demoOrganizationId: string | null }>([
+		{ situation: "the demo account was never used", demoOrganizationId: null },
+		{
+			situation: "the run has no connection of the demo account",
+			demoOrganizationId: "demo-organization",
+		},
+	])(
+		"leaves other organizations' demo fleets alone when $situation",
+		async ({ demoOrganizationId }) => {
+			const query = {
+				from: vi.fn().mockReturnThis(),
+				innerJoin: vi.fn().mockReturnThis(),
+				where: vi
+					.fn()
+					.mockResolvedValueOnce([
+						{
+							id: "fleet-connection",
+							organizationId: "fleet-organization",
+							provider: "demo",
+						},
+					])
+					.mockResolvedValueOnce([]),
+			};
+			mocks.createDb.mockResolvedValue({
+				select: () => query,
+				$client: { end: vi.fn() },
+			});
+			mocks.syncConnection.mockResolvedValueOnce({
+				connectionId: "fleet-connection",
+				ok: true,
+				vehiclesSynced: 0,
+				positionsInserted: 0,
+			});
+			mocks.findDemoOrganizationId.mockResolvedValueOnce(demoOrganizationId);
+			const response = await worker.fetch(
+				new Request("https://worker.test/run", {
+					method: "POST",
+					headers: { "x-fleet-sync-secret": "run-secret" },
+				}),
+			);
+			expect(response.status).toBe(200);
+			expect(mocks.restartFinishedDemo).not.toHaveBeenCalled();
+		},
+	);
 
 	it("returns safe errors when database initialization fails", async () => {
 		mocks.createDb.mockRejectedValue(

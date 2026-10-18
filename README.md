@@ -49,9 +49,9 @@ Every server route requires a session except `/`, `/api/auth/*`, the secret-guar
 
 ## Demo access
 
-"Probar demo" on illapa.app opens `dash.illapa.app/demo`, which signs the visitor into the shared `demo@illapa.app` account through `/api/auth/demo/sign-in` (no password, 30 sign-ins per minute per IP) and seeds its demo fleet and two demo trips on first use. The demo account cannot change its email, password, sessions or organization, and can only add demo GPS connections.
+"Probar demo" on illapa.app opens `dash.illapa.app/demo`, which signs the visitor into the shared `demo@illapa.app` account through `/api/auth/demo/sign-in` (no password, 30 sign-ins per minute per IP) and seeds its demo fleet and two demo trips on first use. Once every trip of the demo account is completed or cancelled, the next fleet-sync run or `/demo` visit restarts the demo with the same wipe and reseed as the reset below. The demo account cannot change its email, password, sessions or organization, and can only add demo GPS connections.
 
-The reset endpoint is off unless the server has `DEMO_RESET_SECRET` set (add it before deploying when you need it). Reset the demo before the pitch with `DEMO_RESET_SECRET=… DEMO_RESET_URL=https://api.illapa.app/api/demo/reset pnpm demo:reset`. Without `DEMO_RESET_URL` it targets the local server. It deletes the demo organization's alerts, trips, vehicles and connections and seeds them again.
+The reset endpoint is off unless the server has `DEMO_RESET_SECRET` set (add it before deploying when you need it). To restart it on demand, for example while a trip is still running, use `DEMO_RESET_SECRET=… DEMO_RESET_URL=https://api.illapa.app/api/demo/reset pnpm demo:reset`. Without `DEMO_RESET_URL` it targets the local server. It deletes the demo organization's alerts, trips, vehicles and connections and seeds them again.
 
 ## Dashboard and fleet tracking
 

@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import type {
 	gpsConnection,
+	TripStatus,
 	trip,
 	vehicle,
 } from "@hack-the-andes-project/db/schema/fleet";
@@ -15,9 +16,10 @@ import {
 	vi,
 } from "vitest";
 
+import { DEMO_TRIP_SCENARIOS } from "./constants";
 import { generateEncryptionKeyBase64 } from "./crypto/index";
 import { demoEntityId } from "./demo-fleet";
-import { prepareDemo, wipeDemoFleet } from "./demo-seed";
+import { prepareDemo, restartFinishedDemo, wipeDemoFleet } from "./demo-seed";
 import * as incidentLoading from "./fleet/load-alertable-incidents";
 import * as demoPlanning from "./fleet/plan-demo-trip";
 import * as fleetSync from "./fleet/sync-connection";
@@ -54,9 +56,13 @@ const database = await createDb({
 });
 const createdAt = new Date("2026-10-17T00:00:00Z");
 const organizationId = "demo-organization";
+interface StoredTrip {
+	vehicleId: string;
+	status: TripStatus;
+}
 const connectionIds = new Set<string>();
 const vehicleIds = new Set<string>();
-const tripVehicleIds = new Map<string, string>();
+const storedTrips = new Map<string, StoredTrip>();
 const route = {
 	geometry: {
 		type: "LineString",
@@ -75,7 +81,7 @@ beforeEach(async () => {
 	query.mockReset();
 	connectionIds.clear();
 	vehicleIds.clear();
-	tripVehicleIds.clear();
+	storedTrips.clear();
 	connection = {
 		id: await demoEntityId(organizationId, "connection"),
 		organizationId,
@@ -135,11 +141,11 @@ beforeEach(async () => {
 							? configuration.where.id
 							: undefined;
 					if (typeof tripId !== "string") return undefined;
-					const vehicleId = tripVehicleIds.get(tripId);
-					if (!vehicleId) return undefined;
+					const storedTrip = storedTrips.get(tripId);
+					if (!storedTrip) return undefined;
 					return {
 						id: tripId,
-						vehicleId,
+						vehicleId: storedTrip.vehicleId,
 						organizationId,
 						name: "Demo",
 						originLat: 0,
@@ -150,13 +156,20 @@ beforeEach(async () => {
 						routeGeometry: route.geometry,
 						routeDistanceM: route.distanceM,
 						routeDurationS: route.durationS,
-						status: "active",
+						status: storedTrip.status,
 						etaAt: null,
 						lastEvaluatedAt: null,
 						createdAt,
 						updatedAt: createdAt,
 					} satisfies typeof trip.$inferSelect;
 				},
+			),
+	);
+	vi.spyOn(database.query.trip, "findMany").mockImplementation(
+		vi
+			.fn()
+			.mockImplementation(async () =>
+				Array.from(storedTrips.values(), ({ status }) => ({ status })),
 			),
 	);
 	query.mockImplementation(async (options, parameters) => {
@@ -178,17 +191,33 @@ beforeEach(async () => {
 				statement.includes("`hack_the_andes_trip`")
 			) {
 				const vehicleId = parameters?.[2];
-				if (typeof vehicleId === "string" && !tripVehicleIds.has(id))
-					tripVehicleIds.set(id, vehicleId);
+				if (typeof vehicleId === "string" && !storedTrips.has(id))
+					storedTrips.set(id, { vehicleId, status: "active" });
 			}
 		}
+		if (statement.startsWith("delete from `hack_the_andes_trip`")) {
+			const deletedStatuses = statement.includes("`status` in")
+				? parameters.slice(1)
+				: null;
+			let affectedRows = 0;
+			for (const [tripId, { status }] of storedTrips) {
+				if (deletedStatuses && !deletedStatuses.includes(status)) continue;
+				storedTrips.delete(tripId);
+				affectedRows += 1;
+			}
+			return [{ affectedRows }, []];
+		}
+		if (statement.startsWith("delete from `hack_the_andes_vehicle`"))
+			vehicleIds.clear();
+		if (statement.startsWith("delete from `hack_the_andes_gps_connection`"))
+			connectionIds.clear();
 		if (statement.startsWith("select count"))
 			return [
 				[
 					[
 						statement.includes("`hack_the_andes_vehicle`")
 							? vehicleIds.size
-							: tripVehicleIds.size,
+							: storedTrips.size,
 					],
 				],
 				[],
@@ -220,6 +249,29 @@ const input = {
 	log: createRequestLogger(),
 };
 
+function tripStatuses() {
+	return Array.from(storedTrips.values(), ({ status }) => status);
+}
+
+function deleteStatements() {
+	return query.mock.calls.flatMap(([options, parameters]) => {
+		const table = options.sql.match(/^delete from `([^`]+)`/)?.[1];
+		return table ? [{ table, parameters }] : [];
+	});
+}
+
+async function finishDemoTrips() {
+	for (const scenario of DEMO_TRIP_SCENARIOS) {
+		const tripId = await demoEntityId(organizationId, `trip:${scenario}`);
+		const storedTrip = storedTrips.get(tripId);
+		if (storedTrip)
+			storedTrips.set(tripId, {
+				...storedTrip,
+				status: scenario === "hazard" ? "completed" : "cancelled",
+			});
+	}
+}
+
 describe("shared demo seeding", () => {
 	it("keeps one fleet and two trips across repeat calls", async () => {
 		await expect(prepareDemo(input)).resolves.toEqual({
@@ -232,7 +284,10 @@ describe("shared demo seeding", () => {
 		});
 		expect(connectionIds.size).toBe(1);
 		expect(vehicleIds.size).toBe(DEMO_VEHICLES.length);
-		expect(new Set(tripVehicleIds.values()).size).toBe(2);
+		expect(
+			new Set(Array.from(storedTrips.values(), ({ vehicleId }) => vehicleId))
+				.size,
+		).toBe(2);
 		expect(demoPlanning.planDemoTrip).toHaveBeenCalledTimes(2);
 	});
 
@@ -240,8 +295,11 @@ describe("shared demo seeding", () => {
 		await Promise.all([prepareDemo(input), prepareDemo(input)]);
 		expect(connectionIds.size).toBe(1);
 		expect(vehicleIds.size).toBe(DEMO_VEHICLES.length);
-		expect(tripVehicleIds.size).toBe(2);
-		expect(new Set(tripVehicleIds.values()).size).toBe(2);
+		expect(storedTrips.size).toBe(2);
+		expect(
+			new Set(Array.from(storedTrips.values(), ({ vehicleId }) => vehicleId))
+				.size,
+		).toBe(2);
 		const insertQueries = vi
 			.mocked(database.$client.query)
 			.mock.calls.filter(
@@ -323,16 +381,8 @@ describe("shared demo seeding", () => {
 
 	it("wipes only the demo organization's fleet in dependency order", async () => {
 		await wipeDemoFleet(database, organizationId);
-		const deletes = vi
-			.mocked(database.$client.query)
-			.mock.calls.map(([options, parameters]) => ({
-				sql: typeof options === "string" ? options : options.sql,
-				parameters,
-			}))
-			.filter(({ sql }) => sql.startsWith("delete"));
-		expect(
-			deletes.map(({ sql }) => sql.match(/^delete from `([^`]+)`/)?.[1]),
-		).toEqual([
+		const deletes = deleteStatements();
+		expect(deletes.map(({ table }) => table)).toEqual([
 			"hack_the_andes_alert",
 			"hack_the_andes_trip",
 			"hack_the_andes_vehicle_position",
@@ -341,5 +391,129 @@ describe("shared demo seeding", () => {
 		]);
 		for (const deletion of deletes)
 			expect(deletion.parameters).toContain(organizationId);
+	});
+});
+
+describe("finished demo restart", () => {
+	it("rebuilds a finished demo with a fresh fleet and new trips", async () => {
+		await prepareDemo(input);
+		await finishDemoTrips();
+		query.mockClear();
+		vi.mocked(fleetSync.syncConnection).mockClear();
+		vi.mocked(demoPlanning.planDemoTrip).mockClear();
+		const log = createRequestLogger();
+
+		await expect(restartFinishedDemo({ ...input, log })).resolves.toEqual({
+			vehicleCount: DEMO_VEHICLES.length,
+			tripCount: 2,
+		});
+
+		const deletes = deleteStatements();
+		expect(deletes.map(({ table }) => table)).toEqual([
+			"hack_the_andes_alert",
+			"hack_the_andes_trip",
+			"hack_the_andes_alert",
+			"hack_the_andes_trip",
+			"hack_the_andes_vehicle_position",
+			"hack_the_andes_vehicle",
+			"hack_the_andes_gps_connection",
+		]);
+		for (const deletion of deletes)
+			expect(deletion.parameters).toContain(organizationId);
+		expect(connectionIds.size).toBe(1);
+		expect(vehicleIds.size).toBe(DEMO_VEHICLES.length);
+		expect(fleetSync.syncConnection).toHaveBeenCalledOnce();
+		expect(demoPlanning.planDemoTrip).toHaveBeenCalledTimes(
+			DEMO_TRIP_SCENARIOS.length,
+		);
+		expect(tripStatuses()).toEqual(["active", "active"]);
+		expect(log.getContext()).toMatchObject({
+			demo: {
+				restarted: true,
+				reason: "trips_finished",
+				vehicleCount: DEMO_VEHICLES.length,
+				tripCount: 2,
+			},
+		});
+
+		query.mockClear();
+		await expect(restartFinishedDemo(input)).resolves.toBeNull();
+		expect(query).not.toHaveBeenCalled();
+	});
+
+	it.each<{ state: string; statuses: TripStatus[] }>([
+		{ state: "a demo trip is still active", statuses: ["completed", "active"] },
+		{
+			state: "a trip a visitor planned is still active",
+			statuses: ["completed", "cancelled", "active"],
+		},
+		{ state: "it has no trips yet", statuses: [] },
+	])("leaves the demo alone while $state", async ({ statuses }) => {
+		for (const [index, status] of statuses.entries())
+			storedTrips.set(`trip-${index}`, { vehicleId: "demo-vehicle", status });
+
+		await expect(restartFinishedDemo(input)).resolves.toBeNull();
+
+		expect(query).not.toHaveBeenCalled();
+		expect(demoPlanning.planDemoTrip).not.toHaveBeenCalled();
+		expect(tripStatuses()).toEqual(statuses);
+	});
+
+	it("restarts only once when two restarts race", async () => {
+		await prepareDemo(input);
+		await finishDemoTrips();
+		query.mockClear();
+		vi.mocked(demoPlanning.planDemoTrip).mockClear();
+		const cronLog = createRequestLogger();
+		const visitLog = createRequestLogger();
+
+		const restarts = await Promise.all([
+			restartFinishedDemo({ ...input, log: cronLog }),
+			restartFinishedDemo({ ...input, log: visitLog }),
+		]);
+
+		expect(restarts.filter((restart) => restart === null)).toHaveLength(1);
+		expect(restarts).toContainEqual({
+			vehicleCount: DEMO_VEHICLES.length,
+			tripCount: 2,
+		});
+		expect([cronLog.getContext(), visitLog.getContext()]).toContainEqual(
+			expect.objectContaining({
+				demo: { restarted: false, reason: "concurrent_restart" },
+			}),
+		);
+		expect(
+			deleteStatements().filter(
+				({ table }) => table === "hack_the_andes_gps_connection",
+			),
+		).toHaveLength(1);
+		expect(demoPlanning.planDemoTrip).toHaveBeenCalledTimes(
+			DEMO_TRIP_SCENARIOS.length,
+		);
+		expect(connectionIds.size).toBe(1);
+		expect(vehicleIds.size).toBe(DEMO_VEHICLES.length);
+		expect(tripStatuses()).toEqual(["active", "active"]);
+	});
+
+	it("leaves rebuilt trips running when its finished check went stale", async () => {
+		await prepareDemo(input);
+		vi.mocked(database.query.trip.findMany).mockImplementationOnce(
+			vi
+				.fn()
+				.mockResolvedValue([{ status: "completed" }, { status: "cancelled" }]),
+		);
+		query.mockClear();
+		vi.mocked(demoPlanning.planDemoTrip).mockClear();
+
+		await expect(restartFinishedDemo(input)).resolves.toBeNull();
+
+		expect(deleteStatements().map(({ table }) => table)).toEqual([
+			"hack_the_andes_alert",
+			"hack_the_andes_trip",
+		]);
+		expect(demoPlanning.planDemoTrip).not.toHaveBeenCalled();
+		expect(connectionIds.size).toBe(1);
+		expect(vehicleIds.size).toBe(DEMO_VEHICLES.length);
+		expect(tripStatuses()).toEqual(["active", "active"]);
 	});
 });

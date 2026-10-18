@@ -1,6 +1,7 @@
 export * from "./constants";
 export * from "./crypto/index";
 export * from "./demo-account";
+export * from "./demo-seed";
 export * from "./fleet/index";
 export * from "./hazards/alertable";
 export * from "./hazards/alternative";
