@@ -10,6 +10,7 @@ import {
 	BRAND_TEAL_COLOR,
 	CAMERA_ARRIVAL_THRESHOLD_M,
 	CAMERA_FAR_M,
+	COMPACT_HUD_MEDIA_QUERY,
 	CAMERA_FOV_DEG,
 	CAMERA_LERP_FACTOR,
 	CAMERA_NEAR_M,
@@ -238,7 +239,9 @@ export default function RouteReview3dMap({
 	);
 	const [xrSupported, setXrSupported] = useState(false);
 	const [xrPresenting, setXrPresenting] = useState(false);
-	const [hudCompact, setHudCompact] = useState(false);
+	const [hudCompact, setHudCompact] = useState(
+		() => window.matchMedia(COMPACT_HUD_MEDIA_QUERY).matches,
+	);
 	const followsRoute = Boolean(origin && destination);
 
 	const routeFrameKey = useMemo(() => {
