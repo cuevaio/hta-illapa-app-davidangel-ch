@@ -1,16 +1,25 @@
-import { ROUTE_SIGNAL_KINDS } from "@hack-the-andes-project/business/route-review/risk";
+import {
+	ROUTE_SIGNAL_KINDS,
+	type RouteRiskHorizon,
+} from "@hack-the-andes-project/business/route-review/risk";
 import type {
 	RouteReviewCandidate,
 	RouteReviewLabels,
 } from "../lib/route-review";
 import { ExternalLinkIcon } from "./icons";
+import { RouteReviewSignalSymbol } from "./route-review-signal-symbol";
 import { RouteReviewSignalTag } from "./route-review-signal-tag";
 
 interface RouteReviewWhyProps {
 	candidate: RouteReviewCandidate;
+	horizon: RouteRiskHorizon;
 	labels: RouteReviewLabels;
 }
-export function RouteReviewWhy({ candidate, labels }: RouteReviewWhyProps) {
+export function RouteReviewWhy({
+	candidate,
+	horizon,
+	labels,
+}: RouteReviewWhyProps) {
 	return (
 		<div className="flex flex-col gap-4 border-t pt-4">
 			<p>
@@ -29,10 +38,21 @@ export function RouteReviewWhy({ candidate, labels }: RouteReviewWhyProps) {
 						return (
 							<article key={signal.id} className="flex flex-col gap-1">
 								<div className="type-label flex flex-wrap items-center gap-2">
-									<RouteReviewSignalTag
-										kind={kind}
-										label={labels.signalKind(kind)}
-									/>
+									{kind === "baseline" ? (
+										<RouteReviewSignalTag
+											kind={kind}
+											label={labels.signalKind(kind)}
+										/>
+									) : (
+										<span className="inline-flex items-center gap-2">
+											<RouteReviewSignalSymbol
+												signal={signal}
+												signalSegments={segments}
+												horizon={horizon}
+											/>
+											{labels.signalKind(kind)}
+										</span>
+									)}
 									{segments.length
 										? labels.kmRange(
 												Math.min(...segments.map((segment) => segment.startM)),
