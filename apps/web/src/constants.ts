@@ -4,6 +4,7 @@ import {
 	MS_PER_HOUR,
 	MS_PER_MINUTE,
 } from "@hack-the-andes-project/business/constants";
+import type { DemoProfile } from "@hack-the-andes-project/business/demo-account";
 import type { AuthShellLabels } from "@hack-the-andes-project/ui/components/auth-shell";
 import type {
 	Incident,
@@ -205,7 +206,10 @@ export const SEEN_ALERTS_STORAGE_PREFIX = "illapa-seen-alerts-v1";
 
 export const TOO_MANY_REQUESTS_STATUS = 429;
 export const CONFLICT_STATUS = 409;
-export const DEMO_START_ROUTE = "/dashboard/revisar-ruta";
+export const DEMO_START_ROUTES = {
+	fleet: "/dashboard/revisar-ruta",
+	engineer: "/ingenieria",
+} as const satisfies Record<DemoProfile, string>;
 export const AUTH_ERROR_MESSAGES: Record<string, () => string> = {
 	INVALID_EMAIL_OR_PASSWORD: m.auth_invalid_credentials,
 	INVALID_EMAIL: m.auth_invalid_email,

@@ -1,7 +1,7 @@
 import {
-	DEMO_ACCOUNT_EMAIL,
-	DEMO_ACCOUNT_NAME,
-	DEMO_ACCOUNT_ROLE,
+	DEFAULT_DEMO_PROFILE,
+	DEMO_ACCOUNTS,
+	DEMO_PROFILES,
 	DEMO_SIGN_IN_AUTH_PATH,
 	isDemoAccountEmail,
 } from "@hack-the-andes-project/business/demo-account";
@@ -13,6 +13,7 @@ import {
 	getSessionFromCtx,
 } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
+import { z } from "zod";
 
 import {
 	DEMO_BLOCKED_AUTH_PATHS,
@@ -31,8 +32,15 @@ export const demoAccess = {
 	endpoints: {
 		signInDemo: createAuthEndpoint(
 			DEMO_SIGN_IN_AUTH_PATH,
-			{ method: "POST" },
+			{
+				method: "POST",
+				body: z
+					.object({ profile: z.enum(DEMO_PROFILES).optional() })
+					.optional(),
+			},
 			async (context) => {
+				const demoAccount =
+					DEMO_ACCOUNTS[context.body?.profile ?? DEFAULT_DEMO_PROFILE];
 				const adapter = context.context.internalAdapter;
 				// Not getSessionFromCtx: it reports a failed lookup as signed out and
 				// writes session cookies, which better-auth also sends with the 409.
@@ -48,25 +56,28 @@ export const demoAccess = {
 						throw new APIError("CONFLICT", {
 							message: DEMO_SESSION_CONFLICT_MESSAGE,
 						});
-					// The server guard refreshes the session row but drops its Set-Cookie,
-					// so a reused demo session must re-issue the 7-day cookie here.
-					await setSessionCookie(context, currentSession);
-					return context.json({ success: true });
+					if (currentSession.user.email === demoAccount.email) {
+						// The server guard refreshes the session row but drops its Set-Cookie,
+						// so a reused demo session must re-issue the 7-day cookie here.
+						await setSessionCookie(context, currentSession);
+						return context.json({ success: true });
+					}
+					await adapter.deleteSession(currentSession.session.token);
 				}
-				let user = (await adapter.findUserByEmail(DEMO_ACCOUNT_EMAIL))?.user;
+				let user = (await adapter.findUserByEmail(demoAccount.email))?.user;
 				if (!user) {
 					try {
 						user = await adapter.createUser(
 							{
-								email: DEMO_ACCOUNT_EMAIL,
-								name: DEMO_ACCOUNT_NAME,
+								email: demoAccount.email,
+								name: demoAccount.name,
 								emailVerified: true,
-								role: DEMO_ACCOUNT_ROLE,
+								role: demoAccount.role,
 							},
 							{ method: "demo" },
 						);
 					} catch (error) {
-						user = (await adapter.findUserByEmail(DEMO_ACCOUNT_EMAIL))?.user;
+						user = (await adapter.findUserByEmail(demoAccount.email))?.user;
 						if (!user) throw error;
 					}
 				}
