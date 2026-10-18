@@ -58,8 +58,8 @@ export class XrViewer {
   private ready = false;
   private starting = false;
   private disposed = false;
-  private readonly initialChildren: Set<Node>;
-  private addedClasses: string[] = [];
+  /** Everything the viewer draws or shows lives in this element, removed as a whole on dispose. */
+  private readonly root: HTMLElement;
   private resizeObserver: ResizeObserver | null = null;
   private readonly renderLoop = () => this.switcher?.frame();
   private readonly onResize = () => this.engine?.resize();
@@ -69,8 +69,10 @@ export class XrViewer {
     this.switcher.active.handleKey(event);
   };
 
-  constructor(private readonly container: HTMLElement, private readonly options: XrViewerOptions) {
-    this.initialChildren = new Set(container.childNodes);
+  constructor(container: HTMLElement, private readonly options: XrViewerOptions) {
+    this.root = document.createElement('div');
+    this.root.className = 'app xr-viewer';
+    container.append(this.root);
     this.imagery = resolveImagery(options.imageryEnv ?? (import.meta.env as ImageryEnv));
     this.imageryMode = defaultImageryMode(this.imagery);
   }
@@ -106,11 +108,9 @@ export class XrViewer {
     this.caps = caps;
     const endpoints = resolveEndpoints(this.options, import.meta.env as { VITE_TILES_URL?: string });
     this.tiles = new TilesClient(endpoints.tilesBaseUrl, undefined, undefined, endpoints.credentials);
-    this.addedClasses = ['app', 'xr-viewer'].filter((name) => !this.container.classList.contains(name));
-    this.container.classList.add(...this.addedClasses);
     const canvas = document.createElement('canvas');
     canvas.className = 'scene-canvas';
-    this.container.append(canvas);
+    this.root.append(canvas);
     this.canvas = canvas;
     const handle = await createEngine(canvas, caps.solverBackend === 'webgpu');
     this.engine = handle.engine;
@@ -129,7 +129,7 @@ export class XrViewer {
     this.weather = weather;
     this.weatherGpu = new WeatherGpu(engine, weather, weatherProfile);
     void weather.start();
-    const overview = new PeruOverview(engine, canvas, this.container, {
+    const overview = new PeruOverview(engine, canvas, this.root, {
       simulateHere: (point) => this.primaryMode().open(point),
       openSimulator: () => this.showMode(this.primaryMode().id),
       backToMap: () => this.showOverview(),
@@ -138,18 +138,18 @@ export class XrViewer {
     this.overview = overview;
     this.requestImageryAttribution();
     const overviewLoad = overview.load(this.tiles).then(() => ({ ok: true as const }), (error: unknown) => ({ ok: false as const, error }));
-    if (caps.fallbackReason === 'xr-compat' && !this.webgpu) renderXrCompatNotice(this.container);
-    else if (!this.webgpu) renderWebGpuUnavailable(this.container, report, true);
+    if (caps.fallbackReason === 'xr-compat' && !this.webgpu) renderXrCompatNotice(this.root);
+    else if (!this.webgpu) renderWebGpuUnavailable(this.root, report, true);
 
     const host = this.modeHost();
     const modes = this.options.modes.map((factory) => factory(host));
     this.modes = modes;
     this.switcher = new ModeSwitcher(modes, overview, (screen) => {
-      this.container.classList.toggle('overview-active', screen === 'overview');
-      if (screen !== 'overview') this.container.dataset.activeMode = screen;
+      this.root.classList.toggle('overview-active', screen === 'overview');
+      if (screen !== 'overview') this.root.dataset.activeMode = screen;
       this.options.onScreenChange?.(screen);
     });
-    this.container.dataset.activeMode = this.primaryMode().id;
+    this.root.dataset.activeMode = this.primaryMode().id;
     this.switcher.showOverview();
     for (const mode of modes) {
       await mode.start();
@@ -179,7 +179,7 @@ export class XrViewer {
 
     engine.runRenderLoop(this.renderLoop);
     window.addEventListener('resize', this.onResize);
-    // Embedded, the container also resizes with the host layout (e.g. a collapsing sidebar).
+    // Embedded, the viewer also resizes with the host layout (e.g. a collapsing sidebar).
     this.resizeObserver = new ResizeObserver(this.onResize);
     this.resizeObserver.observe(canvas);
     window.addEventListener('keydown', this.onKeyDown);
@@ -204,9 +204,7 @@ export class XrViewer {
     this.weatherGpu?.dispose();
     this.weather?.dispose();
     this.engine?.dispose();
-    for (const node of [...this.container.childNodes]) if (!this.initialChildren.has(node)) node.remove();
-    this.container.classList.remove(...this.addedClasses, 'overview-active');
-    delete this.container.dataset.activeMode;
+    this.root.remove();
   }
 
   private primaryMode(): SimulatorMode {
@@ -236,7 +234,7 @@ export class XrViewer {
       backToMap: (xr) => this.vrBackToMap(xr),
     };
     return {
-      engine, canvas, container: this.container, webgpu: this.webgpu, caps, tiles, lodProfile, weather, weatherGpu, overview,
+      engine, canvas, container: this.root, webgpu: this.webgpu, caps, tiles, lodProfile, weather, weatherGpu, overview,
       imagery: this.imagery,
       vr,
       imageryMode: () => this.imageryMode,
