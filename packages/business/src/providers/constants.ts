@@ -21,36 +21,42 @@ export const DEMO_CLEAR_VEHICLE_EXTERNAL_ID = "demo-trujillo";
 export const DEMO_VEHICLES: DemoVehicle[] = [
 	{
 		externalId: "demo-callao",
+		vehicleTypeId: "t2s3",
 		name: "Tracto 01 · Callao",
 		plate: "DEM-101",
 		depot: { lat: -12.0553, lng: -77.118 },
 	},
 	{
 		externalId: "demo-ate",
+		vehicleTypeId: "t3s3",
 		name: "Tracto 02 · Ate",
 		plate: "DEM-102",
 		depot: { lat: -12.026, lng: -76.918 },
 	},
 	{
 		externalId: "demo-lurin",
+		vehicleTypeId: "t2s3",
 		name: "Tracto 03 · Lurín",
 		plate: "DEM-103",
 		depot: { lat: -12.274, lng: -76.871 },
 	},
 	{
 		externalId: "demo-trujillo",
+		vehicleTypeId: "t3s3",
 		name: "Tracto 04 · Trujillo",
 		plate: "DEM-104",
 		depot: { lat: -8.109, lng: -79.0215 },
 	},
 	{
 		externalId: "demo-huancayo",
+		vehicleTypeId: "t2s3",
 		name: "Tracto 05 · Huancayo",
 		plate: "DEM-105",
 		depot: { lat: -12.0651, lng: -75.2049 },
 	},
 	{
 		externalId: "demo-arequipa",
+		vehicleTypeId: "t3s3",
 		name: "Tracto 06 · Arequipa",
 		plate: "DEM-106",
 		depot: { lat: -16.409, lng: -71.5375 },
