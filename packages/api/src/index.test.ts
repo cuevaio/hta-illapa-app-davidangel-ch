@@ -1,6 +1,9 @@
 import { createRequire } from "node:module";
 import { generateEncryptionKeyBase64 } from "@hack-the-andes-project/business/crypto/index";
-import { DEMO_ACCOUNT_EMAIL } from "@hack-the-andes-project/business/demo-account";
+import {
+	DEMO_ACCOUNT_EMAIL,
+	ENGINEER_DEMO_ACCOUNT_EMAIL,
+} from "@hack-the-andes-project/business/demo-account";
 import * as demoSeeding from "@hack-the-andes-project/business/demo-seed";
 import * as incidentLoading from "@hack-the-andes-project/business/fleet/load-alertable-incidents";
 import * as demoTripPlanning from "@hack-the-andes-project/business/fleet/plan-demo-trip";
@@ -810,10 +813,13 @@ describe("shared demo account boundaries", () => {
 		expect(findConnection).not.toHaveBeenCalled();
 	});
 
-	it("rejects prepare for ordinary accounts", async () => {
+	it.each([
+		["ordinary accounts", session.user.email],
+		["the engineer demo", ENGINEER_DEMO_ACCOUNT_EMAIL],
+	])("rejects prepare for %s", async (_, email) => {
 		const query = vi.spyOn(database.$client, "query");
 		const client = createRouterClient(appRouter, {
-			context: contextFor(session),
+			context: contextFor({ ...session, user: { ...session.user, email } }),
 		});
 		await expect(client.demo.prepare()).rejects.toMatchObject({
 			code: "FORBIDDEN",

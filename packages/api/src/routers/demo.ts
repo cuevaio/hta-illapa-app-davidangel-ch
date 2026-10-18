@@ -1,4 +1,4 @@
-import { isDemoAccountEmail } from "@hack-the-andes-project/business/demo-account";
+import { DEMO_ACCOUNT_EMAIL } from "@hack-the-andes-project/business/demo-account";
 import {
 	prepareDemo,
 	restartFinishedDemo,
@@ -19,7 +19,7 @@ export const demoRouter = {
 		.input(z.void())
 		.output(demoPrepareOutputSchema)
 		.handler(async ({ context }) => {
-			if (!isDemoAccountEmail(context.session.user.email))
+			if (context.session.user.email !== DEMO_ACCOUNT_EMAIL)
 				throw new ORPCError("FORBIDDEN", {
 					message: DEMO_PREPARE_FORBIDDEN_MESSAGE,
 				});
