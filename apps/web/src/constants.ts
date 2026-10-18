@@ -177,9 +177,21 @@ interface SincePreset extends IncidentTimePreset {
 }
 
 export const INCIDENT_SINCE_PRESETS: SincePreset[] = [
-	{ value: "24h", label: "Últimas 24 h", durationMs: LAST_DAY_DURATION_MS },
-	{ value: "7d", label: "Últimos 7 días", durationMs: LAST_WEEK_DURATION_MS },
-	{ value: DEFAULT_SINCE_PRESET, label: "Todo el período", durationMs: null },
+	{
+		value: "24h",
+		label: m.dashboard_since_day(),
+		durationMs: LAST_DAY_DURATION_MS,
+	},
+	{
+		value: "7d",
+		label: m.dashboard_since_week(),
+		durationMs: LAST_WEEK_DURATION_MS,
+	},
+	{
+		value: DEFAULT_SINCE_PRESET,
+		label: m.dashboard_since_all(),
+		durationMs: null,
+	},
 ];
 
 export const EMPTY_INCIDENTS: Incident[] = [];
