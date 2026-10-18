@@ -3,6 +3,10 @@
 	"private": true,
 	"type": "module",
 	"exports": {
+		"./viewer": {
+			"types": "./src/viewer/api.public.d.ts",
+			"default": "./src/viewer/api.ts"
+		},
 		"./*": "./src/*.ts"
 	},
 	"scripts": {

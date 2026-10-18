@@ -112,7 +112,7 @@ export class MapContextView {
   private weatherFocus(camera: Camera) {
     const inv = this.node.computeWorldMatrix(true).clone().invert();
     const eye = Vector3.TransformCoordinates(camera.globalPosition, inv);
-    const dir = Vector3.TransformNormal(camera.getDirection(Vector3.Forward()), inv);
+    const dir = Vector3.TransformNormal(camera.getDirection(Vector3.Forward(this.scene.useRightHandedSystem)), inv);
     const frame = contextFrame(this.site!);
     const f = viewFocus([eye.x, eye.y, eye.z], [dir.x, dir.y, dir.z], this.terrain?.heightKm(eye.x, eye.z) ?? 0);
     const [x, y] = localToWorld(frame, f.x, f.z);

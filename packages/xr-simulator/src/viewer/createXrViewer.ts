@@ -16,6 +16,8 @@ export interface XrViewerHandle {
   readonly viewer: XrViewer;
   activeScreen(): ViewerScreen | null;
   mode(id: string): SimulatorMode | undefined;
+  /** The Peru map (ignored while a mode is in an immersive session). */
+  showOverview(): void;
   /** Opens a mode at its own origin, from any screen. */
   openMode(id: string): Promise<void>;
   /** Stops rendering and releases the engine, listeners, XR session and DOM the viewer added. */
@@ -30,6 +32,7 @@ export function createXrViewer(container: HTMLElement, options: CreateXrViewerOp
     viewer,
     activeScreen: () => viewer.activeScreen,
     mode: (id) => viewer.mode(id),
+    showOverview: () => viewer.backToMap(),
     openMode: async (id) => {
       const mode = viewer.mode(id);
       if (!mode) throw new Error(`Simulador desconocido: ${id}`);

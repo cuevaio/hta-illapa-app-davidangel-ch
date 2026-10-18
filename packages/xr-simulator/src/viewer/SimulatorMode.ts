@@ -9,6 +9,7 @@ import type { CapabilitySummary } from '../platform/capabilities';
 import type { XrSessionMember } from '../xr/sharedSession';
 import type { VrEvent, VrState } from '../xr/vrMode';
 import type { SwitchableMode } from './ModeSwitcher';
+import type { SiteTerrain, SiteTerrainOptions } from './SiteTerrain';
 
 /** A mode's immersive side, as the shell hands the shared XR session around (src/xr/sharedSession.ts). */
 export interface ModeXr {
@@ -54,6 +55,8 @@ export interface ModeHost {
   /** Shows the Peru map; `fromVr` while a mode hands the shared session back. */
   showOverview(fromVr?: boolean): void;
   showMode(modeId: string): void;
+  /** Real relief around a site from the viewer's tiles, with its imagery and weather context. */
+  createSiteTerrain(options: SiteTerrainOptions): SiteTerrain;
 }
 
 /**

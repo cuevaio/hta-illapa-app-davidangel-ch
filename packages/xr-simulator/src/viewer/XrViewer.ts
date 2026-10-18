@@ -1,6 +1,7 @@
 import type { AbstractEngine } from '@babylonjs/core';
 import { fetchImageryAttribution, resolveImagery, type ImageryAvailability, type ImageryEnv, type ImageryMode } from '../map/imagery/imagerySource';
 import { pickLodProfile, type LodProfile } from '../map/lod/lodProfile';
+import { MapContextView } from '../map/MapContextView';
 import { PeruOverview } from '../map/PeruOverview';
 import { startScreen, TilesClient } from '../map/tilesClient';
 import { WeatherController } from '../map/weather/WeatherController';
@@ -16,6 +17,7 @@ import { canReturnToMap, VR_OFF, vrReduce, type VrEvent, type VrState } from '..
 import { ModeSwitcher, type ViewerScreen } from './ModeSwitcher';
 import { resolveEndpoints, type XrViewerEndpointOptions } from './options';
 import type { ModeHost, ModeVr, ModeXr, SimulatorMode, SimulatorModeFactory } from './SimulatorMode';
+import { SiteTerrain } from './SiteTerrain';
 
 export interface XrViewerOptions extends XrViewerEndpointOptions {
   /** Simulator modes; the first one answers "Simular aquí" and "Ir al simulador". */
@@ -58,6 +60,7 @@ export class XrViewer {
   private disposed = false;
   private readonly initialChildren: Set<Node>;
   private addedClasses: string[] = [];
+  private resizeObserver: ResizeObserver | null = null;
   private readonly renderLoop = () => this.switcher?.frame();
   private readonly onResize = () => this.engine?.resize();
   private readonly onKeyDown = (event: KeyboardEvent) => {
@@ -75,6 +78,11 @@ export class XrViewer {
   get activeScreen(): ViewerScreen | null {
     if (!this.switcher) return null;
     return this.switcher.overviewActive ? 'overview' : this.switcher.active.id;
+  }
+
+  /** The web "Volver al mapa del Perú" (ignored while a mode is in an immersive session). */
+  backToMap(): void {
+    this.showOverview();
   }
 
   mode(id: string): SimulatorMode | undefined {
@@ -171,6 +179,9 @@ export class XrViewer {
 
     engine.runRenderLoop(this.renderLoop);
     window.addEventListener('resize', this.onResize);
+    // Embedded, the container also resizes with the host layout (e.g. a collapsing sidebar).
+    this.resizeObserver = new ResizeObserver(this.onResize);
+    this.resizeObserver.observe(canvas);
     window.addEventListener('keydown', this.onKeyDown);
   }
 
@@ -185,6 +196,7 @@ export class XrViewer {
   private teardown(): void {
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
+    this.resizeObserver?.disconnect();
     this.engine?.stopRenderLoop();
     this.shared?.dispose();
     this.switcher?.dispose();
@@ -232,6 +244,11 @@ export class XrViewer {
       overviewActive: () => this.switcher?.overviewActive ?? true,
       showOverview: (fromVr) => this.showOverview(fromVr),
       showMode: (modeId) => this.showMode(modeId),
+      createSiteTerrain: (siteOptions) => {
+        const site = new SiteTerrain(siteOptions, tiles, (scene, parent) => new MapContextView(scene, parent, tiles, lodProfile, weatherGpu));
+        site.setImagery(this.imagerySource());
+        return site;
+      },
     };
   }
 
