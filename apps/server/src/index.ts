@@ -29,6 +29,7 @@ import { cors } from "hono/cors";
 import {
 	AUTH_PREFIX,
 	CORS_PREFLIGHT_MAX_AGE_S,
+	HTTP_STATUS_FORBIDDEN,
 	PUBLIC_PATHS,
 	RPC_PREFIX,
 	SERVICE_NAME,
@@ -99,6 +100,27 @@ app.use(
 		maxAge: CORS_PREFLIGHT_MAX_AGE_S,
 	}),
 );
+
+app.use("*", async (context, next) => {
+	const origin = context.req.header("Origin");
+	if (
+		(context.req.path === RPC_PREFIX ||
+			context.req.path.startsWith(`${RPC_PREFIX}/`)) &&
+		!["GET", "HEAD", "OPTIONS"].includes(context.req.method) &&
+		origin !== undefined &&
+		!isAllowedOrigin(origin)
+	) {
+		context.get("log").set({ auth: { gate: "forbidden_origin", origin } });
+		return context.json(
+			{
+				error: "forbidden_origin",
+				message: "This origin is not allowed to call the API.",
+			},
+			HTTP_STATUS_FORBIDDEN,
+		);
+	}
+	return next();
+});
 
 // Global auth guard: every route requires a session unless it is listed in
 // PUBLIC_PATHS, lives under /api/auth/*, or is a PUBLIC_PROCEDURE_PATHS

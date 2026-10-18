@@ -9,6 +9,7 @@ export const CORS_PREFLIGHT_MAX_AGE_S = 86_400;
 
 export const RPC_PREFIX = "/rpc";
 export const AUTH_PREFIX = "/api/auth";
+export const HTTP_STATUS_FORBIDDEN = 403;
 
 export const PUBLIC_PATHS: ReadonlySet<string> = new Set([
 	"/",
