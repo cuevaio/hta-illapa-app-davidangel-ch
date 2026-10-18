@@ -28,6 +28,7 @@ export const SENAMHI_MAPSERVER_BASE =
 	"https://geosinpad.indeci.gob.pe/indeci/rest/services/Ent_Tecnico_Cientificas/SENAMHI/MapServer";
 export const INDECI_MAPSERVER_BASE =
 	"https://geosinpad.indeci.gob.pe/indeci/rest/services/Multisectorial/INDECI/MapServer";
+export const INDECI_HAZARD_CODE_PREFIX_PATTERN = /^\d+\s+/;
 export const IGP_LAST_QUAKE_LAYER_URL =
 	"https://ide.igp.gob.pe/arcgis/rest/services/monitoreocensis/UltimoSismo/MapServer/0";
 export const SERFOR_WILDFIRE_ALERTS_LAYER_URL =

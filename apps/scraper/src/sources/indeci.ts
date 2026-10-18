@@ -3,6 +3,7 @@ import type { IncidentCategory } from "@hack-the-andes-project/db/schema/scraper
 import {
 	COEN_API_BASE,
 	COEN_RECENT_DAYS,
+	INDECI_HAZARD_CODE_PREFIX_PATTERN,
 	INDECI_MAPSERVER_BASE,
 } from "../constants";
 import {
@@ -72,7 +73,7 @@ function toCoenIncident(feature: GeoJsonFeature): IncidentRecord | null {
 		sourceId,
 		category: categorizeHazard(hazard),
 		severity: fireState === "active" ? "critical" : "warning",
-		title: `${hazard} · ${[distrito, provincia, region].filter(Boolean).join(", ")}`,
+		title: `${hazard.replace(INDECI_HAZARD_CODE_PREFIX_PATTERN, "")} · ${[distrito, provincia, region].filter(Boolean).join(", ")}`,
 		description: narrative ? stripHtml(narrative) : null,
 		status: fireState ?? stringAt(properties, "Estado"),
 		roadStatus: null,
