@@ -36,7 +36,7 @@ On Dokploy the server applies pending migrations before it starts listening, so 
 
 Dokploy deploys production when `main` changes and staging when `develop` changes. Each app has one deployment per environment. Server, scraper and fleet-sync use `deploy/node-service.Dockerfile` with `APP=<app>`; dashboard and marketing use their nginx Dockerfiles. Each environment has its own env values and static-site URL build args. MySQL holds `illapa` (production) and `illapa_staging`.
 
-The intended production domains are `dash.illapa.app` and `api.illapa.app`, but their DNS is not pointed at EC2 yet (issue #7). Until that is done, use the URLs configured in each Dokploy environment. See [the deployment runbook](deploy/README.md) for build args, env values, the SRATMA relay and operations.
+Production runs on `getillapa.com`: the dashboard at https://dash.getillapa.com (judges start at `/demo`), the API at https://api.getillapa.com and the marketing site at https://getillapa.com. Staging still uses the URLs configured in its Dokploy environment. See [the deployment runbook](deploy/README.md) for the domains, build args, env values, the SRATMA relay and operations.
 
 ## Scripts
 
