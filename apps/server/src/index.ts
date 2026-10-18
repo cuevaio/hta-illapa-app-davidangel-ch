@@ -1,10 +1,7 @@
 import { PUBLIC_PROCEDURE_PATHS } from "@hack-the-andes-project/api/constants";
 import type { Context as ApiContext } from "@hack-the-andes-project/api/context";
 import { handleDemoRequest } from "@hack-the-andes-project/api/demo-request";
-import {
-	resetDemo,
-	verifyDemoResetSecret,
-} from "@hack-the-andes-project/api/demo-reset";
+import { resetDemo } from "@hack-the-andes-project/api/demo-reset";
 import { appRouter } from "@hack-the-andes-project/api/routers/index";
 import {
 	type Auth,
@@ -13,6 +10,7 @@ import {
 	parseAllowedOrigins,
 	type Session,
 } from "@hack-the-andes-project/auth";
+import { verifySecret } from "@hack-the-andes-project/business/crypto/index";
 import {
 	DEMO_RESET_PATH,
 	DEMO_RESET_SECRET_HEADER,
@@ -230,7 +228,7 @@ app.post(DEMO_RESET_PATH, async (context) => {
 		return context.notFound();
 	}
 	if (
-		!verifyDemoResetSecret(
+		!verifySecret(
 			context.req.header(DEMO_RESET_SECRET_HEADER),
 			ENV.DEMO_RESET_SECRET,
 		)
