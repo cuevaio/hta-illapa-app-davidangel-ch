@@ -9,12 +9,11 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 ARG PUBLIC_APP_URL
 ARG PUBLIC_API_URL
-# Vite bakes any PUBLIC_* variable present in the environment over the .env
-# files, even an empty one, so an empty build arg would ship an empty URL.
-# Unset, apps/illapa/.env.production supplies the production URLs instead.
-RUN if [ -z "$PUBLIC_APP_URL" ]; then unset PUBLIC_APP_URL; fi \
-	&& if [ -z "$PUBLIC_API_URL" ]; then unset PUBLIC_API_URL; fi \
-	&& pnpm --filter illapa build
+RUN test -n "$PUBLIC_APP_URL" \
+	|| { echo "PUBLIC_APP_URL is required; set --build-arg PUBLIC_APP_URL for this environment" >&2; exit 1; }
+RUN test -n "$PUBLIC_API_URL" \
+	|| { echo "PUBLIC_API_URL is required; set --build-arg PUBLIC_API_URL for this environment" >&2; exit 1; }
+RUN pnpm --filter illapa build
 
 FROM nginx:stable-alpine
 COPY deploy/illapa.nginx.conf /etc/nginx/conf.d/default.conf
