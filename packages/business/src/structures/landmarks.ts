@@ -1,3 +1,5 @@
+export const PE22_TERRAIN_ORIGIN = { lat: -11.84, lng: -76.39 };
+
 export interface CorridorLandmark {
 	name: string;
 	lat: number;
