@@ -45,7 +45,7 @@ For the first cutover, run `pnpm deploy:server`, wait until `https://api.illapa.
 
 ## Auth
 
-Every server route requires a session except `/`, `/api/auth/*`, the secret-guarded `/api/demo/reset` and the procedures listed in `PUBLIC_PROCEDURE_PATHS`. Browser origins allowed for CORS and better-auth come from the comma-separated `ALLOWED_ORIGINS`.
+Every server route requires a session except `/`, `/api/auth/*`, public `POST /api/demo-requests`, the secret-guarded `/api/demo/reset` and the procedures listed in `PUBLIC_PROCEDURE_PATHS`. Browser origins allowed for CORS and better-auth come from the comma-separated `ALLOWED_ORIGINS`.
 
 ## Demo access
 

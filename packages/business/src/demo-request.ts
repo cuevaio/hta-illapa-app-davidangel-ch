@@ -7,6 +7,8 @@ import {
 	DEMO_PHONE_MAX_LENGTH_CHARS,
 } from "./constants";
 
+export const DEMO_REQUESTS_PATH = "/api/demo-requests";
+
 export interface DemoRequest {
 	name: string;
 	company?: string;

@@ -1,5 +1,6 @@
 import { PUBLIC_PROCEDURE_PATHS } from "@hack-the-andes-project/api/constants";
 import type { Context as ApiContext } from "@hack-the-andes-project/api/context";
+import { handleDemoRequest } from "@hack-the-andes-project/api/demo-request";
 import {
 	resetDemo,
 	verifyDemoResetSecret,
@@ -16,6 +17,7 @@ import {
 	DEMO_RESET_PATH,
 	DEMO_RESET_SECRET_HEADER,
 } from "@hack-the-andes-project/business/demo-account";
+import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
 import { createDb, type Database } from "@hack-the-andes-project/db";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -214,6 +216,14 @@ app.use("/*", async (c, next) => {
 
 	return next();
 });
+
+app.post(DEMO_REQUESTS_PATH, (context) =>
+	handleDemoRequest({
+		request: context.req.raw,
+		createDatabase: () => createDb(ENV.HYPERDRIVE),
+		log: context.get("log"),
+	}),
+);
 
 app.post(DEMO_RESET_PATH, async (context) => {
 	if (!ENV.DEMO_RESET_SECRET) {
