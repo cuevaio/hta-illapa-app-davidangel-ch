@@ -38,8 +38,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T11 | S7 | delegated (same writer) | done | 70b143f, c230c28 |
 | T12 | S8 | delegated (same writer) | done | cc8d62c |
 | T13 | S9 | delegated (same writer) | done | 1153531, 7ddf2d9 |
-| T14 | S10 | delegated (same writer) | pending | |
-| T15 | S11 | delegated (same writer) | pending | |
+| T14 | S10 | delegated (same writer) | done | 9c563d5 |
+| T15 | S11 | delegated (same writer) | done | 4ee8642 |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -72,4 +72,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L15** (2026-10-18, user): "cuando termine súbelo a develop" / "por cierto cambia el diseño de las interfaces/menu de la experiencia VR a los que ya de por si usa la web".
 - **L16** T11: `topDownView(bounds, fovY, aspect)` frames Peru top-down (beta 0.01, north up), also on every return to the map. T12: VR weather menu (X button on the map, "Meteorología" in the huayco panel) has every web panel option; map card's old weather toggles removed; structures has no weather overlay in XR. T13: `src/ui/vr/theme.ts` maps Mayu tokens (read from the page CSS) to Babylon GUI. Checks at 7ddf2d9: check-types 0, xr-simulator 355/355, ui 53/53, web build ok, biome clean (tracked). Writer open questions: VR flight keeps a 25° tilt; fog density fixed at large radius; Archivo expanded width unavailable in Babylon GUI.
 - **L17** (2026-10-18, user): "si, quitalo, y tmb ajusta la niebla" — answering "¿quito también la inclinación de 25° del vuelo en VR?" and "¿Ajusto la niebla cuando la cámara está muy lejos?". Local dev up (localhost:3001); infra schema fix 5e84050 (TILES_API_URL/WEATHER_API_URL were missing from the infra @import pick list, breaking `pnpm dev`).
+- **L18** T14: VR flight tilt removed (maqueta never tilted). T15: `fogDensityAt(viewKm) = min(FOG_DENSITY_PER_KM, FOG_MAX_OPTICAL_DEPTH / viewKm)`, applied to scene and relief shader fog. Checks at 4ee8642: check-types 0, xr-simulator 357/357, web build ok, biome clean (tracked).
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
