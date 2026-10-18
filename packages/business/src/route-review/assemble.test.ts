@@ -251,6 +251,7 @@ describe("assembleRouteReview", () => {
 				kind: "forecast",
 				source: "Open-Meteo",
 				detail: "Hasta 32 mm en 24 h.",
+				incidentCategory: "rain_warning",
 				validFrom: now,
 				validUntil: new Date("2026-10-19T12:00:00Z"),
 				segmentIds: ["illapa:fastest:0"],

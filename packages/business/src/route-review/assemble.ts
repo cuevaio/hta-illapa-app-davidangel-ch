@@ -432,7 +432,7 @@ function buildCandidateDraft(
 			validUntil: new Date(now.getTime() + windowHours * MS_PER_HOUR),
 			roadStatus: null,
 			incidentId: null,
-			incidentCategory: null,
+			incidentCategory: "rain_warning",
 			geometry: null,
 			segmentIds: forecastChunks.map(({ index }) => segmentIdForChunk(index)),
 		});
