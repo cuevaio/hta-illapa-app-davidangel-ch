@@ -1,6 +1,6 @@
 import './base.css';
 import './app.css';
-import { App } from '../app/App';
+import { createXrViewer } from '../viewer/createXrViewer';
 
 const root = document.getElementById('app')!;
 const loading = document.createElement('div');
@@ -8,10 +8,14 @@ loading.className = 'loading';
 loading.textContent = 'Preparando simulador…';
 root.append(loading);
 
-new App(root)
-  .start()
-  .then(() => loading.remove())
-  .catch((err) => {
+const handle = createXrViewer(root);
+handle.ready
+  .then(() => {
+    loading.remove();
+    // Debug/verification hooks of the standalone page only (window.__app.huayco.mapContextStats()…).
+    Object.assign(window, { __app: { viewer: handle.viewer, huayco: handle.mode('huayco'), overview: handle.viewer.overview, weather: handle.viewer.weather } });
+  })
+  .catch((err: unknown) => {
     console.error(err);
     loading.remove();
     const box = document.createElement('section');

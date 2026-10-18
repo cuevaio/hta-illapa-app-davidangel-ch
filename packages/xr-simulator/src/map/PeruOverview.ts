@@ -166,6 +166,7 @@ export class PeruOverview implements FlightHost {
   private readonly flyHint: HTMLElement;
   private readonly flyPad: HTMLElement;
   private readonly vrBtn: HTMLButtonElement;
+  private readonly entryBtns: HTMLButtonElement[] = [];
   private readonly lodInfo: HTMLElement;
   private readonly imageryToggle: ImageryToggle;
   private readonly weatherPanel: WeatherPanel | null = null;
@@ -437,6 +438,21 @@ export class PeruOverview implements FlightHost {
     this.syncDom();
   }
 
+  /** Another simulator of the viewer (src/viewer/SimulatorMode.ts), opened from the map at its own origin. */
+  addEntry(label: string, open: () => Promise<void>): void {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'peru-entry';
+    button.textContent = label;
+    button.onclick = () => {
+      if (!overviewButtons(this.buttonState()).skip) return;
+      open().catch((err: unknown) => this.setStatus(`No se pudo abrir ${label}: ${err instanceof Error ? err.message : String(err)}`));
+    };
+    (this.entryBtns.at(-1) ?? this.skipBtn).after(button);
+    this.entryBtns.push(button);
+    this.syncDom();
+  }
+
   /** Offers "Entrar en VR" (Quest flight); the handler lazy-loads the XR code. */
   enableVr(handler: () => Promise<void>): void {
     this.vrHandler = handler;
@@ -631,6 +647,12 @@ export class PeruOverview implements FlightHost {
     this.scene.render();
   }
 
+  dispose(): void {
+    this.fly.dispose();
+    this.terrain?.dispose();
+    this.scene.dispose();
+  }
+
   /** Debug/verification hook (window.__app.overview.weatherStats()). */
   weatherStats() {
     return this.weather?.gpu.stats() ?? null;
@@ -656,6 +678,7 @@ export class PeruOverview implements FlightHost {
     const enabled = overviewButtons(this.buttonState());
     this.simulateBtn.disabled = !enabled.simulate;
     this.skipBtn.disabled = !enabled.skip;
+    for (const button of this.entryBtns) button.disabled = !enabled.skip;
   }
 
   private buttonState() {

@@ -1,59 +1,49 @@
-import type { AbstractEngine, WebGPUEngine } from '@babylonjs/core';
+import type { WebGPUEngine } from '@babylonjs/core';
 import {
   activeSources, activeWalls, distToPolyline, push, redo, targetAt, undo, wallBounds, wallProfile,
   type EditCommand, type Vec2, type WallCommand, type WallMaterial,
-} from '../edit/commands';
-import { EraseTool, SourceTool, WallTool, type Tool, type ToolContext } from '../edit/tools';
-import { applyEditCpu, MAX_WALLS, planEdit } from '../edit/walls';
-import { DomPointerSource } from '../input/DomPointerSource';
-import { PointerHub, type PointerSample } from '../input/pointer';
-import { raycastHeightField } from '../input/raycast';
-import { probeCapabilities, summarize } from '../platform/capabilities';
-import { pickLodProfile, type LodProfile } from '../map/lod/lodProfile';
-import { contextBadge, contextCamera, mapSiteOf, type MapSite } from '../map/mapContext';
-import { MapContextView } from '../map/MapContextView';
-import { PeruOverview, type PickedPoint } from '../map/PeruOverview';
-import { fetchLocalGrid, peruLabel } from '../map/peruTerrain';
-import { startScreen, TilesClient } from '../map/tilesClient';
-import { FpsGovernor } from '../platform/governor';
-import { QUALITY_ORDER, QUALITY_PROFILES, QUEST_TARGET_FPS, type QualityProfileId } from '../platform/quality';
-import { BarrierView } from '../render/BarrierView';
-import { EditPreviewView } from '../render/EditPreview';
-import { createEngine } from '../render/engine';
-import { FlowView } from '../render/FlowView';
-import { TerrainView } from '../render/TerrainView';
-import { World } from '../render/World';
-import { loadGeoTiff, loadPng16, type PngDemOptions } from '../scenario/dem';
-import { buildScenario, decodeInlineTerrain, encodeInlineTerrain, parseScenario, serializeScenario, type Scenario } from '../scenario/scenario';
-import { createSyntheticRavine, resampleGrid, SYNTHETIC_SIZE, syntheticEmitterPosition, Terrain, type HeightGrid } from '../scenario/terrain';
-import { CpuSolver } from '../solver/cpu/CpuSolver';
-import { MAX_EMITTERS } from '../solver/params';
-import { LocalGpuSolver } from '../solver/gpu/LocalGpuSolver';
-import { HttpTransport } from '../solver/remote/HttpTransport';
-import { LoopbackTransport } from '../solver/remote/LoopbackTransport';
-import { RemoteSolver } from '../solver/remote/RemoteSolver';
-import { FramePlayer, FrameRecording, type Frame } from '../playback/FramePlayer';
-import type { ResultActions } from '../playback/ResultActions';
-import { resampleState } from '../solver/resample';
-import type { FlowState, Solver, SolverStats } from '../solver/Solver';
-import { createAppStore, newSource, sourceEmitter, type AppState, type ToolId } from '../state/appState';
-import type { Store } from '../state/store';
-import { ControlPanel } from '../ui/web/ControlPanel';
-import { Hud, massError } from '../ui/web/Hud';
-import { Toolbar } from '../ui/web/Toolbar';
-import { Timeline } from '../ui/web/Timeline';
-import { renderWebGpuUnavailable, renderXrCompatNotice } from '../ui/web/unsupported';
-import type { OverviewXr } from '../xr/OverviewXr';
-import { fetchImageryAttribution, resolveImagery, type ImageryAvailability, type ImageryEnv, type ImageryMode } from '../map/imagery/imagerySource';
-import { defaultImageryMode, ImageryToggle } from '../ui/web/ImageryToggle';
-import { WeatherController } from '../map/weather/WeatherController';
-import { WeatherGpu, WEATHER_PROFILES } from '../map/weather/WeatherGpu';
-import { cloudDecoder, httpWeatherApi } from '../map/weather/weatherApi';
-import { WeatherPanel } from '../ui/web/WeatherPanel';
-import type { XrController } from '../xr/XrController';
-import { snapPoint } from '../xr/placement';
-import type { SharedXrSession } from '../xr/sharedSession';
-import { canReturnToMap, VR_OFF, vrReduce, type VrEvent, type VrState } from '../xr/vrMode';
+} from '../../edit/commands';
+import { EraseTool, SourceTool, WallTool, type Tool, type ToolContext } from '../../edit/tools';
+import { applyEditCpu, MAX_WALLS, planEdit } from '../../edit/walls';
+import { DomPointerSource } from '../../input/DomPointerSource';
+import { PointerHub, type PointerSample } from '../../input/pointer';
+import { raycastHeightField } from '../../input/raycast';
+import { contextBadge, contextCamera, mapSiteOf, type MapSite } from '../../map/mapContext';
+import { MapContextView } from '../../map/MapContextView';
+import type { PickedPoint } from '../../map/PeruOverview';
+import { fetchLocalGrid, peruLabel } from '../../map/peruTerrain';
+import { FpsGovernor } from '../../platform/governor';
+import { QUALITY_ORDER, QUALITY_PROFILES, QUEST_TARGET_FPS, type QualityProfileId } from '../../platform/quality';
+import { BarrierView } from '../../render/BarrierView';
+import { EditPreviewView } from '../../render/EditPreview';
+import { FlowView } from '../../render/FlowView';
+import { TerrainView } from '../../render/TerrainView';
+import { World } from '../../render/World';
+import { loadGeoTiff, loadPng16, type PngDemOptions } from '../../scenario/dem';
+import { buildScenario, decodeInlineTerrain, encodeInlineTerrain, parseScenario, serializeScenario, type Scenario } from '../../scenario/scenario';
+import { createSyntheticRavine, resampleGrid, SYNTHETIC_SIZE, syntheticEmitterPosition, Terrain, type HeightGrid } from '../../scenario/terrain';
+import { CpuSolver } from '../../solver/cpu/CpuSolver';
+import { MAX_EMITTERS } from '../../solver/params';
+import { LocalGpuSolver } from '../../solver/gpu/LocalGpuSolver';
+import { HttpTransport } from '../../solver/remote/HttpTransport';
+import { LoopbackTransport } from '../../solver/remote/LoopbackTransport';
+import { RemoteSolver } from '../../solver/remote/RemoteSolver';
+import { FramePlayer, FrameRecording, type Frame } from '../../playback/FramePlayer';
+import type { ResultActions } from '../../playback/ResultActions';
+import { resampleState } from '../../solver/resample';
+import type { FlowState, Solver, SolverStats } from '../../solver/Solver';
+import { createAppStore, newSource, sourceEmitter, type AppState, type ToolId } from '../../state/appState';
+import type { Store } from '../../state/store';
+import { ControlPanel } from '../../ui/web/ControlPanel';
+import { Hud, massError } from '../../ui/web/Hud';
+import { Toolbar } from '../../ui/web/Toolbar';
+import { Timeline } from '../../ui/web/Timeline';
+import type { ImageryMode, ImagerySource } from '../../map/imagery/imagerySource';
+import { ImageryToggle } from '../../ui/web/ImageryToggle';
+import { WeatherPanel } from '../../ui/web/WeatherPanel';
+import type { XrController } from '../../xr/XrController';
+import { snapPoint } from '../../xr/placement';
+import type { ModeHost, ModeXr, SimulatorMode } from '../../viewer/SimulatorMode';
 
 /** Solver steps allowed per frame, per profile (before automatic degradation). */
 const SUBSTEP_BUDGET: Record<QualityProfileId, number> = { low: 32, medium: 24, high: 16, ultra: 8 };
@@ -89,9 +79,12 @@ const REMOTE: string | null = (() => {
   return q.get('solver') === 'remote' ? q.get('server') ?? 'loopback' : null;
 })();
 
-export class App {
-  private engine!: AbstractEngine;
-  private webgpu = false;
+export const HUAYCO_MODE_ID = 'huayco';
+
+/** The huayco (debris-flow) simulator: the viewer's first mode, entered with "Simular aquí". */
+export class HuaycoMode implements SimulatorMode {
+  readonly id = HUAYCO_MODE_ID;
+  readonly entryLabel = null;
   private world!: World;
   private store!: Store<AppState>;
   private hud!: Hud;
@@ -113,13 +106,6 @@ export class App {
   private rebuilding = false;
   private cpuStepMs: number | null = null;
   private xr: XrController | null = null;
-  /** VR flight over the Peru overview; lazy-loaded like the simulator XR. */
-  private overviewXr: OverviewXr | null = null;
-  /** VR inside one session (S2): map (vuelo / maqueta) ↔ simulator; see src/xr/vrMode.ts. */
-  private vr: VrState = VR_OFF;
-  /** The immersive session shared by the map and the simulator XR (lazy, with the XR code). */
-  private shared: SharedXrSession | null = null;
-  private readonly renderLoop = () => this.frame();
   /** Start time of each active origin, by command id. */
   private readonly sourceStarts = new Map<string, number>();
   /** GPU sim-time extrapolation: last read time plus the sim seconds requested since that read. */
@@ -136,56 +122,26 @@ export class App {
   private depthSnapshot: { h: Float32Array; solver: Solver } | null = null;
   private lastSnapshotAt = 0;
   private snapshotPending = false;
-  private canvas!: HTMLCanvasElement;
-  private readonly tiles = new TilesClient();
-  /** Peru relief shown first ("vista general"); while active the simulator neither renders nor steps. */
-  private overview!: PeruOverview;
-  private overviewActive = false;
-  private lodProfile!: LodProfile;
   /** Real Peru relief around a "Simular aquí" terrain (S1); empty for the other terrains. */
   private mapContext!: MapContextView;
-  /** Satellite imagery (S7): provider from the Vite env, loaded directly by the browser (decision L7). */
-  private readonly imagery: ImageryAvailability = resolveImagery(import.meta.env as ImageryEnv);
-  /** Relieve / Satélite, shared by the overview and the simulator's map context. */
-  private imageryMode: ImageryMode = defaultImageryMode(this.imagery);
-  private imageryAttributionRequested = false;
-  /** The switch over the simulator (shown only with a map context). */
+  /** The Relieve / Satélite switch over the simulator (shown only with a map context). */
   private simImagery!: ImageryToggle;
-  /** Weather layers (S8): one client for the overview, its VR and the map context (window.__app.weather). */
-  weather!: WeatherController;
-  private weatherGpu!: WeatherGpu;
   private simWeather!: WeatherPanel;
+  private domPointer: DomPointerSource | null = null;
+  private started = false;
 
-  constructor(private readonly container: HTMLElement) {}
+  constructor(private readonly host: ModeHost) {}
+
+  private get engine() {
+    return this.host.engine;
+  }
+
+  private get webgpu() {
+    return this.host.webgpu;
+  }
 
   async start(): Promise<void> {
-    const report = await probeCapabilities();
-    const caps = summarize(report, { forceWebGPU: new URLSearchParams(location.search).has('forcewebgpu') });
-    const canvas = document.createElement('canvas');
-    canvas.className = 'scene-canvas';
-    this.container.append(canvas);
-
-    this.canvas = canvas;
-    const handle = await createEngine(canvas, caps.solverBackend === 'webgpu');
-    this.engine = handle.engine;
-    this.webgpu = handle.webgpu;
-    // The Peru overview loads its tiles while the simulator is built below, exactly as before.
-    this.lodProfile = pickLodProfile(report.device, location.search);
-    const wxProfile = WEATHER_PROFILES[this.lodProfile.id];
-    // A stopped weather backend only disables the weather layers (notice in their panel).
-    this.weather = new WeatherController(httpWeatherApi(), { cacheFrames: this.lodProfile.id === 'quest' ? 8 : 24, decodeImage: cloudDecoder(wxProfile.cloudMaxWidth) });
-    this.weatherGpu = new WeatherGpu(this.engine, this.weather, wxProfile);
-    void this.weather.start();
-    this.overview = new PeruOverview(this.engine, canvas, this.container, {
-      simulateHere: (p) => this.simulateAt(p),
-      openSimulator: () => this.leaveOverview(),
-      backToMap: () => this.enterOverview(),
-    }, this.lodProfile, { availability: this.imagery, mode: this.imageryMode, onChange: (m) => this.setImageryMode(m) },
-    { controller: this.weather, gpu: this.weatherGpu });
-    this.requestImageryAttribution();
-    const overviewLoad = this.overview.load(this.tiles).then(() => ({ ok: true as const }), (error: unknown) => ({ ok: false as const, error }));
-    if (caps.fallbackReason === 'xr-compat' && !this.webgpu) renderXrCompatNotice(this.container);
-    else if (!this.webgpu) renderWebGpuUnavailable(this.container, report, true);
+    const { caps, canvas, container } = this.host;
     this.webTargetFps = caps.defaultQuality.targetFps;
 
     const profile = this.webgpu ? caps.defaultQuality.id : 'low';
@@ -194,21 +150,21 @@ export class App {
     this.substepBudget = this.webgpu ? SUBSTEP_BUDGET[profile] : CPU_SUBSTEP_BUDGET;
 
     this.world = new World(this.engine, canvas);
-    this.enterOverview();
-    this.hud = new Hud(this.container);
+    // The overview is on screen while the simulator is built: its camera does not listen yet.
+    this.world.camera.detachControl();
+    this.hud = new Hud(container);
     const panelHost = document.createElement('div');
     panelHost.className = 'panel-host';
-    this.container.append(panelHost);
+    container.append(panelHost);
 
     this.barriers = new BarrierView(this.world.scene, this.world.root);
-    this.mapContext = new MapContextView(this.world.scene, this.world.root, this.tiles, this.lodProfile, this.weatherGpu);
-    this.simImagery = new ImageryToggle(this.imagery, this.imageryMode, (m) => this.setImageryMode(m), 'imagery-sim');
+    this.mapContext = new MapContextView(this.world.scene, this.world.root, this.host.tiles, this.host.lodProfile, this.host.weatherGpu);
+    this.simImagery = new ImageryToggle(this.host.imagery, this.host.imageryMode(), (m) => this.host.setImageryMode(m), 'imagery-sim');
     this.simImagery.el.hidden = true;
-    this.container.append(this.simImagery.el);
-    this.simWeather = new WeatherPanel(this.weather, 'weather-sim');
+    container.append(this.simImagery.el);
+    this.simWeather = new WeatherPanel(this.host.weather, 'weather-sim');
     this.simWeather.el.hidden = true;
-    this.container.append(this.simWeather.el);
-    this.applyImagery();
+    container.append(this.simWeather.el);
     this.sim = await this.buildSimulation(this.terrainGrid(this.resolution()), null);
     this.world.fitTerrain(this.sim.terrain);
     this.syncMapContext();
@@ -217,8 +173,8 @@ export class App {
     const ctx = this.toolContext();
     this.tools = { source: new SourceTool(ctx), wall: new WallTool(ctx), erase: new EraseTool(ctx) };
 
-    new Toolbar(this.container, this.store, { undo: () => this.undo(), redo: () => this.redo() });
-    new Timeline(this.container, this.store, this.resultActions);
+    new Toolbar(container, this.store, { undo: () => this.undo(), redo: () => this.redo() });
+    new Timeline(container, this.store, this.resultActions);
     new ControlPanel(panelHost, this.store, {
       resetSimulation: () => this.resetSimulation(),
       undo: () => this.undo(),
@@ -229,53 +185,51 @@ export class App {
       importScenario: (file) => void this.importScenario(file),
     }, { qualityEditable: this.webgpu });
     this.bindStore();
-    this.bindKeyboard();
     this.bindPointer(canvas);
     // XR renders through XRGPUBinding with WebGPU, or through WebGL; otherwise no button at all.
     const xrRenderable = !this.webgpu || !caps.xrNeedsWebGLRenderer;
     if (xrRenderable && (caps.showVrButton || caps.showArButton)) this.addXrButtons(caps.showVrButton, caps.showArButton);
-    if (xrRenderable && caps.showVrButton) this.overview.enableVr(() => this.enterOverviewVr());
-    // Only now can the overview hand over to the simulator (A1: this.sim exists from here on).
-    this.overview.setSimulatorReady(true);
-
-    // No tiles service: continue to the synthetic simulator as before, with a notice.
-    void overviewLoad.then((load) => {
-      const start = startScreen(load);
-      if (start.screen === 'overview') return;
-      if (!load.ok) console.warn('Peru overview unavailable:', load.error);
-      this.overview.unavailable();
-      this.leaveOverview();
-      this.hud.setNotice(start.notice);
-    });
-
-    this.engine.runRenderLoop(this.renderLoop);
-    window.addEventListener('resize', () => this.engine.resize());
-    Object.assign(window, { __app: this });
+    this.started = true;
   }
 
-  /**
-   * Shows the Peru overview; the simulation pauses and its camera stops listening. From the
-   * simulator's VR (`fromVr`, S2) the shared session keeps the store's session at 'xr'.
-   */
-  private enterOverview(fromVr = false): void {
-    if (this.overviewActive || (this.store.get().session === 'xr' && !fromVr)) return;
-    this.overviewActive = true;
+  /** "Ir al simulador" keeps the current terrain; "Simular aquí" loads the picked point's. */
+  async open(point: PickedPoint | null): Promise<void> {
+    if (point) await this.simulateAt(point);
+    else this.host.showMode(this.id);
+  }
+
+  /** The Peru overview is shown: the simulation pauses and its camera stops listening. */
+  hide(): void {
+    if (!this.started) return;
     const { tool, playback } = this.store.get();
-    if (tool !== 'navigate') this.tools?.[tool].cancel();
+    if (tool !== 'navigate') this.tools[tool].cancel();
     if (playback.playing) this.store.set((s) => ({ playback: { ...s.playback, playing: false } }));
     this.world.camera.detachControl();
-    this.hud?.setCursor(null);
-    this.container.classList.add('overview-active');
-    this.overview.show();
+    this.hud.setCursor(null);
   }
 
-  private leaveOverview(): void {
-    // Before the simulator exists there is nothing to show (A1).
-    if (!this.overviewActive || !this.sim) return;
-    this.overviewActive = false;
-    this.overview.hide();
-    this.container.classList.remove('overview-active');
-    this.world.camera.attachControl(this.canvas, true);
+  show(): void {
+    this.world.camera.attachControl(this.host.canvas, true);
+  }
+
+  /** From the simulator's VR (S2) the shared session keeps the store's session at 'xr'. */
+  presenting(): boolean {
+    return this.store.get().session === 'xr';
+  }
+
+  notify(message: string | null): void {
+    this.hud.setNotice(message);
+  }
+
+  dispose(): void {
+    if (!this.started) return;
+    this.started = false;
+    this.domPointer?.dispose();
+    this.sim.solver.dispose();
+    this.sim.terrainView.dispose();
+    this.sim.flowView.dispose();
+    this.mapContext.dispose();
+    this.world.scene.dispose();
   }
 
   /**
@@ -284,73 +238,44 @@ export class App {
    */
   private async simulateAt(p: PickedPoint): Promise<void> {
     if (this.rebuilding || !this.sim) throw new Error('Espera a que termine la carga en curso');
-    const fromVr = this.vr.phase === 'map';
-    if (fromVr) this.vrDispatch({ type: 'simulate' });
+    const vr = this.host.vr;
+    const fromVr = vr.state().phase === 'map';
+    if (fromVr) vr.dispatch({ type: 'simulate' });
     try {
-      const grid = await fetchLocalGrid(this.tiles, p.lon, p.lat, this.resolution());
+      const grid = await fetchLocalGrid(this.host.tiles, p.lon, p.lat, this.resolution());
       if (this.store.get().result.mode === 'result') await this.setResultMode(false);
       const label = peruLabel(p.lon, p.lat);
       const half = (grid.resolution * grid.cellSize) / 2;
       // The debris-flow origin starts at the picked point (the grid centre), shown in place over the real relief.
       await this.replaceTerrain({ kind: 'dem', grid, label, site: { lon: p.lon, lat: p.lat, height: p.height } }, [half, half], label);
       // The headset may have left VR during the download: then it is the web flow.
-      if (fromVr && this.vr.phase === 'loading') {
-        await this.vrToSimulator();
-        this.vrDispatch({ type: 'simulated' });
-      } else this.leaveOverview();
+      if (fromVr && vr.state().phase === 'loading') {
+        // The simulator's XR takes the map's session, maquette view first.
+        const xr = await this.modeXr();
+        this.store.set((s) => ({ xr: { ...s.xr, mode: 'maquette' } }));
+        await vr.takeFromMap(this.id, xr);
+        vr.dispatch({ type: 'simulated' });
+      } else this.host.showMode(this.id);
     } catch (err) {
-      if (fromVr) this.vrDispatch({ type: 'failed', message: err instanceof Error ? err.message : String(err) });
+      if (fromVr) vr.dispatch({ type: 'failed', message: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
 
-  private vrDispatch(e: VrEvent): void {
-    this.vr = vrReduce(this.vr, e);
-  }
-
-  private async ensureShared(): Promise<SharedXrSession> {
-    if (this.shared) return this.shared;
-    const { SharedXrSession } = await import('../xr/sharedSession');
-    this.shared = new SharedXrSession(this.engine, () => this.engine.runRenderLoop(this.renderLoop), () => this.vrDispatch({ type: 'exit' }));
-    return this.shared;
-  }
-
-  /** VR card "Simular aquí": the simulator's XR takes the map's session, maquette view first. */
-  private async vrToSimulator(): Promise<void> {
+  /** The simulator XR as the shell hands the shared session around. */
+  private async modeXr(): Promise<ModeXr> {
     const xr = await this.ensureXr();
-    const shared = await this.ensureShared();
-    this.store.set((s) => ({ xr: { ...s.xr, mode: 'maquette' } }));
-    await shared.handover(xr.experience, () => xr.enter('immersive-vr'), () => {
-      this.leaveOverview();
-      xr.resume();
-    }, () => {
-      xr.pause();
-      this.enterOverview(true);
-    });
-  }
-
-  /** "Volver al mapa del Perú" in the simulator's VR panel: the map takes the session back. */
-  private async vrBackToMap(): Promise<void> {
-    if (!canReturnToMap(this.vr, this.overview.available) || !this.xr) return;
-    const xr = this.xr;
-    try {
-      const map = await this.ensureOverviewXr();
-      const shared = await this.ensureShared();
-      await shared.handover(map.experience, () => map.enter(), () => {
+    return {
+      member: xr.experience,
+      enter: (mode) => xr.enter(mode),
+      pause: () => {
         xr.pause();
         const t = this.store.get().tool;
         if (t !== 'navigate') this.tools[t].cancel();
         this.preview.clear();
-        this.enterOverview(true);
-        map.resumed();
-      }, () => {
-        this.leaveOverview();
-        xr.resume();
-      });
-      this.vrDispatch({ type: 'back-to-map' });
-    } catch (err) {
-      console.error('No se pudo volver al mapa en VR:', err);
-    }
+      },
+      resume: () => xr.resume(),
+    };
   }
 
   private resolution(): number {
@@ -467,37 +392,22 @@ export class App {
     this.simImagery.el.hidden = !site;
     this.simWeather.el.hidden = !site;
     const src = this.source;
-    this.overview.setActiveSimulation(site && src.kind === 'dem' && src.site
+    this.host.overview.setActiveSimulation(site && src.kind === 'dem' && src.site
       ? { lon: site.lon, lat: site.lat, height: src.site.height, size: t.size, label: this.store.get().terrainLabel }
       : null);
   }
 
-  /** "Relieve / Satélite" from either switch: both views follow. */
-  private setImageryMode(mode: ImageryMode): void {
-    this.imageryMode = mode;
-    this.overview.setImageryMode(mode);
-    this.simImagery?.set(mode);
-    this.applyImagery();
-    this.requestImageryAttribution();
+  /** "Relieve / Satélite" from any switch of the viewer: the map context follows. */
+  imageryChanged(mode: ImageryMode, source: ImagerySource | null): void {
+    this.simImagery.set(mode);
+    this.mapContext.setImagery(source);
   }
 
-  private applyImagery(): void {
-    const a = this.imagery;
-    this.mapContext?.setImagery(a.available && this.imageryMode === 'satellite' ? a.source : null);
+  imageryAttribution(text: string): void {
+    this.simImagery.setAttribution(text);
   }
 
-  /** Dynamic provider attribution, fetched once the first time Satélite is shown. */
-  private requestImageryAttribution(): void {
-    const a = this.imagery;
-    if (!a.available || this.imageryMode !== 'satellite' || this.imageryAttributionRequested) return;
-    this.imageryAttributionRequested = true;
-    void fetchImageryAttribution(a.source).then((text) => {
-      this.overview.setImageryAttribution(text);
-      this.simImagery?.setAttribution(text);
-    });
-  }
-
-  /** Debug/verification hook (window.__app.mapContextStats()). */
+  /** Debug/verification hook (window.__app.huayco.mapContextStats()). */
   mapContextStats() {
     return this.mapContext.stats();
   }
@@ -623,63 +533,61 @@ export class App {
     });
   }
 
-  private bindKeyboard(): void {
-    window.addEventListener('keydown', (e) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      if (this.overviewActive) return;
-      const st = this.store;
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && (e.key === 'z' || e.key === 'Z')) {
-        e.preventDefault();
-        if (e.shiftKey) this.redo();
-        else this.undo();
-        return;
-      }
-      if (mod && (e.key === 'y' || e.key === 'Y')) {
-        e.preventDefault();
-        this.redo();
-        return;
-      }
-      if (mod) return;
-      const toolKeys: Record<string, ToolId> = { n: 'navigate', o: 'source', m: 'wall', b: 'erase' };
-      const tool = toolKeys[e.key.toLowerCase()];
-      if (tool) {
-        st.set({ tool });
-        return;
-      }
-      if (e.key === 'Escape') {
-        const t = st.get().tool;
-        if (t !== 'navigate') this.tools[t].cancel();
-        return;
-      }
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (st.get().result.mode === 'result') this.resultActions.togglePlay();
-        else st.set((s) => ({ playback: { ...s.playback, playing: !s.playback.playing } }));
-      } else if (e.key === 'r' || e.key === 'R') {
-        this.resetSimulation();
-      } else if (e.key === '+' || e.key === '=') {
-        st.set((s) => ({ playback: { ...s.playback, speed: Math.min(60, s.playback.speed + 1) } }));
-      } else if (e.key === '-') {
-        st.set((s) => ({ playback: { ...s.playback, speed: Math.max(1, s.playback.speed - 1) } }));
-      }
-    });
+  /** Keys reach the active mode only (the shell's single listener skips form fields). */
+  handleKey(e: KeyboardEvent): void {
+    const st = this.store;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault();
+      if (e.shiftKey) this.redo();
+      else this.undo();
+      return;
+    }
+    if (mod && (e.key === 'y' || e.key === 'Y')) {
+      e.preventDefault();
+      this.redo();
+      return;
+    }
+    if (mod) return;
+    const toolKeys: Record<string, ToolId> = { n: 'navigate', o: 'source', m: 'wall', b: 'erase' };
+    const tool = toolKeys[e.key.toLowerCase()];
+    if (tool) {
+      st.set({ tool });
+      return;
+    }
+    if (e.key === 'Escape') {
+      const t = st.get().tool;
+      if (t !== 'navigate') this.tools[t].cancel();
+      return;
+    }
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (st.get().result.mode === 'result') this.resultActions.togglePlay();
+      else st.set((s) => ({ playback: { ...s.playback, playing: !s.playback.playing } }));
+    } else if (e.key === 'r' || e.key === 'R') {
+      this.resetSimulation();
+    } else if (e.key === '+' || e.key === '=') {
+      st.set((s) => ({ playback: { ...s.playback, speed: Math.min(60, s.playback.speed + 1) } }));
+    } else if (e.key === '-') {
+      st.set((s) => ({ playback: { ...s.playback, speed: Math.max(1, s.playback.speed - 1) } }));
+    }
   }
 
   /** Mouse/touch/pen become rays; the active tool turns them into edit commands. */
   private bindPointer(canvas: HTMLCanvasElement): void {
     const hub = this.pointerHub;
-    hub.add(new DomPointerSource(canvas, (x, y) => this.world.screenRay(x, y), {
-      captureRoot: this.container,
+    this.domPointer = new DomPointerSource(canvas, (x, y) => this.world.screenRay(x, y), {
+      captureRoot: this.host.container,
       // With an editing tool active, the left mouse button / pen belongs to the tool, not the camera.
       claim: (e) => this.store.get().tool !== 'navigate' && e.pointerType !== 'touch' && e.button === 0,
-    }));
+    });
+    hub.add(this.domPointer);
     hub.subscribe((p) => this.onPointer(p));
   }
 
   /** Single entry point for every pointer kind: mouse, touch, pen, XR controllers and hands. */
   onPointer(p: PointerSample): void {
-    if (this.rebuilding || this.overviewActive) return;
+    if (this.rebuilding || this.host.overviewActive()) return;
     // Inside a session only XR pointers edit (the page canvas may still get mouse events).
     const xrPointer = p.kind === 'xr-controller' || p.kind === 'xr-hand';
     if ((this.store.get().session === 'xr') !== xrPointer) return;
@@ -934,10 +842,9 @@ export class App {
       b.onclick = async () => {
         b.disabled = true;
         try {
-          const xr = await this.ensureXr();
+          const xr = await this.modeXr();
           await xr.enter(mode);
-          (await this.ensureShared()).started(xr.experience, mode);
-          this.vrDispatch({ type: 'enter-simulator', mode });
+          await this.host.vr.started(xr, mode);
         } catch (err) {
           this.hud.setNotice(`No se pudo entrar en ${label.replace('Entrar en ', '')}: ${String(err)}`);
         } finally {
@@ -948,27 +855,12 @@ export class App {
     };
     if (vr) add('Entrar en VR', 'immersive-vr');
     if (ar) add('Entrar en AR', 'immersive-ar');
-    this.container.append(bar);
-  }
-
-  /** "Entrar en VR" from the Peru overview: fly over the relief (src/xr/OverviewXr.ts). */
-  private async enterOverviewVr(): Promise<void> {
-    const map = await this.ensureOverviewXr();
-    await map.enter();
-    (await this.ensureShared()).started(map.experience, 'immersive-vr');
-    this.vrDispatch({ type: 'enter-map' });
-  }
-
-  private async ensureOverviewXr(): Promise<OverviewXr> {
-    if (this.overviewXr) return this.overviewXr;
-    const { OverviewXr } = await import('../xr/OverviewXr');
-    this.overviewXr = await OverviewXr.create(this.overview, this.webgpu, { state: () => this.vr, dispatch: (e) => this.vrDispatch(e) });
-    return this.overviewXr;
+    this.host.container.append(bar);
   }
 
   private async ensureXr(): Promise<XrController> {
     if (this.xr) return this.xr;
-    const { XrController } = await import('../xr/XrController');
+    const { XrController } = await import('../../xr/XrController');
     this.xr = await XrController.create({
       scene: this.world.scene,
       world: this.world,
@@ -980,8 +872,8 @@ export class App {
       resetSimulation: () => this.resetSimulation(),
       result: this.resultActions,
       onSessionChange: (inXr) => this.onXrSession(inXr),
-      backToMap: () => void this.vrBackToMap(),
-      mapAvailable: () => this.overview.available,
+      backToMap: () => void this.modeXr().then((xr) => this.host.vr.backToMap(xr)),
+      mapAvailable: () => this.host.overview.available,
     });
     this.pointerHub.add(this.xr.pointers);
     return this.xr;
@@ -997,7 +889,7 @@ export class App {
     // Leaving XR re-frames the terrain (World.fitTerrain): restore the map-context reach.
     if (!inXr) this.world.setReach(contextCamera(this.sim.terrain.size, this.mapContext.active));
     // The session ended on the Peru map (S2): Babylon re-attached the simulator camera behind it.
-    if (!inXr && this.overviewActive) this.world.camera.detachControl();
+    if (!inXr && this.host.overviewActive()) this.world.camera.detachControl();
     this.hud.setNotice(null);
   }
 
@@ -1006,11 +898,8 @@ export class App {
     this.engine.setHardwareScalingLevel(scale / Math.min(window.devicePixelRatio, 2));
   }
 
-  private frame(): void {
-    if (this.overviewActive) {
-      this.overview.render();
-      return;
-    }
+  /** One frame of the simulator; the shell renders the overview instead while it is shown. */
+  frame(): void {
     if (this.rebuilding) {
       this.world.scene.render();
       return;

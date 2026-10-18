@@ -119,7 +119,7 @@ export class MapContextView {
     return { x, y, side: f.sideKm / frame.k };
   }
 
-  /** Debug/verification hook (window.__app.mapContextStats()). */
+  /** Debug/verification hook (window.__app.huayco.mapContextStats()). */
   stats() {
     return this.terrain ? { ...this.terrain.stats, site: this.site, unavailable: this.failed } : null;
   }

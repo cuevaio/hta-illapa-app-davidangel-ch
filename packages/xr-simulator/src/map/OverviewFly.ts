@@ -21,7 +21,7 @@ export class OverviewFly {
   private readonly pressed = new Set<string>();
   private drag: { id: number; x: number; y: number } | null = null;
 
-  constructor(scene: Scene, canvas: HTMLCanvasElement, private readonly ground: FlyGround) {
+  constructor(scene: Scene, private readonly canvas: HTMLCanvasElement, private readonly ground: FlyGround) {
     this.camera = new UniversalCamera('peru-fly', new Vector3(0, 500, -1500), scene);
     this.camera.inputs.clear();
     this.camera.minZ = 0.05;
@@ -108,5 +108,15 @@ export class OverviewFly {
   release(): void {
     this.pressed.clear();
     this.drag = null;
+  }
+
+  dispose(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('blur', this.onBlur);
+    this.canvas.removeEventListener('pointerdown', this.onPointerDown);
+    window.removeEventListener('pointermove', this.onPointerMove);
+    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
   }
 }

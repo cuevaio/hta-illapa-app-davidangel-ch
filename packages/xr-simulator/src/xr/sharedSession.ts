@@ -1,4 +1,13 @@
-import { WebXRFeatureName, type AbstractEngine, type WebXRDefaultExperience } from '@babylonjs/core';
+import { WebXRFeatureName, type AbstractEngine, type WebXRExperienceHelper, type WebXRInput } from '@babylonjs/core';
+
+/**
+ * What the shared session needs from an XR experience: a WebXRDefaultExperience, or an
+ * experience assembled by hand (helper + input) such as the structures simulator's.
+ */
+export interface XrSessionMember {
+  readonly baseExperience: WebXRExperienceHelper;
+  readonly input: WebXRInput;
+}
 
 /**
  * One immersive session shared by two Babylon XR experiences (S2): the Peru map
@@ -25,8 +34,8 @@ import { WebXRFeatureName, type AbstractEngine, type WebXRDefaultExperience } fr
 export class SharedXrSession {
   private session: XRSession | null = null;
   private mode: XRSessionMode | null = null;
-  private owner: WebXRDefaultExperience | null = null;
-  private readonly members = new Map<WebXRDefaultExperience, { renderState: XRRenderStateInit | null; detached: string[] }>();
+  private owner: XrSessionMember | null = null;
+  private readonly members = new Map<XrSessionMember, { renderState: XRRenderStateInit | null; detached: string[] }>();
   private switching = false;
 
   constructor(
@@ -46,7 +55,7 @@ export class SharedXrSession {
   }
 
   /** An experience entered a new session of its own (web "Entrar en VR/AR"). */
-  started(xr: WebXRDefaultExperience, mode: XRSessionMode): void {
+  started(xr: XrSessionMember, mode: XRSessionMode): void {
     const session = xr.baseExperience.sessionManager.session;
     this.session = session;
     this.mode = mode;
@@ -56,7 +65,7 @@ export class SharedXrSession {
     session.addEventListener('end', () => this.ended(session), { once: true });
   }
 
-  owns(xr: WebXRDefaultExperience | null | undefined): boolean {
+  owns(xr: XrSessionMember | null | undefined): boolean {
     return !!xr && this.owner === xr;
   }
 
@@ -65,7 +74,7 @@ export class SharedXrSession {
    * `to` joins this session; `swap` runs while neither experience renders (switch the scene
    * the app draws there) and `revert` undoes it if the hand-over fails.
    */
-  async handover(to: WebXRDefaultExperience, enter: () => Promise<void>, swap: () => void, revert: () => void): Promise<void> {
+  async handover(to: XrSessionMember, enter: () => Promise<void>, swap: () => void, revert: () => void): Promise<void> {
     const session = this.session;
     const from = this.owner;
     if (!session || !from) throw new Error('No hay una sesión de VR activa');
@@ -113,6 +122,11 @@ export class SharedXrSession {
     }
   }
 
+  /** The viewer closes: ends the running session (its 'end' handler restores the web). */
+  dispose(): void {
+    this.session?.end().catch(() => undefined);
+  }
+
   /** Cancels the pending XR frame of the current owner so exactly one frame loop runs. */
   private stopLoop(session: XRSession): void {
     const engine = this.engine as unknown as { customAnimationFrameRequester: { requestID?: number } | null; _frameHandler: number };
@@ -141,7 +155,7 @@ export class SharedXrSession {
 }
 
 /** First join: `to`'s enterXRAsync with requestSession answered by the running session. */
-async function adopt(to: WebXRDefaultExperience, session: XRSession, enter: () => Promise<void>): Promise<void> {
+async function adopt(to: XrSessionMember, session: XRSession, enter: () => Promise<void>): Promise<void> {
   const sm = to.baseExperience.sessionManager as unknown as { _xrNavigator: unknown };
   const real = sm._xrNavigator;
   sm._xrNavigator = { xr: { requestSession: async () => session, isSessionSupported: async () => true } };
@@ -164,14 +178,14 @@ function renderStateOf(session: XRSession): XRRenderStateInit {
 }
 
 /** Detaches the features (pointer selection, teleportation…) of a paused experience; layers stay. */
-function suspendFeatures(xr: WebXRDefaultExperience): string[] {
+function suspendFeatures(xr: XrSessionMember): string[] {
   const fm = xr.baseExperience.featuresManager;
   const names = fm.getEnabledFeatures().filter((n) => n !== WebXRFeatureName.LAYERS && (fm.getEnabledFeature(n as Parameters<typeof fm.getEnabledFeature>[0]) as { attached?: boolean } | undefined)?.attached);
   for (const n of names) fm.detachFeature(n);
   return names;
 }
 
-function resumeFeatures(xr: WebXRDefaultExperience, names: string[]): void {
+function resumeFeatures(xr: XrSessionMember, names: string[]): void {
   const fm = xr.baseExperience.featuresManager;
   for (const n of names) fm.attachFeature(n);
 }
