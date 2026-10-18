@@ -14,10 +14,10 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 
 | ID | Specs | Route | Status | Commit |
 |----|-------|-------|--------|--------|
-| T1 | S1 | inline | pending | |
-| T2 | S1, S2 | inline | pending | |
-| T3 | S4 | inline | pending | |
-| T4 | S2, S4 | inline | pending | |
+| T1 | S1 | inline | done | aca68ce |
+| T2 | S1, S2 | inline | done | 7103dbd |
+| T3 | S4 | inline | merged into T4 | 170d38e |
+| T4 | S2, S4 | inline | done (env files pending, user) | 170d38e |
 | T5 | S3 | inline | pending | |
 | T6 | S3 | inline | pending | |
 | T7 | S1, S3, S4 | inline | pending | |
@@ -40,4 +40,7 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L2** (2026-10-18, user): "hazlo en develop" — switched to `develop` tracking `origin/develop` (61 commits ahead of `main`).
 - **L3** (2026-10-18, user): role = existing `engineer` ("Usar `engineer`").
 - **L4** Exploration: both viewers are Babylon 9; xr-simulator backend is Python FastAPI (tiles: rasterio/GDAL; weather: eccodes/h5py + pollers), cannot run in a Worker. illapa `packages/terrain` was ported from the same terrain LOD lineage. Server has no role middleware today; gating is web-only (`apps/web/src/routes/_auth/ingenieria/route.tsx:27`). Structures data is fixture/localStorage only.
-- Next: T1.
+- **L5** T1: vitest 318/318 in packages/xr-simulator (lod.test.ts "refines towards the camera" is flaky, also fails intermittently at source 46ae0ab). Dropped: three.js feasibility page, validation export tool and 13 MB validation DEMs.
+- **L6** T2: pytest tiles 70 passed/2 skipped (test_resilience circuit test flaky, passes on rerun and at source), weather 116 passed/2 skipped.
+- **L7** T3 merged into T4: no oRPC procedure needs the role yet (structures are fixture-backed), so an `engineerProcedure` would be unused code. Role rule lives in `packages/business/src/simulators.ts` (`canUseSimulators`). T4: proxy tests 5/5, api suite 70/70. `.env*` edits are blocked by permissions: user must add `TILES_API_URL`/`WEATHER_API_URL` to `apps/server/.env.schema` and production URLs to `.env.production`.
+- Next: T5.
