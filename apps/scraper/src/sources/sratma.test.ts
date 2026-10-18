@@ -188,6 +188,7 @@ describe("sratmaAccidentsSource", () => {
 			log: createLogger(),
 			jevApiKey: "jev-key",
 			mediaBucket,
+			sratmaApiBase: "https://sratma-relay.test/wssratma/api/Mapa",
 		});
 	}
 
@@ -198,6 +199,20 @@ describe("sratmaAccidentsSource", () => {
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
+	});
+
+	it("sends every request to the configured SRATMA base", async () => {
+		stubSratma([LISTING_FEATURE], 200);
+		await runFetch();
+		const requestedUrls = vi
+			.mocked(fetch)
+			.mock.calls.map(([input]) => String(input));
+		expect(requestedUrls.length).toBeGreaterThan(0);
+		expect(
+			requestedUrls.every((url) =>
+				url.startsWith("https://sratma-relay.test/wssratma/api/Mapa/"),
+			),
+		).toBe(true);
 	});
 
 	it("asks Jev only for accidents inside the route impact window", async () => {
