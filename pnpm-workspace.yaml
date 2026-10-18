@@ -65,7 +65,9 @@ minimumReleaseAgeExclude:
   - '@ai-sdk/gateway@4.0.116'
   - ai@7.0.143
 
-# @iwer/devui and @iwer/sem (the local WebXR emulator) pin three ^0.165; two
-# three.js copies in one page break rendering, so every package shares ours.
+# @iwer/devui and @iwer/sem (the local WebXR emulator) pin three ^0.165 and
+# illapa-quest pins ^0.180; two three.js copies (or type packages) in one
+# build break rendering and R3F's types, so every package shares ours.
 overrides:
   three: 0.186.1
+  "@types/three": 0.186.0

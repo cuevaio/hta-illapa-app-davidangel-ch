@@ -134,17 +134,17 @@ describe("demo access", () => {
 		await expect(hook.handler(hookContext)).resolves.toBeUndefined();
 	});
 
-	it("has an independent 30 per minute rule for the demo endpoint", () => {
+	it("has an independent 120 per minute rule for the demo endpoint", () => {
 		const rule = demoAccess.rateLimit[0];
 		if (!rule) throw new Error("Demo rate limit missing");
 		expect(rule.pathMatcher(DEMO_SIGN_IN_AUTH_PATH)).toBe(true);
 		expect(rule.pathMatcher("/sign-in/email")).toBe(false);
 		expect(rule.max).toBe(DEMO_RATE_LIMIT_MAX_REQUESTS);
 		expect(rule.window).toBe(DEMO_RATE_LIMIT_WINDOW_S);
-		expect(rule).toMatchObject({ max: 30, window: 60 });
+		expect(rule).toMatchObject({ max: 120, window: 60 });
 	});
 
-	it("allows thirty venue requests and rate-limits the thirty-first", async () => {
+	it("allows 120 venue requests and rate-limits the 121st", async () => {
 		const limitedAuth = betterAuth({
 			...auth.options,
 			rateLimit: { ...auth.options.rateLimit, storage: "memory" },
