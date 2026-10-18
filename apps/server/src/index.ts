@@ -24,12 +24,15 @@ import { identifyUser } from "evlog/better-auth";
 import { type EvlogVariables, evlog } from "evlog/hono";
 import { initWorkersLogger } from "evlog/workers";
 import { Hono, type Context as HonoContext } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 
 import {
 	AUTH_PREFIX,
 	CORS_PREFLIGHT_MAX_AGE_S,
 	HTTP_STATUS_FORBIDDEN,
+	HTTP_STATUS_PAYLOAD_TOO_LARGE,
+	MAX_REQUEST_BODY_BYTES,
 	PUBLIC_PATHS,
 	RPC_PREFIX,
 	SERVICE_NAME,
@@ -121,6 +124,17 @@ app.use("*", async (context, next) => {
 	}
 	return next();
 });
+
+app.use(
+	bodyLimit({
+		maxSize: MAX_REQUEST_BODY_BYTES,
+		onError: (context) =>
+			context.json(
+				{ error: "payload_too_large" },
+				HTTP_STATUS_PAYLOAD_TOO_LARGE,
+			),
+	}),
+);
 
 // Global auth guard: every route requires a session unless it is listed in
 // PUBLIC_PATHS, lives under /api/auth/*, or is a PUBLIC_PROCEDURE_PATHS
