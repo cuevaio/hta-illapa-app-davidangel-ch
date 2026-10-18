@@ -202,6 +202,10 @@ export function buildRibbonMesh(
 	ribbonColorHex: string,
 	elevationLiftMeters = NORMAL_ROAD_LIFT_M,
 	stripeColorHex: string | null = null,
+	sampleSurfaceHeight: (
+		positionX: number,
+		positionZ: number,
+	) => number = getTerrainHeightAtXZ,
 ): {
 	mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
 	flowTexture: THREE.CanvasTexture | null;
@@ -250,9 +254,9 @@ export function buildRibbonMesh(
 		const rightX = currentPoint.x - normalVector.x * halfWidthMeters;
 		const rightZ = currentPoint.z - normalVector.z * halfWidthMeters;
 
-		const terrainCenterY = getTerrainHeightAtXZ(currentPoint.x, currentPoint.z);
-		const terrainLeftY = getTerrainHeightAtXZ(leftX, leftZ);
-		const terrainRightY = getTerrainHeightAtXZ(rightX, rightZ);
+		const terrainCenterY = sampleSurfaceHeight(currentPoint.x, currentPoint.z);
+		const terrainLeftY = sampleSurfaceHeight(leftX, leftZ);
+		const terrainRightY = sampleSurfaceHeight(rightX, rightZ);
 		const highestLocalTerrainY = Math.max(
 			terrainCenterY,
 			terrainLeftY,
