@@ -5,7 +5,7 @@ import {
 	type vehicle as vehicleTable,
 } from "@hack-the-andes-project/db/schema/fleet";
 import { distance } from "@turf/distance";
-import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
 
 import { FLEET_WRITE_BATCH_SIZE_ROWS, MS_PER_SECOND } from "../constants";
@@ -235,6 +235,8 @@ export async function evaluateTrip({
 				.values(batch)
 				.onDuplicateKeyUpdate({
 					set: {
+						status: sql`if(${alert.status} = 'resolved', 'open', ${alert.status})`,
+						resolvedAt: null,
 						title: incomingValue(alert.title),
 						message: incomingValue(alert.message),
 						severity: incomingValue(alert.severity),

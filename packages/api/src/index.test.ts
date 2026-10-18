@@ -34,7 +34,9 @@ import {
 	ALERT_STATUS_OPEN,
 	CREDENTIALS_VALIDATION_FAILED_MESSAGE,
 	DEMO_VEHICLE_REQUIRED_MESSAGE,
+	HTTP_STATUS_BAD_REQUEST,
 	RISK_DISCLAIMER_MESSAGE,
+	ROUTE_REVIEW_DEPARTURE_INVALID_MESSAGE,
 	ROUTING_FAILED_MESSAGE,
 	VEHICLE_POSITION_REQUIRED_MESSAGE,
 } from "./constants";
@@ -997,6 +999,13 @@ describe("risk procedures", () => {
 });
 
 describe("route review procedures", () => {
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(new Date("2026-10-18T12:00:00Z"));
+	});
+
+	afterEach(() => vi.useRealTimers());
+
 	const departureAt = new Date("2026-10-18T13:00:00Z");
 	const input = {
 		originPlaceId: "lima" as const,
@@ -1042,6 +1051,34 @@ describe("route review procedures", () => {
 			client.routeReview.evaluate({ ...input, destinationPlaceId: "lima" }),
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
+
+	it.each([
+		"2040-01-01T00:00:00Z",
+		"2026-10-25T12:00:00Z",
+		"2026-10-19T12:15:00.001Z",
+		"2026-10-18T11:44:59.999Z",
+	])(
+		"rejects departure %s before evaluation or database writes",
+		async (departure) => {
+			const evaluate = vi.spyOn(routeReviewEvaluation, "evaluateRouteReview");
+			const query = vi.spyOn(database.$client, "query");
+			const client = createRouterClient(appRouter, {
+				context: contextFor(session),
+			});
+			await expect(
+				client.routeReview.evaluate({
+					...input,
+					departureAt: new Date(departure),
+				}),
+			).rejects.toMatchObject({
+				code: "BAD_REQUEST",
+				status: HTTP_STATUS_BAD_REQUEST,
+				message: ROUTE_REVIEW_DEPARTURE_INVALID_MESSAGE,
+			});
+			expect(evaluate).not.toHaveBeenCalled();
+			expect(query).not.toHaveBeenCalled();
+		},
+	);
 
 	it("returns the profile-required error through the organization API", async () => {
 		vi.spyOn(database.query.vehicle, "findFirst").mockResolvedValue({
@@ -1159,7 +1196,15 @@ describe("route review procedures", () => {
 		);
 	});
 
-	it("evaluates the places' coordinates for the vehicle's axles", async () => {
+	it.each([
+		"2026-10-18T11:45:00Z",
+		"2026-10-18T11:59:00Z",
+		"2026-10-18T12:00:00Z",
+		"2026-10-18T13:00:00Z",
+		"2026-10-19T12:00:00Z",
+		"2026-10-19T12:15:00Z",
+	])("evaluates the vehicle's route departing at %s", async (departure) => {
+		const departureAt = new Date(departure);
 		const evaluation = {
 			horizons: ["now" as const, "24h" as const],
 			recommendedCandidateId: null,
@@ -1188,7 +1233,7 @@ describe("route review procedures", () => {
 			},
 			[],
 		]);
-		const review = await client.routeReview.evaluate(input);
+		const review = await client.routeReview.evaluate({ ...input, departureAt });
 		expect(findVehicle).toHaveBeenCalledWith({
 			where: {
 				id: input.vehicleId,

@@ -174,6 +174,7 @@ export const newsArticle = mysqlTable(
 			table.relevant,
 			table.publishedAt,
 		),
+		index("newsArticle_publishedAt_idx").on(table.publishedAt),
 	],
 );
 

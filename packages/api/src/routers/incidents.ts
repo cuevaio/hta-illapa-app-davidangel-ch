@@ -21,8 +21,14 @@ export const incidentsRouter = {
 		.input(
 			z.object({
 				bbox: boundingBoxSchema.optional(),
-				categories: z.array(z.enum(INCIDENT_CATEGORIES)).optional(),
-				severities: z.array(z.enum(INCIDENT_SEVERITIES)).optional(),
+				categories: z
+					.array(z.enum(INCIDENT_CATEGORIES))
+					.max(INCIDENT_CATEGORIES.length)
+					.optional(),
+				severities: z
+					.array(z.enum(INCIDENT_SEVERITIES))
+					.max(INCIDENT_SEVERITIES.length)
+					.optional(),
 				since: z.date().optional(),
 				limit: z
 					.number()

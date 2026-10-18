@@ -1,6 +1,6 @@
 # Illapa risk pipeline
 
-Offline Python pipeline for the predictive risk engine. It builds the road graph, the road segments and their static features, loads them into MySQL, and trains the optional ML model. The Workers handle the live part: the scraper's hourly job scores segments, and the API routes over the graph (see `packages/business/src/risk`).
+Offline Python pipeline for the predictive risk engine. It builds the road graph, the road segments and their static features, loads them into MySQL, and trains the optional ML model. The Node services on Dokploy handle the live part: the scraper's hourly job scores segments, and the API routes over the graph (see `packages/business/src/risk`).
 
 ## Steps
 
@@ -25,7 +25,7 @@ uv run python -m illapa_risk.load         # replace the risk tables in MySQL
 | Mass-movement susceptibility | INGEMMET `SERV_IMG_SUSCEP_MOV_MASA` ImageServer | Classes 1 (muy baja) to 5 (muy alta); the worst of 3 samples along the segment |
 | Fluvial flood susceptibility | INGEMMET `SERV_IMG_SUSCEP_INUN_FLUVIAL` ImageServer | Classes 1–4. **Assumption:** they rise with susceptibility (the service publishes no legend) |
 | Distance to water | OSM `waterway=river` (same extract) | `null` when no river lies within 5 km |
-| Precipitation (forecast and last 72 h) | Open-Meteo forecast API | Fetched live by the scraper Worker on a 0.1° grid |
+| Precipitation (forecast and last 72 h) | Open-Meteo forecast API | Fetched live by the scraper service on a 0.1° grid |
 | Official alerts and closures | SENAMHI, INDECI and SUTRAN | Already ingested by `apps/scraper`. SUTRAN `interrumpido` incidents block graph edges, and SUTRAN `alt_route` POIs are the fallback detours |
 
 Pending sources:

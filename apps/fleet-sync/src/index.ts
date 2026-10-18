@@ -9,6 +9,7 @@ import {
 	type SyncConnectionResult,
 	syncConnection,
 } from "@hack-the-andes-project/business";
+import { verifySecret } from "@hack-the-andes-project/business/crypto/index";
 import { createDb } from "@hack-the-andes-project/db";
 import {
 	gpsConnection,
@@ -187,8 +188,10 @@ export default {
 			);
 		}
 		if (
-			!ENV.FLEET_SYNC_RUN_SECRET ||
-			request.headers.get(RUN_SECRET_HEADER) !== ENV.FLEET_SYNC_RUN_SECRET
+			!verifySecret(
+				request.headers.get(RUN_SECRET_HEADER),
+				ENV.FLEET_SYNC_RUN_SECRET,
+			)
 		) {
 			return Response.json(
 				{ error: "unauthorized" },

@@ -498,15 +498,9 @@ importers:
       '@hack-the-andes-project/node-runtime':
         specifier: workspace:*
         version: link:../../packages/node-runtime
-      '@orpc/openapi':
-        specifier: 'catalog:'
-        version: 1.15.7(@opentelemetry/api@1.9.1)(crossws@0.3.5)(ws@8.22.0)
       '@orpc/server':
         specifier: 'catalog:'
         version: 1.15.7(@opentelemetry/api@1.9.1)(crossws@0.3.5)(ws@8.22.0)
-      '@orpc/zod':
-        specifier: 'catalog:'
-        version: 1.15.7(@opentelemetry/api@1.9.1)(@orpc/contract@1.15.7(@opentelemetry/api@1.9.1))(@orpc/server@1.15.7(@opentelemetry/api@1.9.1)(crossws@0.3.5)(ws@8.22.0))(crossws@0.3.5)(ws@8.22.0)(zod@4.6.7)
       better-auth:
         specifier: 'catalog:'
         version: 1.7.7(@opentelemetry/api@1.9.1)(drizzle-kit@1.0.0-rc.4)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20261016.1)(@effect/sql-d1@4.0.5(effect@4.0.5))(@effect/sql-sqlite-do@4.0.5(effect@4.0.5))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)(@planetscale/database@1.20.2)(effect@4.0.5)(mysql2@3.24.6(@types/node@26.6.5))(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7))(mysql2@3.24.6(@types/node@26.6.5))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1)))
@@ -541,6 +535,9 @@ importers:
       varlock:
         specifier: 'catalog:'
         version: 1.18.0
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
 
   apps/web:
     dependencies:

@@ -1,4 +1,8 @@
-import { MS_PER_SECOND, ROUTE_REVIEW_DEPARTURE_WINDOW_MS } from "../constants";
+import {
+	MS_PER_SECOND,
+	ROUTE_REVIEW_DEPARTURE_CLOCK_SKEW_MS,
+	ROUTE_REVIEW_DEPARTURE_WINDOW_MS,
+} from "../constants";
 
 interface TimedTrip {
 	status: "planned" | "active" | "completed" | "cancelled";
@@ -18,7 +22,10 @@ export function isUpcomingTrip(trip: TimedTrip, now: Date) {
 export function isDepartureInReviewWindow(departureAt: Date, now: Date) {
 	const departureMs = departureAt.getTime();
 	return (
-		departureMs >= now.getTime() &&
-		departureMs <= now.getTime() + ROUTE_REVIEW_DEPARTURE_WINDOW_MS
+		departureMs >= now.getTime() - ROUTE_REVIEW_DEPARTURE_CLOCK_SKEW_MS &&
+		departureMs <=
+			now.getTime() +
+				ROUTE_REVIEW_DEPARTURE_WINDOW_MS +
+				ROUTE_REVIEW_DEPARTURE_CLOCK_SKEW_MS
 	);
 }

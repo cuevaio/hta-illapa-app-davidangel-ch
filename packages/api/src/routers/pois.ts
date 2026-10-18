@@ -11,7 +11,7 @@ export const poisRouter = {
 	list: protectedProcedure
 		.input(
 			z.object({
-				kinds: z.array(z.enum(POI_KINDS)),
+				kinds: z.array(z.enum(POI_KINDS)).max(POI_KINDS.length),
 				bbox: boundingBoxSchema.optional(),
 			}),
 		)

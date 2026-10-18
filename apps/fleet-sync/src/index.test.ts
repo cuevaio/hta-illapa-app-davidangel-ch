@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	runSecret: "run-secret",
 	createDb: vi.fn(),
 	syncConnection: vi.fn(),
 	evaluateTrip: vi.fn(),
@@ -12,7 +13,9 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("./env.server", () => ({
 	ENV: {
-		FLEET_SYNC_RUN_SECRET: "run-secret",
+		get FLEET_SYNC_RUN_SECRET() {
+			return mocks.runSecret;
+		},
 		CREDENTIALS_ENCRYPTION_KEY: "encryption-key",
 		OSRM_BASE_URL: "https://osrm.test",
 		HYPERDRIVE: {},
@@ -29,10 +32,11 @@ import worker from "./index";
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mocks.runSecret = "run-secret";
 });
 
 describe("fleet-sync run endpoint", () => {
-	it.each([undefined, "wrong-secret"])(
+	it.each([undefined, "", "wrong-secret"])(
 		"rejects an unauthorized run before opening the database (%s)",
 		async (secret) => {
 			const response = await worker.fetch(
@@ -45,6 +49,18 @@ describe("fleet-sync run endpoint", () => {
 			expect(mocks.createDb).not.toHaveBeenCalled();
 		},
 	);
+
+	it("fails closed when both configured and provided secrets are empty", async () => {
+		mocks.runSecret = "";
+		const response = await worker.fetch(
+			new Request("https://worker.test/run", {
+				method: "POST",
+				headers: { "x-fleet-sync-secret": "" },
+			}),
+		);
+		expect(response.status).toBe(401);
+		expect(mocks.createDb).not.toHaveBeenCalled();
+	});
 
 	it("does not accept a run secret in the URL or a GET request", async () => {
 		const response = await worker.fetch(

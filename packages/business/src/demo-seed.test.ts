@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { TEXT_LENGTH_CHARS } from "@hack-the-andes-project/db/schema/constants";
 import type {
 	gpsConnection,
 	TripStatus,
@@ -23,6 +24,7 @@ import { prepareDemo, restartFinishedDemo, wipeDemoFleet } from "./demo-seed";
 import * as incidentLoading from "./fleet/load-alertable-incidents";
 import * as demoPlanning from "./fleet/plan-demo-trip";
 import * as fleetSync from "./fleet/sync-connection";
+import { MATUCANA, pointIncident } from "./hazards/test-fixtures";
 import { DEMO_VEHICLES } from "./providers/index";
 import * as routing from "./routing/osrm";
 
@@ -283,6 +285,24 @@ async function finishDemoTrips() {
 }
 
 describe("shared demo seeding", () => {
+	it("truncates a hazard title to the destination column length", async () => {
+		const incident = pointIncident("long-title", MATUCANA, {
+			title: "P".repeat(TEXT_LENGTH_CHARS + TEXT_LENGTH_CHARS),
+		});
+		vi.mocked(demoPlanning.planDemoTrip).mockResolvedValueOnce({
+			destination: { lat: -11, lng: -75 },
+			incident,
+		});
+		await expect(prepareDemo(input)).resolves.toMatchObject({ tripCount: 2 });
+		const tripInsert = query.mock.calls.find(([options]) =>
+			options.sql.startsWith("insert into `hack_the_andes_trip`"),
+		);
+		expect(tripInsert?.[1]).toContain(
+			incident.title.slice(0, TEXT_LENGTH_CHARS),
+		);
+		expect(tripInsert?.[1]).not.toContain(incident.title);
+	});
+
 	it("keeps one fleet and two trips across repeat calls", async () => {
 		await expect(prepareDemo(input)).resolves.toEqual({
 			vehicleCount: DEMO_VEHICLES.length,
