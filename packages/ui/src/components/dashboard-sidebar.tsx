@@ -40,21 +40,17 @@ export interface DashboardNavigationItem {
 export interface DashboardSidebarProps {
 	items: DashboardNavigationItem[];
 	homeLink: ReactElement;
-	preferences: (collapsed: boolean) => ReactNode;
 	account: (collapsed: boolean) => ReactNode;
 	expandLabel: string;
 	collapseLabel: string;
-	preferencesLabel: string;
 }
 
 export function DashboardSidebar({
 	items,
 	homeLink,
-	preferences,
 	account,
 	expandLabel,
 	collapseLabel,
-	preferencesLabel,
 }: DashboardSidebarProps) {
 	const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
 	const collapsed = state === "collapsed" && !isMobile;
@@ -177,12 +173,6 @@ export function DashboardSidebar({
 							</SidebarMenu>
 						</nav>
 					</SidebarGroupContent>
-				</SidebarGroup>
-				<SidebarGroup className="mt-auto">
-					<SidebarGroupLabel className="type-label!">
-						{preferencesLabel}
-					</SidebarGroupLabel>
-					<SidebarGroupContent>{preferences(collapsed)}</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
 			<SidebarSeparator />
