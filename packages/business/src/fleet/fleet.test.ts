@@ -67,6 +67,9 @@ const storedVehicle: typeof vehicle.$inferSelect = {
 	organizationId: connection.organizationId,
 	connectionId: connection.id,
 	externalId: "external-truck",
+	vehicleTypeId: null,
+	axleCount: null,
+	grossWeightKg: null,
 	name: "Camión",
 	plate: "ABC-123",
 	lastLat: LIMA[1],
@@ -79,6 +82,13 @@ const storedVehicle: typeof vehicle.$inferSelect = {
 	updatedAt: recordedAt,
 };
 const activeTrip: typeof trip.$inferSelect = {
+	reviewId: null,
+	chosenCandidateId: null,
+	chosenCandidate: null,
+	originPlaceId: null,
+	destinationPlaceId: null,
+	departureAt: null,
+	startedAt: null,
 	id: "trip",
 	organizationId: connection.organizationId,
 	vehicleId: storedVehicle.id,
@@ -203,6 +213,33 @@ describe("syncConnection with real Drizzle queries", () => {
 		expect(JSON.stringify(query.mock.calls)).not.toContain("secret-token");
 	});
 
+	it("backfills missing demo profile values without replacing stored profiles", async () => {
+		const encryptionKey = generateEncryptionKeyBase64();
+		const encryptedCredentials = await encryptJson(encryptionKey, {
+			provider: "demo",
+		});
+		expect(
+			await syncConnection({
+				db: await testDatabase(),
+				encryptionKey,
+				connection: { ...connection, provider: "demo", encryptedCredentials },
+				now,
+				log: createLogger(),
+			}),
+		).toMatchObject({ ok: true, vehiclesSynced: DEMO_VEHICLES.length });
+		const vehicleWrite = query.mock.calls.find(([options]) =>
+			options.sql.startsWith("insert into `hack_the_andes_vehicle`"),
+		);
+		expect(vehicleWrite?.[1]).toEqual(
+			expect.arrayContaining(["t2s3", 5, 43_000, "t3s3", 6, 48_000]),
+		);
+		for (const column of ["vehicle_type_id", "axle_count", "gross_weight_kg"]) {
+			expect(vehicleWrite?.[0].sql).toContain(
+				`coalesce(\`hack_the_andes_vehicle\`.\`${column}\`, values(\`${column}\`))`,
+			);
+		}
+	});
+
 	it("records a safe failure without exposing a provider error containing credentials", async () => {
 		const encryptionKey = generateEncryptionKeyBase64();
 		const encryptedCredentials = await encryptJson(encryptionKey, {
@@ -281,6 +318,9 @@ describe("syncConnection with real Drizzle queries", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 		const fleetQuery = query.mock.calls.find(([options]) =>
 			options.sql.includes("left join"),
+		);
+		expect(fleetQuery?.[0].sql).toContain(
+			"coalesce(`hack_the_andes_trip`.`started_at`, `hack_the_andes_trip`.`created_at`)",
 		);
 		expect(fleetQuery?.[1]).toEqual(
 			expect.arrayContaining(["active", connection.id]),
@@ -480,6 +520,20 @@ describe("evaluateTrip with real Drizzle queries", () => {
 			JSON.stringify(replacementGeometry),
 		);
 		expect(query.mock.calls[0]?.[0].sql).toContain("eta_at");
+	});
+
+	it("never evaluates or alerts on a planned trip", async () => {
+		const result = await evaluateTrip({
+			db: await testDatabase(),
+			osrmBaseUrl: "https://osrm.test",
+			trip: { ...activeTrip, status: "planned" },
+			vehicle: storedVehicle,
+			incidents: [],
+			now,
+			log: createLogger(),
+		});
+		expect(result).toMatchObject({ ok: true, skipped: "inactive_trip" });
+		expect(query).not.toHaveBeenCalled();
 	});
 
 	it("skips a vehicle with no position without writing or resolving alerts", async () => {

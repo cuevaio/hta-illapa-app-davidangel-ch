@@ -2,7 +2,6 @@ export {
 	ArrowUpIcon,
 	BellIcon,
 	ChevronRightIcon,
-	CircleDashedIcon as SignalForecast,
 	CloudLightningIcon,
 	DiamondIcon as SignalBaseline,
 	ExternalLinkIcon,
@@ -47,6 +46,21 @@ export function SignalConfirmed({ className }: { className?: string }) {
 			className={className}
 		>
 			<circle cx="12" cy="12" r="8" />
+		</svg>
+	);
+}
+
+export function SignalForecast({ className }: { className?: string }) {
+	return (
+		<svg
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			aria-hidden="true"
+			className={className}
+		>
+			<circle cx="12" cy="12" r="7" />
 		</svg>
 	);
 }

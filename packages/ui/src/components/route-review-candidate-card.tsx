@@ -190,7 +190,11 @@ export function RouteReviewCandidateCard({
 								) : null}
 							</div>
 							<CollapsibleContent>
-								<RouteReviewWhy candidate={candidate} labels={labels} />
+								<RouteReviewWhy
+									candidate={candidate}
+									horizon={horizon}
+									labels={labels}
+								/>
 							</CollapsibleContent>
 						</Collapsible>
 						{action ? (

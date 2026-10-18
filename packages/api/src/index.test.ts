@@ -31,7 +31,6 @@ import {
 	it,
 	vi,
 } from "vitest";
-
 import {
 	ALERT_STATUS_OPEN,
 	CREDENTIALS_VALIDATION_FAILED_MESSAGE,
@@ -43,6 +42,7 @@ import {
 import type { Context } from "./context";
 import { resetDemo } from "./demo-reset";
 import { organizationProcedure, protectedProcedure } from "./index";
+import type { VehicleCreateInput } from "./route-review-schemas";
 import { appRouter } from "./routers/index";
 
 const databaseRequire = createRequire(
@@ -193,6 +193,9 @@ describe("fleet procedure boundaries", () => {
 		destination: { lat: 0, lng: 0 },
 	};
 	const positionedVehicle: typeof vehicle.$inferSelect = {
+		vehicleTypeId: null,
+		axleCount: null,
+		grossWeightKg: null,
 		id: tripInput.vehicleId,
 		organizationId: session.session.activeOrganizationId,
 		connectionId: "fleet-connection",
@@ -698,6 +701,13 @@ describe("trip completion alert cleanup", () => {
 			const status = action === "cancel" ? "cancelled" : "completed";
 			vi.spyOn(database.query.trip, "findFirst").mockResolvedValue({
 				id: "trip",
+				reviewId: null,
+				chosenCandidateId: null,
+				chosenCandidate: null,
+				originPlaceId: null,
+				destinationPlaceId: null,
+				departureAt: null,
+				startedAt: null,
 				status,
 				name: "Trip",
 				organizationId: session.session.activeOrganizationId,
@@ -741,6 +751,10 @@ describe("trip completion alert cleanup", () => {
 				id: "trip",
 				status,
 			});
+			if (action === "cancel")
+				expect(query.mock.calls[0]?.[1]).toContain("planned");
+			else expect(query.mock.calls[0]?.[1]).not.toContain("planned");
+
 			expect(query).toHaveBeenCalledWith(
 				expect.objectContaining({
 					sql: expect.stringContaining("update `hack_the_andes_alert`"),
@@ -989,7 +1003,27 @@ describe("route review procedures", () => {
 		originPlaceId: "lima" as const,
 		destinationPlaceId: "huancayo" as const,
 		departureAt,
-		vehicleAxleCount: 6,
+		vehicleId: "review-vehicle",
+	};
+
+	const selectedVehicle: typeof vehicle.$inferSelect = {
+		id: input.vehicleId,
+		organizationId: session.session.activeOrganizationId,
+		connectionId: null,
+		externalId: null,
+		name: "Truck",
+		plate: null,
+		vehicleTypeId: "t3s3",
+		axleCount: 6,
+		grossWeightKg: null,
+		lastLat: null,
+		lastLng: null,
+		lastSpeedKmh: null,
+		lastHeading: null,
+		lastPositionAt: null,
+		active: true,
+		createdAt,
+		updatedAt: createdAt,
 	};
 
 	it("rejects unauthenticated route reviews", async () => {
@@ -1010,6 +1044,122 @@ describe("route review procedures", () => {
 		).rejects.toMatchObject({ code: "BAD_REQUEST" });
 	});
 
+	it("returns the profile-required error through the organization API", async () => {
+		vi.spyOn(database.query.vehicle, "findFirst").mockResolvedValue({
+			...selectedVehicle,
+			axleCount: null,
+		});
+		const client = createRouterClient(appRouter, {
+			context: contextFor(session),
+		});
+		await expect(client.routeReview.evaluate(input)).rejects.toMatchObject({
+			code: "BAD_REQUEST",
+			message:
+				"Indica el tipo de vehículo y sus ejes antes de revisar la ruta.",
+		});
+	});
+
+	it("creates a profiled manual vehicle without a GPS connection", async () => {
+		const query = vi.spyOn(database.$client, "query").mockResolvedValue([
+			{
+				affectedRows: 1,
+				constructor: { name: "ResultSetHeader" },
+				fieldCount: 0,
+				info: "",
+				insertId: 0,
+				serverStatus: 0,
+				warningStatus: 0,
+				changedRows: 1,
+			},
+			[],
+		]);
+		const client = createRouterClient(appRouter, {
+			context: contextFor(session),
+		});
+		const input: VehicleCreateInput = {
+			name: "Manual truck",
+			plate: null,
+			vehicleTypeId: "t3s3",
+			axleCount: 6,
+			grossWeightKg: null,
+		};
+		const result = await client.vehicles.create(input);
+		expect(result).toMatchObject({
+			name: input.name,
+			connectionId: null,
+			externalId: null,
+			provider: null,
+			activeTrip: null,
+			profile: { vehicleTypeId: "t3s3", axleCount: 6, grossWeightKg: null },
+		});
+		expect(query).toHaveBeenCalledWith(
+			expect.objectContaining({
+				sql: expect.stringContaining("insert into `hack_the_andes_vehicle`"),
+			}),
+			expect.arrayContaining([session.session.activeOrganizationId]),
+		);
+	});
+
+	it("updates a manual vehicle profile inside the organization", async () => {
+		const client = createRouterClient(appRouter, {
+			context: contextFor(session),
+		});
+		vi.spyOn(database.query.vehicle, "findFirst").mockResolvedValue(
+			selectedVehicle,
+		);
+		vi.spyOn(database.query.trip, "findFirst").mockResolvedValue(undefined);
+		const query = vi.spyOn(database.$client, "query").mockResolvedValue([
+			{
+				affectedRows: 1,
+				constructor: { name: "ResultSetHeader" },
+				fieldCount: 0,
+				info: "",
+				insertId: 0,
+				serverStatus: 0,
+				warningStatus: 0,
+				changedRows: 1,
+			},
+			[],
+		]);
+		expect(
+			await client.vehicles.updateProfile({
+				id: selectedVehicle.id,
+				vehicleTypeId: "c2",
+				axleCount: 2,
+				grossWeightKg: null,
+			}),
+		).toMatchObject({
+			id: selectedVehicle.id,
+			connectionId: null,
+			profile: { vehicleTypeId: "c2", axleCount: 2, grossWeightKg: null },
+		});
+		expect(query).toHaveBeenCalledWith(
+			expect.objectContaining({
+				sql: expect.stringContaining("update `hack_the_andes_vehicle`"),
+			}),
+			expect.arrayContaining([
+				selectedVehicle.id,
+				session.session.activeOrganizationId,
+			]),
+		);
+	});
+
+	it("lists saved review trips within the session organization", async () => {
+		const query = vi
+			.spyOn(database.$client, "query")
+			.mockResolvedValue([[], []]);
+		const client = createRouterClient(appRouter, {
+			context: contextFor(session),
+		});
+		expect(await client.trips.listPlanned()).toEqual([]);
+		expect(query).toHaveBeenCalledWith(
+			expect.objectContaining({
+				sql: expect.stringContaining("left join `hack_the_andes_vehicle`"),
+			}),
+			expect.arrayContaining([session.session.activeOrganizationId]),
+		);
+	});
+
 	it("evaluates the places' coordinates for the vehicle's axles", async () => {
 		const evaluation = {
 			horizons: ["now" as const, "24h" as const],
@@ -1023,7 +1173,37 @@ describe("route review procedures", () => {
 			context: contextFor(session),
 		});
 
+		const findVehicle = vi
+			.spyOn(database.query.vehicle, "findFirst")
+			.mockResolvedValue(selectedVehicle);
+		const query = vi.spyOn(database.$client, "query").mockResolvedValue([
+			{
+				affectedRows: 1,
+				constructor: { name: "ResultSetHeader" },
+				fieldCount: 0,
+				info: "",
+				insertId: 0,
+				serverStatus: 0,
+				warningStatus: 0,
+				changedRows: 1,
+			},
+			[],
+		]);
 		const review = await client.routeReview.evaluate(input);
+		expect(findVehicle).toHaveBeenCalledWith({
+			where: {
+				id: input.vehicleId,
+				organizationId: session.session.activeOrganizationId,
+			},
+		});
+		expect(query).toHaveBeenCalledWith(
+			expect.objectContaining({
+				sql: expect.stringContaining(
+					"insert into `hack_the_andes_route_review`",
+				),
+			}),
+			expect.any(Array),
+		);
 
 		expect(evaluate).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -1040,6 +1220,7 @@ describe("route review procedures", () => {
 			originPlaceId: "lima",
 			destinationPlaceId: "huancayo",
 			vehicleAxleCount: 6,
+			vehicleId: input.vehicleId,
 			departureAt,
 			...evaluation,
 			evaluatedAt: expect.any(Date),

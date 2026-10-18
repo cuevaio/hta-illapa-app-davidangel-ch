@@ -4,6 +4,7 @@ import {
 	vehicle,
 } from "@hack-the-andes-project/db/schema/fleet";
 
+import { sql } from "drizzle-orm";
 import { FLEET_WRITE_BATCH_SIZE_ROWS } from "../constants";
 import type { ProviderVehicle } from "../providers/types";
 import { incomingValue } from "./sql";
@@ -38,6 +39,9 @@ export async function importFleetVehicles({
 					externalId: providerVehicle.externalId,
 					name: providerVehicle.name,
 					plate: providerVehicle.plate,
+					vehicleTypeId: providerVehicle.vehicleTypeId,
+					axleCount: providerVehicle.axleCount,
+					grossWeightKg: providerVehicle.grossWeightKg,
 					active: true,
 				})),
 		);
@@ -48,6 +52,9 @@ export async function importFleetVehicles({
 				set: {
 					name: incomingValue(vehicle.name),
 					plate: incomingValue(vehicle.plate),
+					vehicleTypeId: sql`coalesce(${vehicle.vehicleTypeId}, ${incomingValue(vehicle.vehicleTypeId)})`,
+					axleCount: sql`coalesce(${vehicle.axleCount}, ${incomingValue(vehicle.axleCount)})`,
+					grossWeightKg: sql`coalesce(${vehicle.grossWeightKg}, ${incomingValue(vehicle.grossWeightKg)})`,
 					active: true,
 				},
 			});

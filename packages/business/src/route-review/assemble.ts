@@ -31,7 +31,6 @@ import {
 } from "../risk/constants";
 import { strongestOfficialAlert } from "../risk/exposure";
 import { scoreCurrentRisk } from "../risk/score";
-import { compareRouteCandidates } from "./ranking";
 import {
 	type RouteRecommendationDecision,
 	recommendRoute,
@@ -432,7 +431,7 @@ function buildCandidateDraft(
 			validUntil: new Date(now.getTime() + windowHours * MS_PER_HOUR),
 			roadStatus: null,
 			incidentId: null,
-			incidentCategory: null,
+			incidentCategory: "rain_warning",
 			geometry: null,
 			segmentIds: forecastChunks.map(({ index }) => segmentIdForChunk(index)),
 		});
@@ -634,9 +633,13 @@ export function assembleRouteReview({
 			: recommendable
 		).map(({ id }) => id),
 	);
-	const [recommended] = candidates
+	const [recommended] = drafts
 		.filter(({ id }) => recommendableIds.has(id))
-		.toSorted(compareRouteCandidates);
+		.toSorted(
+			(first, second) =>
+				windowScore(first) - windowScore(second) ||
+				first.durationS - second.durationS,
+		);
 
 	return {
 		horizons: REVIEW_HORIZONS,

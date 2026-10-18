@@ -1,21 +1,28 @@
 import { DEMO_TRIP_SCENARIOS } from "@hack-the-andes-project/business/constants";
+import { TRIP_NOT_CANCELLABLE_MESSAGE } from "@hack-the-andes-project/business/fleet/constants";
 import { createFleetTrip } from "@hack-the-andes-project/business/fleet/create-trip";
 import { evaluateTrip } from "@hack-the-andes-project/business/fleet/evaluate-trip";
 import { loadAlertableIncidents } from "@hack-the-andes-project/business/fleet/load-alertable-incidents";
 import { planDemoTrip } from "@hack-the-andes-project/business/fleet/plan-demo-trip";
 import { resolveObsoleteAlerts } from "@hack-the-andes-project/business/fleet/resolve-obsolete-alerts";
+import {
+	chooseReviewTripCandidate,
+	getReviewTrip,
+	listReviewTrips,
+	planReviewTrip,
+	reevaluateReviewTrip,
+	startReviewTrip,
+} from "@hack-the-andes-project/business/fleet/review-trips";
 import { fetchRouteCandidates } from "@hack-the-andes-project/business/routing/osrm";
 import {
 	alert,
 	TRIP_STATUSES,
-	type TripStatus,
 	trip,
 	vehicle,
 } from "@hack-the-andes-project/db/schema/fleet";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, getColumns } from "drizzle-orm";
+import { and, desc, eq, getColumns, inArray } from "drizzle-orm";
 import { z } from "zod";
-
 import {
 	ALERT_STATUS_OPEN,
 	DEMO_CLEAR_ROUTE_NOT_FOUND_MESSAGE,
@@ -27,10 +34,18 @@ import {
 	TRIP_STATUS_ACTIVE,
 	TRIP_STATUS_CANCELLED,
 	TRIP_STATUS_COMPLETED,
+	TRIP_STATUS_PLANNED,
 	VEHICLE_POSITION_REQUIRED_MESSAGE,
 } from "../constants";
 import type { OrganizationContext } from "../context";
+import { fleetPlanningProcedure } from "../fleet-planning-procedure";
 import { organizationProcedure } from "../index";
+import {
+	plannedTripSchema,
+	plannedTripSummarySchema,
+	tripCandidateChoiceInputSchema,
+	tripPlanInputSchema,
+} from "../route-review-schemas";
 import {
 	entityIdInputSchema,
 	fleetIdSchema,
@@ -44,7 +59,7 @@ import {
 async function finishTrip(
 	context: OrganizationContext,
 	tripId: string,
-	status: Exclude<TripStatus, typeof TRIP_STATUS_ACTIVE>,
+	status: typeof TRIP_STATUS_CANCELLED | typeof TRIP_STATUS_COMPLETED,
 ) {
 	await context.db
 		.update(trip)
@@ -53,7 +68,12 @@ async function finishTrip(
 			and(
 				eq(trip.id, tripId),
 				eq(trip.organizationId, context.organizationId),
-				eq(trip.status, TRIP_STATUS_ACTIVE),
+				inArray(
+					trip.status,
+					status === TRIP_STATUS_CANCELLED
+						? [TRIP_STATUS_ACTIVE, TRIP_STATUS_PLANNED]
+						: [TRIP_STATUS_ACTIVE],
+				),
 			),
 		);
 	const finishedTrip = await context.db.query.trip.findFirst({
@@ -63,7 +83,12 @@ async function finishTrip(
 	if (!finishedTrip)
 		throw new ORPCError("NOT_FOUND", { message: TRIP_NOT_FOUND_MESSAGE });
 	if (finishedTrip.status !== status)
-		throw new ORPCError("BAD_REQUEST", { message: TRIP_NOT_ACTIVE_MESSAGE });
+		throw new ORPCError("BAD_REQUEST", {
+			message:
+				status === TRIP_STATUS_CANCELLED
+					? TRIP_NOT_CANCELLABLE_MESSAGE
+					: TRIP_NOT_ACTIVE_MESSAGE,
+		});
 	await resolveObsoleteAlerts({
 		db: context.db,
 		organizationId: context.organizationId,
@@ -76,6 +101,30 @@ async function finishTrip(
 }
 
 export const tripsRouter = {
+	listPlanned: fleetPlanningProcedure
+		.input(z.void())
+		.output(z.array(plannedTripSummarySchema))
+		.handler(({ context }) => listReviewTrips(context)),
+	get: fleetPlanningProcedure
+		.input(entityIdInputSchema)
+		.output(plannedTripSchema)
+		.handler(({ context, input }) => getReviewTrip(context, input.id)),
+	plan: fleetPlanningProcedure
+		.input(tripPlanInputSchema)
+		.output(plannedTripSummarySchema)
+		.handler(({ context, input }) => planReviewTrip(context, input)),
+	chooseCandidate: fleetPlanningProcedure
+		.input(tripCandidateChoiceInputSchema)
+		.output(plannedTripSchema)
+		.handler(({ context, input }) => chooseReviewTripCandidate(context, input)),
+	reevaluate: fleetPlanningProcedure
+		.input(entityIdInputSchema)
+		.output(plannedTripSchema)
+		.handler(({ context, input }) => reevaluateReviewTrip(context, input.id)),
+	start: fleetPlanningProcedure
+		.input(entityIdInputSchema)
+		.output(plannedTripSchema)
+		.handler(({ context, input }) => startReviewTrip(context, input.id)),
 	list: organizationProcedure
 		.input(z.object({ status: z.enum(TRIP_STATUSES).optional() }).default({}))
 		.output(z.array(tripSummarySchema))

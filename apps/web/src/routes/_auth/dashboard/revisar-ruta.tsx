@@ -6,6 +6,7 @@ import type {
 	ProfiledVehicleSummary,
 	RouteReview,
 	RouteReviewInput,
+	TripPlanInput,
 } from "@hack-the-andes-project/api/route-review-schemas";
 import { ROUTE_REVIEW_DEPARTURE_WINDOW_MS } from "@hack-the-andes-project/business/constants";
 import {
@@ -62,7 +63,7 @@ import {
 import {
 	invalidateRouteReviewQueries,
 	routeReviewClient,
-	routeReviewQueries,
+	useRouteReviewQueries,
 } from "@/lib/route-review-queries";
 import {
 	getVehicleProfileDialogLabels,
@@ -98,6 +99,7 @@ const places = ROUTE_REVIEW_PLACE_IDS.map((id) => ({
 	...ROUTE_REVIEW_PLACES[id],
 }));
 function RouteReviewPage() {
+	const routeReviewQueries = useRouteReviewQueries();
 	const search = Route.useSearch();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
@@ -191,7 +193,7 @@ function RouteReviewPage() {
 		},
 	});
 	const planMutation = useMutation({
-		mutationFn: routeReviewClient.trips.plan,
+		mutationFn: (input: TripPlanInput) => routeReviewClient.trips.plan(input),
 		onSuccess: async (trip) => {
 			await invalidateRouteReviewQueries(queryClient);
 			toast.success(m.route_review_planned_toast({ name: trip.name }));
