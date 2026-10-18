@@ -44,8 +44,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T13 | S9 | delegated (same writer) | done | 1153531, 7ddf2d9 |
 | T14 | S10 | delegated (same writer) | done | 9c563d5 |
 | T15 | S11 | delegated (same writer) | done | 4ee8642 |
-| T16 | S12 | delegated (same writer) | pending | |
-| T17 | S13 | delegated (same writer) | pending | |
+| T16 | S12 | delegated (same writer) | done | cf551b3, c52fa81 |
+| T17 | S13 | delegated (same writer) | done | 9e5c59c |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -81,4 +81,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L18** T14: VR flight tilt removed (maqueta never tilted). T15: `fogDensityAt(viewKm) = min(FOG_DENSITY_PER_KM, FOG_MAX_OPTICAL_DEPTH / viewKm)`, applied to scene and relief shader fog. Checks at 4ee8642: check-types 0, xr-simulator 357/357, web build ok, biome clean (tracked).
 - **L19** (2026-10-18, user): "quiero que los cards virtuales (menus VR) sean como describe @docs/DESIGN.md , actualiza fu forma de vicualizarlos". T13 gaps vs DESIGN.md: 35px corners, no Archivo Expanded (canvas `fontStretch` is available in Chromium), panels don't follow the web Card anatomy, never rendered/compared.
 - **L20** (2026-10-18, user): "tmabién necesito q arregles esto: cuando marco un sitio con A para hacer una simulación se pone un menu flotante justo defrente y ni siquiera puedo ponerla a un costado, me gustaria q se pusiera a un costado (no inmediatamente cerca) del punto q acabo de seleccionar".
+- **L21** T16: one scale (1 CSS px = 3 texture px = 1.25 mm), Mayu card anatomy/radii/type roles (expanded heading via canvas fontStretch), web button variants; dev page `packages/xr-simulator/vr-cards.html` (light/dark screenshots compared with `/design-system`). T17: `placePointCard` puts the card beside the marked point (clears the line of sight by 12 cm), leader line, trigger-drag on the title band. Checks at 9e5c59c: check-types 0, xr-simulator 378/378, ui 53/53, web build ok, biome clean (tracked). Not tried on a Quest.
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
