@@ -138,6 +138,7 @@ The type comes from the Rayo direction the team kept alongside Mayu's colours, r
 - Headlines, labels and buttons are uppercase; write them in sentence case in the source and let the utility transform them. Running text stays sentence case.
 - Use the utilities instead of hand-rolled sizes (`text-3xl font-bold`). Avoid `text-*` theme keys for type roles; `cn()` treats them as colours.
 - Buttons use Archivo 600 at 12px, uppercase with 0.06em tracking (the `link` variant stays in running-text case). Form labels use `text-sm font-medium`.
+- Type sizes are in rem; the px values in the frontmatter are the M size at a 16px root. The account menu's Tamaño de texto (S, M, L) sets the root to 87.5%, 100% or 112.5% through `data-font-size` on `<html>`, saved per device under `illapa-font-size` and applied by an inline head script before first paint, so type and the rem-based spacing scale together. Never size type in px.
 
 ## Layout and spacing
 
@@ -148,7 +149,7 @@ The type comes from the Rayo direction the team kept alongside Mayu's colours, r
 
 ### Theme
 
-- Light is the default for everyone, in the app and on illapa.app. Dark is an explicit choice made with the theme switch (`ThemeSwitch`: sun, switch, moon), never a dropdown and never "system".
+- Light is the default for everyone, in the app and on illapa.app. In the dashboard the account menu's Tema control offers Claro, Oscuro and Sistema as a segmented `ToggleGroup`; the login page and illapa.app keep the theme switch (`ThemeSwitch`: sun, switch, moon). Never a dropdown.
 - The choice persists per device under the `illapa-theme` key; the marketing site applies it in an inline head script so the page never flashes.
 
 ### Navigation shell
@@ -157,7 +158,9 @@ The dashboard uses one collapsible rail built on the shadcn `Sidebar` with `coll
 
 - Expanded on desktop (1280px and up), collapsed to an icon rail on tablets (768 to 1279px), a drawer on phones. Only an explicit choice is saved (`useSidebarPreference`, key `illapa-sidebar`).
 - Toggle with the button in the rail head, the rail edge, `[` or Ctrl/Cmd+B. Collapsed items keep their icon and show their label in a tooltip; badges become a dot.
-- The rail holds everything global: brand, navigation, a Preferencias group (theme switch and language ES | EN) and the account at the bottom. The page header keeps only the page title (and the drawer button on phones).
+- Rail head: expanded, the toggle sits right of the lockup. Collapsed, the centred mark cross-fades to the expand button over 150ms while the rail is hovered or holds keyboard focus (`has-[:focus-visible]`, not `focus-within`, so focus left by a click does not keep it showing).
+- The rail holds the brand (a plain lockup: no link, no tagline), the navigation (no group label) and the account at the bottom. The page header keeps only the page title (and the drawer button on phones).
+- The account menu (`AccountMenu`) is a `Popover` above the avatar, or to its right when collapsed. It holds the identity, then Preferencias as segmented `ToggleGroup`s (Tema: Claro, Oscuro, Sistema; Idioma: 🇵🇪 ES, 🇺🇸 EN, flags from `country-flag-icons`; Tamaño de texto: S, M, L), then Cerrar sesión, which stays open with a retry message if signing out fails.
 
 ## Shapes
 

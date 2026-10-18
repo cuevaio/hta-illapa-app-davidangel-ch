@@ -196,7 +196,7 @@
 	font-family: var(--font-heading);
 	font-weight: 800;
 	font-stretch: 125%;
-	font-size: clamp(40px, 5vw + 12px, 68px);
+	font-size: clamp(2.5rem, 5vw + 0.75rem, 4.25rem);
 	line-height: 1;
 	letter-spacing: 0.005em;
 	text-transform: uppercase;
@@ -207,7 +207,7 @@
 	font-family: var(--font-heading);
 	font-weight: 800;
 	font-stretch: 125%;
-	font-size: clamp(28px, 2.6vw + 12px, 44px);
+	font-size: clamp(1.75rem, 2.6vw + 0.75rem, 2.75rem);
 	line-height: 1.05;
 	letter-spacing: 0.005em;
 	text-transform: uppercase;
@@ -218,7 +218,7 @@
 	font-family: var(--font-heading);
 	font-weight: 800;
 	font-stretch: 125%;
-	font-size: 17px;
+	font-size: 1.0625rem;
 	line-height: 1.2;
 	letter-spacing: 0.005em;
 	text-transform: uppercase;
@@ -228,21 +228,21 @@
 @utility type-lead {
 	font-family: var(--font-sans);
 	font-weight: 400;
-	font-size: clamp(17px, 0.5vw + 14px, 20px);
+	font-size: clamp(1.0625rem, 0.5vw + 0.875rem, 1.25rem);
 	line-height: 1.6;
 }
 
 @utility type-body {
 	font-family: var(--font-sans);
 	font-weight: 400;
-	font-size: 15px;
+	font-size: 0.9375rem;
 	line-height: 1.6;
 }
 
 @utility type-label {
 	font-family: var(--font-mono);
 	font-weight: 600;
-	font-size: 11px;
+	font-size: 0.6875rem;
 	line-height: 1.4;
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
@@ -251,12 +251,19 @@
 @utility type-data {
 	font-family: var(--font-mono);
 	font-weight: 500;
-	font-size: 13px;
+	font-size: 0.8125rem;
 	line-height: 1.45;
 	font-variant-numeric: tabular-nums;
 }
 
 @layer base {
+	html[data-font-size="sm"] {
+		font-size: 87.5%;
+	}
+	html[data-font-size="lg"] {
+		font-size: 112.5%;
+	}
+
 	* {
 		@apply border-border outline-ring;
 	}

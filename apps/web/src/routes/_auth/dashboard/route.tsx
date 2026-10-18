@@ -19,7 +19,6 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { SidebarPreferences } from "@/components/sidebar-preferences";
 import UserMenu from "@/components/user-menu";
 import {
 	ALERT_REFETCH_INTERVAL_MS,
@@ -123,14 +122,9 @@ function DashboardLayout() {
 		>
 			<DashboardSidebar
 				items={navigationItems}
-				homeLink={<Link to="/dashboard" />}
-				preferences={(collapsed) => (
-					<SidebarPreferences collapsed={collapsed} />
-				)}
 				account={(collapsed) => <UserMenu collapsed={collapsed} />}
 				expandLabel={m.sidebar_expand()}
 				collapseLabel={m.sidebar_collapse()}
-				preferencesLabel={m.sidebar_preferences()}
 			/>
 			<SidebarInset className="min-w-0 overflow-hidden">
 				{isDemoAccountEmail(session.data?.user.email) ? (
