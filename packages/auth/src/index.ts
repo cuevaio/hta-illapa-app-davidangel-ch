@@ -54,6 +54,15 @@ export function createAuth(env: AuthConfig, database: Database) {
 			minPasswordLength: MIN_PASSWORD_LENGTH_CHARS,
 			password: { hash: hashPassword, verify: verifyPassword },
 		},
+		user: {
+			additionalFields: {
+				role: {
+					type: [...schema.USER_ROLES],
+					defaultValue: schema.DEFAULT_USER_ROLE,
+					input: false,
+				},
+			},
+		},
 		session: {
 			cookieCache: {
 				enabled: true,

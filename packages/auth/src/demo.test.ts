@@ -3,6 +3,7 @@ import {
 	DEMO_ACCOUNT_EMAIL,
 	DEMO_SIGN_IN_AUTH_PATH,
 } from "@hack-the-andes-project/business/demo-account";
+import { DEFAULT_USER_ROLE } from "@hack-the-andes-project/db/schema/auth";
 import { betterAuth } from "better-auth";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
@@ -51,6 +52,7 @@ const user = {
 	email: DEMO_ACCOUNT_EMAIL,
 	emailVerified: true,
 	image: null,
+	role: DEFAULT_USER_ROLE,
 	createdAt,
 	updatedAt: createdAt,
 };
