@@ -307,7 +307,32 @@ app.notFound((c) =>
 );
 
 app.onError((error, c) => {
-	c.get("log").error(error instanceof Error ? error : new Error(String(error)));
+	let queryError = error;
+	while (
+		queryError.name !== "DrizzleQueryError" &&
+		queryError.cause instanceof Error
+	) {
+		queryError = queryError.cause;
+	}
+	if (
+		queryError.name === "DrizzleQueryError" &&
+		"query" in queryError &&
+		typeof queryError.query === "string"
+	) {
+		const driverError = queryError.cause;
+		const driverCode =
+			driverError instanceof Error &&
+			"code" in driverError &&
+			typeof driverError.code === "string"
+				? driverError.code
+				: undefined;
+		c.get("log").set({ database: { query: queryError.query, driverCode } });
+		// evlog reads c.error after onError returns, so it must be sanitized too.
+		c.error = new Error("Database query failed");
+		c.get("log").error(c.error);
+	} else {
+		c.get("log").error(error);
+	}
 	// An exception can bypass the cors() middleware, so re-apply CORS headers or
 	// the browser reports an opaque CORS failure instead of the 500.
 	const origin = c.req.header("Origin");
@@ -316,8 +341,8 @@ app.onError((error, c) => {
 		c.header("Access-Control-Allow-Credentials", "true");
 		c.header("Vary", "Origin");
 	}
-	// The parsed error (driver and SQL text included) stays on the wide event;
-	// the client only gets an id to quote back.
+	// The SQL text and driver code stay on the wide event, never the bound
+	// params; the client only gets an id to quote back.
 	const errorId = c.req.header("cf-ray") ?? crypto.randomUUID();
 	c.get("log").set({ errorId });
 	return c.json(
