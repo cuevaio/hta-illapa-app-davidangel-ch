@@ -1,0 +1,9 @@
+# Context is the repository root: send only what the image needs.
+*
+!services/weather/pyproject.toml
+!services/weather/uv.lock
+!services/weather/.python-version
+!services/weather/README.md
+!services/weather/src/**
+!services/weather/sample/**
+**/__pycache__

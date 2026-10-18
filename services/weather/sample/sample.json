@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "satellite": "GOES-19",
+  "product": "ABI-L2-ACMF",
+  "maskVariable": "Cloud_Probabilities",
+  "irBand": 13,
+  "scanStart": "2026-10-17T23:00:20.7Z",
+  "generatedAt": "2026-10-17T23:19:32Z",
+  "sourceKeys": {
+    "mask": "ABI-L2-ACMF/2026/290/23/OR_ABI-L2-ACMF-M6_G19_s20262902300207_e20262902309516_c20262902310187.nc",
+    "ir": "ABI-L2-CMIPF/2026/290/23/OR_ABI-L2-CMIPF-M6C13_G19_s20262902300207_e20262902309526_c20262902309584.nc"
+  },
+  "image": "sample.png",
+  "width": 1536,
+  "height": 2089,
+  "lonLatBounds": {
+    "west": -83.4,
+    "south": -20.4,
+    "east": -66.6,
+    "north": 2.0
+  },
+  "mercatorBounds": {
+    "minX": -9284045.532159016,
+    "minY": -2320477.1094807833,
+    "maxX": -7413878.086832019,
+    "maxY": 222684.20850554318
+  },
+  "alphaCoverage": 0.778,
+  "meanAlpha": 0.3371,
+  "projectionLongitude": -75.0
+}
