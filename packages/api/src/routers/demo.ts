@@ -1,5 +1,8 @@
 import { isDemoAccountEmail } from "@hack-the-andes-project/business/demo-account";
-import { prepareDemo } from "@hack-the-andes-project/business/demo-seed";
+import {
+	prepareDemo,
+	restartFinishedDemo,
+} from "@hack-the-andes-project/business/demo-seed";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
@@ -15,11 +18,11 @@ export const demoRouter = {
 	prepare: organizationProcedure
 		.input(z.void())
 		.output(demoPrepareOutputSchema)
-		.handler(({ context }) => {
+		.handler(async ({ context }) => {
 			if (!isDemoAccountEmail(context.session.user.email))
 				throw new ORPCError("FORBIDDEN", {
 					message: DEMO_PREPARE_FORBIDDEN_MESSAGE,
 				});
-			return prepareDemo(context);
+			return (await restartFinishedDemo(context)) ?? prepareDemo(context);
 		}),
 };

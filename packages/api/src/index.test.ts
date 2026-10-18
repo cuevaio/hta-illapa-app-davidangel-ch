@@ -803,6 +803,45 @@ describe("shared demo account boundaries", () => {
 		});
 		expect(query).not.toHaveBeenCalled();
 	});
+
+	it("restarts a finished demo instead of returning its stale state", async () => {
+		const restart = vi
+			.spyOn(demoSeeding, "restartFinishedDemo")
+			.mockResolvedValue({ vehicleCount: DEMO_VEHICLES.length, tripCount: 2 });
+		const prepare = vi.spyOn(demoSeeding, "prepareDemo");
+		const client = createRouterClient(appRouter, {
+			context: contextFor(demoSession),
+		});
+		await expect(client.demo.prepare()).resolves.toEqual({
+			vehicleCount: DEMO_VEHICLES.length,
+			tripCount: 2,
+		});
+		expect(restart).toHaveBeenCalledWith(
+			expect.objectContaining({
+				organizationId: session.session.activeOrganizationId,
+			}),
+		);
+		expect(prepare).not.toHaveBeenCalled();
+	});
+
+	it("prepares the demo while its trips are still running", async () => {
+		vi.spyOn(demoSeeding, "restartFinishedDemo").mockResolvedValue(null);
+		const prepare = vi
+			.spyOn(demoSeeding, "prepareDemo")
+			.mockResolvedValue({ vehicleCount: DEMO_VEHICLES.length, tripCount: 2 });
+		const client = createRouterClient(appRouter, {
+			context: contextFor(demoSession),
+		});
+		await expect(client.demo.prepare()).resolves.toEqual({
+			vehicleCount: DEMO_VEHICLES.length,
+			tripCount: 2,
+		});
+		expect(prepare).toHaveBeenCalledWith(
+			expect.objectContaining({
+				organizationId: session.session.activeOrganizationId,
+			}),
+		);
+	});
 });
 
 describe("demo reset orchestration", () => {

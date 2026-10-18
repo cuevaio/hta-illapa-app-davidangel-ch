@@ -6,7 +6,9 @@ Cloudflare Worker scheduled every two minutes (`*/2 * * * *`). Each full run:
 2. Resolves alerts for ended trips and inactive incidents.
 3. Polls each GPS connection, including connections in `error` status so transient failures recover. It imports vehicles, writes newer positions and updates the latest-position checkpoint.
 4. Evaluates active trips against active alertable incidents. It updates ETAs, reroutes off-route vehicles, completes arrivals within 300 m of the requested destination, and creates or refreshes hazard alerts.
-5. Reconciles obsolete alerts again and emits one evlog event with results, then closes its database connection.
+5. Reconciles obsolete alerts again.
+6. Restarts the shared demo (`demo@illapa.app`) once every trip of its organization is completed or cancelled: it wipes the demo fleet and seeds it again, so the trucks leave their depots on fresh hazard and clear trips. Demo connections of other organizations are never touched.
+7. Emits one evlog event with results, then closes its database connection.
 
 Connections and trips run sequentially. A connection can make two provider requests concurrently. Alert writes use batches of 250. Alerts are unique per trip and incident; acknowledgement does not reopen on the next poll. Open and acknowledged alerts resolve once the hazard is passed or no longer active. Alternative-routing failures still save the hazard alert.
 
@@ -46,7 +48,7 @@ Run `pnpm --filter fleet-sync test` and `pnpm --filter fleet-sync check-types`. 
 
 ## Capacity
 
-For a successful full run, budget six fixed SQL statements (three reads, two alert reconciliations, one history cleanup). Each connection adds one status update and up to four statements per 250 vehicles. Each evaluated trip adds three statements plus one per 250 hazards; an arrival needs two. Count these Hyperdrive queries separately from HTTP traffic when sizing a run.
+For a successful full run, budget eight fixed SQL statements (five reads, two alert reconciliations, one history cleanup). Each connection adds one status update and up to four statements per 250 vehicles. Each evaluated trip adds three statements plus one per 250 hazards; an arrival needs two. A run that includes the demo account's connection reads its trips once more; a demo restart then adds seven deletes and a fresh seeding of about 20 statements, with up to 18 OSRM requests. Count these Hyperdrive queries separately from HTTP traffic when sizing a run.
 
 Geotab normally needs four HTTP calls per connection (two Authenticate/Get pairs), up to eight with session retries. Samsara needs one call per page for each of vehicles and GPS stats, capped at 100 pages per collection. A trip makes at most one OSRM call per evaluation. External requests time out after 15 seconds.
 

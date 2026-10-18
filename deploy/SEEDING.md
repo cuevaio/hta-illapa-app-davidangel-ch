@@ -177,7 +177,7 @@ In the dashboard, check for:
 
 ### Before showing the demo
 
-Demo trucks drive at 10× the planned OSRM pace (`DEMO_TIME_ACCELERATION_FACTOR`). The hazard alert resolves as soon as the truck passes the incident. A trip completes at about a tenth of its route duration after it was created, usually within 5–20 minutes. Visiting `/demo` again does not replace a finished trip, because its id is derived from the organization and stays taken. Reset a few minutes before showing the demo, then run fleet-sync or wait up to two minutes for the alert.
+Demo trucks drive at 10× the planned OSRM pace (`DEMO_TIME_ACCELERATION_FACTOR`). The hazard alert resolves as soon as the truck passes the incident. A trip completes at about a tenth of its route duration after it was created, usually within 5–20 minutes. Once every trip of the demo account has finished, the next fleet-sync run (at most two minutes later) or `/demo` visit restarts the demo with fresh trips, so it keeps looping without a manual reset. Use the reset in step 6 only to restart a demo whose trips are still running.
 
 ## What only the old database holds
 

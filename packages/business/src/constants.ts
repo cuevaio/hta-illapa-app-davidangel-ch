@@ -1,3 +1,5 @@
+import type { TripStatus } from "@hack-the-andes-project/db/schema/fleet";
+
 export const HAZARD_BUFFER_M = 500;
 export const LOOKAHEAD_M = 150_000;
 export const OFF_ROUTE_THRESHOLD_M = 1_000;
@@ -26,6 +28,10 @@ export const ROUTING_USER_AGENT = "illapa-fleet/1.0 (+https://illapa.app)";
 export const MIN_ROUTE_COORDINATES_COUNT = 2;
 
 export const DEMO_TRIP_SCENARIOS = ["hazard", "clear"] as const;
+export const FINISHED_TRIP_STATUSES: readonly TripStatus[] = [
+	"completed",
+	"cancelled",
+];
 export const DEMO_HAZARD_MIN_DISTANCE_M = 20_000;
 export const DEMO_HAZARD_MAX_DISTANCE_M = LOOKAHEAD_M;
 export const DEMO_HAZARD_OVERSHOOT_M = 10_000;

@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { DEMO_ACCOUNT_EMAIL } from "@hack-the-andes-project/business/demo-account";
 import {
+	findDemoOrganizationId,
 	type PrepareDemoInput,
 	prepareDemo,
 	wipeDemoFleet,
@@ -27,14 +27,8 @@ export interface ResetDemoInput
 	extends Omit<PrepareDemoInput, "organizationId"> {}
 
 export async function resetDemo(input: ResetDemoInput) {
-	const user = await input.db.query.user.findFirst({
-		where: { email: DEMO_ACCOUNT_EMAIL },
-	});
-	if (!user) return null;
-	const membership = await input.db.query.member.findFirst({
-		where: { userId: user.id, organizationId: user.id },
-	});
-	if (!membership) return null;
-	await wipeDemoFleet(input.db, membership.organizationId);
-	return prepareDemo({ ...input, organizationId: membership.organizationId });
+	const organizationId = await findDemoOrganizationId(input.db);
+	if (!organizationId) return null;
+	await wipeDemoFleet(input.db, organizationId);
+	return prepareDemo({ ...input, organizationId });
 }

@@ -1,9 +1,11 @@
 import {
 	type EvaluateTripResult,
 	evaluateTrip,
+	findDemoOrganizationId,
 	loadAlertableIncidents,
 	pruneVehiclePositions,
 	resolveObsoleteAlerts,
+	restartFinishedDemo,
 	type SyncConnectionResult,
 	syncConnection,
 } from "@hack-the-andes-project/business";
@@ -136,6 +138,20 @@ async function syncAll(
 					? connections[0]?.organizationId
 					: undefined,
 			});
+			const demoOrganizationId = await findDemoOrganizationId(db);
+			if (
+				demoOrganizationId &&
+				connections.some(
+					(connection) => connection.organizationId === demoOrganizationId,
+				)
+			)
+				await restartFinishedDemo({
+					db,
+					organizationId: demoOrganizationId,
+					encryptionKey: ENV.CREDENTIALS_ENCRYPTION_KEY,
+					osrmBaseUrl: ENV.OSRM_BASE_URL,
+					log,
+				});
 			summary.ok =
 				summary.connections.every((result) => result.ok) &&
 				summary.trips.every((result) => result.ok);
