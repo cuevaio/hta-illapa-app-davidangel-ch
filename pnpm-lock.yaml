@@ -129,9 +129,6 @@ catalogs:
     tailwindcss:
       specifier: ^4.3.3
       version: 4.3.3
-    three:
-      specifier: 0.186.1
-      version: 0.186.1
     varlock:
       specifier: 1.18.0
       version: 1.18.0
@@ -141,6 +138,9 @@ catalogs:
     zod:
       specifier: ^4.5.4
       version: 4.6.7
+
+overrides:
+  three: 0.186.1
 
 importers:
 
@@ -845,7 +845,7 @@ importers:
   packages/terrain:
     dependencies:
       three:
-        specifier: 'catalog:'
+        specifier: 0.186.1
         version: 0.186.1
     devDependencies:
       '@hack-the-andes-project/config':
@@ -945,7 +945,7 @@ importers:
         specifier: 'catalog:'
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       three:
-        specifier: 'catalog:'
+        specifier: 0.186.1
         version: 0.186.1
       tw-animate-css:
         specifier: ^1.4.0
@@ -3051,7 +3051,7 @@ packages:
   '@monogrid/gainmap-js@3.4.0':
     resolution: {integrity: sha512-2Z0FATFHaoYJ8b+Y4y4Hgfn3FRFwuU5zRrk+9dFWp4uGAdHGqVEdP7HP+gLA3X469KXHmfupJaUbKo1b/aDKIg==}
     peerDependencies:
-      three: '>= 0.159.0'
+      three: 0.186.1
 
   '@mrleebo/prisma-ast@0.13.1':
     resolution: {integrity: sha512-XyroGQXcHrZdvmrGJvsA9KNeOOgGMg1Vg9OlheUsBOSKznLMDl+YChxbkboRHvtFYJEMRYmlV3uoo/njCw05iw==}
@@ -3418,7 +3418,7 @@ packages:
   '@pmndrs/xr@6.6.32':
     resolution: {integrity: sha512-d5fLwVlRpoZ8tcQNLw7jbiOA1jsboKdjH4+6gYCoT+PVRtTwsoJOwYaeI48i3rz17mLLmZ7pEABC47ZMicO10A==}
     peerDependencies:
-      three: '*'
+      three: 0.186.1
 
   '@prisma/debug@7.2.0':
     resolution: {integrity: sha512-YSGTiSlBAVJPzX4ONZmMotL+ozJwQjRmZweQNIq/ER0tQJKJynNkRB3kyvt37eOfsbMCXk3gnLF6J9OJ4QWftw==}
@@ -3788,7 +3788,7 @@ packages:
       '@react-three/fiber': ^9.0.0
       react: ^19
       react-dom: ^19
-      three: '>=0.159'
+      three: 0.186.1
     peerDependenciesMeta:
       react-dom:
         optional: true
@@ -3803,7 +3803,7 @@ packages:
       react: '>=19 <19.4'
       react-dom: '>=19 <19.4'
       react-native: '>=0.78'
-      three: '>=0.156'
+      three: 0.186.1
     peerDependenciesMeta:
       expo:
         optional: true
@@ -3824,7 +3824,7 @@ packages:
       '@react-three/fiber': '>=8'
       react: '>=18'
       react-dom: '>=18'
-      three: '*'
+      three: 0.186.1
 
   '@redis/bloom@6.3.0':
     resolution: {integrity: sha512-NQ5poYpZr0jv6zazN1cy6JY5kIipKFZ3R9GTL4kOUTX3a9YAfY29U8bsE4lWhVQEM+G4V0BXVC57mubIdDijeA==}
@@ -5412,7 +5412,7 @@ packages:
     resolution: {integrity: sha512-xkxfpG2ECZ6Ww5/9+kf4mfg1VEYAoe9aDSY+IwF0UEs7qEzwy0aVRfs2grImIECs/PoBtWFrh7RXsQkwG922JA==}
     engines: {node: '>=22.0.0', npm: '>=10.5.1'}
     peerDependencies:
-      three: '>=0.126.1'
+      three: 0.186.1
 
   caniuse-lite@1.0.30001816:
     resolution: {integrity: sha512-+8Yx7BXCoqk6IF8yTicjfUR6D/ldJzdlsodlEOiOSPmhK844WIgk67/zIQaGAOxNkZyyvBlrRFnLvqKIoqbAFw==}
@@ -7658,7 +7658,7 @@ packages:
     resolution: {integrity: sha512-tRvbDF0Pgqz+9XUa4jjfgAQ8/aPKmQdWXilFu2tMy4GWj4NOsx99HlULO4IeREfbO3a0sA145DZYyvXPkybm0g==}
     peerDependencies:
       '@types/three': '>=0.134.0'
-      three: '>=0.134.0'
+      three: 0.186.1
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -7722,7 +7722,7 @@ packages:
   meshline@3.3.1:
     resolution: {integrity: sha512-/TQj+JdZkeSUOl5Mk2J7eLcYTLiQm2IDzmlSvYm7ov15anEcDJ92GHqqazxTSreeNgfnYu24kiEvvv0WlbCdFQ==}
     peerDependencies:
-      three: '>=0.137'
+      three: 0.186.1
 
   meshoptimizer@1.1.1:
     resolution: {integrity: sha512-oRFNWJRDA/WTrVj7NWvqa5HqE1t9MYDj2VaWirQCzCCrAd2GHrqR/sQezCxiWATPNlKTcRaPRHPJwIRoPBAp5g==}
@@ -9165,7 +9165,7 @@ packages:
     resolution: {integrity: sha512-g5O9B0hm9CvnM36+v7SFl39T7hmAlv541tU81ME8YeSb3i1CIP5/QdDeSB3A0la0bKNHpxpwxOVRo2wFTYEosQ==}
     peerDependencies:
       '@types/three': '*'
-      three: '*'
+      three: 0.186.1
 
   stats.js@0.17.0:
     resolution: {integrity: sha512-hNKz8phvYLPEcRkeG1rsGmV5ChMjKDAWU7/OJJdDErPBNChQXxCo3WZurGpnWc6gZhAzEPFad1aVgyOANH1sMw==}
@@ -9360,15 +9360,12 @@ packages:
   three-mesh-bvh@0.8.3:
     resolution: {integrity: sha512-4G5lBaF+g2auKX3P0yqx+MJC6oVt6sB5k+CchS6Ob0qvH0YIhuUk1eYr7ktsIpY+albCqE80/FVQGV190PmiAg==}
     peerDependencies:
-      three: '>= 0.159.0'
+      three: 0.186.1
 
   three-stdlib@2.36.1:
     resolution: {integrity: sha512-XyGQrFmNQ5O/IoKm556ftwKsBg11TIb301MB5dWNicziQBEs2g3gtOYIf7pFiLa0zI2gUwhtCjv9fmjnxKZ1Cg==}
     peerDependencies:
-      three: '>=0.128.0'
-
-  three@0.165.0:
-    resolution: {integrity: sha512-cc96IlVYGydeceu0e5xq70H8/yoVT/tXBxV/W8A/U6uOq7DXc4/s1Mkmnu6SqoYGhSRWWYFOhVwvq6V0VtbplA==}
+      three: 0.186.1
 
   three@0.186.1:
     resolution: {integrity: sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==}
@@ -9434,12 +9431,12 @@ packages:
   troika-three-text@0.52.5:
     resolution: {integrity: sha512-Ry3jRhic9pzcY4JduSvRRyDmVOSqEW19gT4vtK+aCiPNVcDlmkxvGG0YbFd36RTDq1wExOupXnvNF/j1oiHHDA==}
     peerDependencies:
-      three: '>=0.125.0'
+      three: 0.186.1
 
   troika-three-utils@0.52.5:
     resolution: {integrity: sha512-WsePbcX8RtfidRfsxK1eCZCjF81ZDzAKHH/evLs0hdV2wpoCb0vArGZHdzdOJrSS3k4zfdtbKDaBh8+phkrYnw==}
     peerDependencies:
-      three: '>=0.125.0'
+      three: 0.186.1
 
   troika-worker-utils@0.52.0:
     resolution: {integrity: sha512-W1CpvTHykaPH5brv5VHLfQo9D1OYuo0cSBEUQFFT/nBUzM8iD6Lq2/tgG/f1OelbAS1WtaTPQzE5uM49egnngw==}
@@ -12760,7 +12757,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       styled-components: 6.6.0(react-dom@19.3.1(react@19.3.1))(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(react@19.3.1)
-      three: 0.165.0
+      three: 0.186.1
     transitivePeerDependencies:
       - '@types/react'
       - css-to-react-native
@@ -12770,7 +12767,7 @@ snapshots:
   '@iwer/sem@0.2.5(iwer@2.6.0)':
     dependencies:
       iwer: 2.6.0
-      three: 0.165.0
+      three: 0.186.1
       ts-proto: 2.15.3
 
   '@jest/schemas@29.6.3':
@@ -20257,8 +20254,6 @@ snapshots:
       fflate: 0.6.11
       potpack: 1.0.2
       three: 0.186.1
-
-  three@0.165.0: {}
 
   three@0.186.1: {}
 

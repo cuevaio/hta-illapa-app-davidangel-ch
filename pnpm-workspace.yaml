@@ -61,3 +61,8 @@ minimumReleaseAgeExclude:
   - '@ai-sdk/typesafe-ai@3.0.21'
   - '@ai-sdk/gateway@4.0.116'
   - ai@7.0.143
+
+# @iwer/devui and @iwer/sem (the local WebXR emulator) pin three ^0.165; two
+# three.js copies in one page break rendering, so every package shares ours.
+overrides:
+  three: 0.186.1
