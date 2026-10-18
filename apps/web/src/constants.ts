@@ -3,6 +3,7 @@ import {
 	MS_PER_HOUR,
 	MS_PER_MINUTE,
 } from "@hack-the-andes-project/business/constants";
+import type { AuthShellLabels } from "@hack-the-andes-project/ui/components/auth-shell";
 import type {
 	Incident,
 	IncidentTimePreset,
@@ -204,19 +205,35 @@ export const SEEN_ALERTS_STORAGE_PREFIX = "illapa-seen-alerts-v1";
 export const TOO_MANY_REQUESTS_STATUS = 429;
 export const CONFLICT_STATUS = 409;
 export const DEMO_START_ROUTE = "/dashboard/revisar-ruta";
-export const DEFAULT_AUTH_ERROR_MESSAGE =
-	"No pudimos completar la solicitud. Inténtalo de nuevo.";
-export const AUTH_ERROR_MESSAGES: Record<string, string> = {
-	INVALID_EMAIL_OR_PASSWORD: "Correo o contraseña incorrectos.",
-	INVALID_EMAIL: "Ingresa un correo válido.",
-	USER_ALREADY_EXISTS: "Ya existe una cuenta con este correo.",
-	USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:
-		"Ya existe una cuenta con este correo.",
-	PASSWORD_TOO_SHORT: `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH_CHARS} caracteres.`,
-	PASSWORD_TOO_LONG: "La contraseña es demasiado larga.",
+export const AUTH_ERROR_MESSAGES: Record<string, () => string> = {
+	INVALID_EMAIL_OR_PASSWORD: m.auth_invalid_credentials,
+	INVALID_EMAIL: m.auth_invalid_email,
+	USER_ALREADY_EXISTS: m.auth_user_already_exists,
+	USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: m.auth_user_already_exists,
+	PASSWORD_TOO_SHORT: () =>
+		m.auth_password_too_short({ minimumLength: MIN_PASSWORD_LENGTH_CHARS }),
+	PASSWORD_TOO_LONG: m.auth_password_too_long,
 };
-export const RATE_LIMITED_AUTH_MESSAGE =
-	"Demasiados intentos. Espera un momento e inténtalo de nuevo.";
+
+export function getAuthShellLabels(): AuthShellLabels {
+	return {
+		headline: m.auth_shell_headline(),
+		tagline: m.auth_shell_tagline(),
+		liveIncidents: {
+			title: m.auth_shell_live_incidents_title(),
+			description: m.auth_shell_live_incidents_description(),
+		},
+		fleetArrival: {
+			title: m.auth_shell_fleet_arrival_title(),
+			description: m.auth_shell_fleet_arrival_description(),
+		},
+		rerouteAlerts: {
+			title: m.auth_shell_reroute_alerts_title(),
+			description: m.auth_shell_reroute_alerts_description(),
+		},
+		sources: m.auth_shell_sources(),
+	};
+}
 
 export const SHOWCASE_RADIUS_SCALE = [
 	{ token: "rounded-xs", size: "4 px", role: m.ds_radius_detail },

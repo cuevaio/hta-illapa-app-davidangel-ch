@@ -21,6 +21,7 @@ import { useEffect, useRef } from "react";
 import {
 	CONFLICT_STATUS,
 	DEMO_START_ROUTE,
+	getAuthShellLabels,
 	TOO_MANY_REQUESTS_STATUS,
 } from "@/constants";
 import { authClient } from "@/lib/auth-client";
@@ -97,7 +98,7 @@ function DemoRoute() {
 		error && "status" in error && error.status === TOO_MANY_REQUESTS_STATUS;
 
 	return (
-		<AuthShell>
+		<AuthShell labels={getAuthShellLabels()}>
 			<div className="flex flex-col gap-6">
 				{signedInEmail ? (
 					<>
