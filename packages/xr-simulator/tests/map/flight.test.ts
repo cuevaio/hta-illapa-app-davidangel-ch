@@ -17,7 +17,6 @@ import {
 	snapTurnStep,
 	topDownView,
 	vrStartPose,
-	vrTiltAxis,
 } from "../../src/map/flight";
 import { snapTurn } from "../../src/xr/placement";
 
@@ -301,16 +300,9 @@ describe("DoubleTap (double press of the grip → back to the start view)", () =
 	});
 });
 
-describe("VR map tilt", () => {
-	it("tilts about the horizontal axis to the right of the heading", () => {
-		const [x, y, z] = vrTiltAxis(Math.PI / 2);
-		expect(x).toBeCloseTo(0);
-		expect(y).toBe(0);
-		expect(z).toBeCloseTo(-1);
-	});
-	it("defaults to a moderate tilt", () => {
-		expect(FLY.vrTiltDeg).toBeGreaterThan(0);
-		expect(FLY.vrTiltDeg).toBeLessThanOrEqual(35);
+describe("VR map flight (S10)", () => {
+	it("keeps the map level: no tilt toward the user", () => {
+		expect(Object.keys(FLY)).not.toContain("vrTiltDeg");
 	});
 });
 

@@ -78,7 +78,7 @@ export class VrPointCard {
 			scene,
 		);
 		this.mesh.isPickable = true;
-		// Always facing the user, whatever the map tilt in flight.
+		// Always facing the user, wherever they fly.
 		this.mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
 		this.ui = AdvancedDynamicTexture.CreateForMesh(
 			this.mesh,

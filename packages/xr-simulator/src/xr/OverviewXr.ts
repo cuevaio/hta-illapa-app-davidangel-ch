@@ -25,7 +25,6 @@ import {
 	gripStickMove,
 	snapTurnStep,
 	type Vec3,
-	vrTiltAxis,
 	ZoomTween,
 	zoomTarget,
 } from "../map/flight";
@@ -118,8 +117,6 @@ export class OverviewXr {
 	private readonly ray = new BabylonRay(Vector3.Zero(), Vector3.Forward());
 	private zoom: ZoomTween | null = null;
 	private readonly gripTap = new DoubleTap();
-	/** World heading the map tilt is applied about (follows every yaw move of the rig); null = untilted. */
-	private tiltHeading: number | null = null;
 	/** Everything the rig moved this frame (stick, zoom, snap turn, clamps). */
 	private frameMove: Rig = IDENTITY_RIG;
 
@@ -178,7 +175,6 @@ export class OverviewXr {
 				this.cardError = null;
 				this.buttons.clear();
 				this.zoom = null;
-				this.tiltHeading = null;
 				this.table = null;
 				this.tableGrab.reset();
 				this.view = "vuelo";
@@ -449,8 +445,7 @@ export class OverviewXr {
 		this.card?.hide();
 		if (this.hintText) this.hintText.text = controlsHint(view);
 		if (view === "maqueta") {
-			// Real scale, untilted, standing at the origin: the map comes to the user, not the reverse.
-			this.setTilt(false);
+			// Real scale, standing at the origin: the map comes to the user, not the reverse.
 			const cam = this.xr.baseExperience.camera;
 			cam.position.set(0, cam.realWorldHeight || 1.6, 0);
 			this.tableSnap = { armed: true };
@@ -546,32 +541,15 @@ export class OverviewXr {
 
 	/**
 	 * Start view (entering VR and grip double press): middle of the map, facing north, above the
-	 * highest relief, with the map tilted toward the user (FLY.vrTiltDeg) about the heading's
-	 * horizontal axis. Only yaw and that tilt are changed, never roll.
+	 * highest relief, the map level (S10). Only yaw is changed, never pitch or roll.
 	 */
 	private toStartView(): void {
 		this.zoom = null;
-		this.setTilt(false);
 		const start = this.host.vrStart();
 		this.card?.hide();
 		this.turn(start.yaw - this.headYaw());
 		this.xr.baseExperience.camera.position.set(...start.position);
-		this.tiltHeading = start.yaw;
-		this.setTilt(true);
 		this.clamp();
-	}
-
-	/** Applies or removes the map tilt (rotation of the rig about the heading's horizontal axis). */
-	private setTilt(on: boolean): void {
-		if (this.tiltHeading === null) return;
-		const angle = (FLY.vrTiltDeg * Math.PI) / 180;
-		const [x, y, z] = vrTiltAxis(this.tiltHeading);
-		const cam = this.xr.baseExperience.camera;
-		cam.rotationQuaternion = Quaternion.RotationAxis(
-			new Vector3(x, y, z),
-			on ? angle : -angle,
-		).multiply(cam.rotationQuaternion);
-		if (!on) this.tiltHeading = null;
 	}
 
 	/** Moves the user's rig (head and controllers): yaw about the vertical, then translation. */
@@ -584,7 +562,6 @@ export class OverviewXr {
 				Vector3.Up(),
 				m.yaw,
 			).multiply(cam.rotationQuaternion);
-			if (this.tiltHeading !== null) this.tiltHeading += m.yaw;
 		}
 		cam.position.set(p[0], p[1], p[2]);
 		this.frameMove = composeRig(this.frameMove, m);
@@ -615,7 +592,6 @@ export class OverviewXr {
 			Vector3.Up(),
 			angle,
 		).multiply(cam.rotationQuaternion);
-		if (this.tiltHeading !== null) this.tiltHeading += angle;
 	}
 
 	private controller(handedness: XRHandedness): WebXRInputSource | undefined {

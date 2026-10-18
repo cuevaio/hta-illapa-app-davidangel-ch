@@ -23,12 +23,6 @@ export const FLY = {
 	peruTopKm: 6.8,
 	/** VR start: eye height above the highest exaggerated relief, km of scene (= metres in the 1:1000 model). */
 	vrStartMargin: 20,
-	/**
-	 * VR map tilt: the rig is pitched down by this angle about the horizontal axis of its
-	 * heading, so the map rises toward the user like a tilted table and looking straight ahead
-	 * already shows (and flies toward) the ground ahead.
-	 */
-	vrTiltDeg: 25,
 } as const;
 
 /** Snap-turn step: 30°, the same as the XR maquette snap turn. */
@@ -360,9 +354,4 @@ export class DoubleTap {
 		this.last = t;
 		return false;
 	}
-}
-
-/** Horizontal axis to the right of a heading (yaw = atan2(x, z)), the VR tilt axis. */
-export function vrTiltAxis(yaw: number): Vec3 {
-	return [Math.cos(yaw), 0, -Math.sin(yaw)];
 }
