@@ -91,6 +91,16 @@ export function childrenOf(tile: TileId): TileId[] {
 	];
 }
 
+export function ancestorAtZoom(tile: TileId, maxZoom: number): TileId {
+	if (tile.z <= maxZoom) return tile;
+	const zoomDifference = tile.z - maxZoom;
+	return {
+		z: maxZoom,
+		x: tile.x >> zoomDifference,
+		y: tile.y >> zoomDifference,
+	};
+}
+
 export function parentOf(tile: TileId): TileId | null {
 	if (tile.z === 0) return null;
 	return { z: tile.z - 1, x: tile.x >> 1, y: tile.y >> 1 };

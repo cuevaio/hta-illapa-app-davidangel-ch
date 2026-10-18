@@ -1,6 +1,7 @@
 const PERU_BOUNDS = { west: -81.4, south: -18.4, east: -68.6, north: 0 };
 
 import { describe, expect, it } from "vitest";
+import { LOD_TILE_BUDGET_COUNT, MAX_IMAGERY_ZOOM_LEVEL } from "../constants";
 import { createLocalFrame, lonLatToLocal } from "./local-frame";
 import {
 	type LodParams,
@@ -96,6 +97,24 @@ describe("selectTiles", () => {
 		const far = display.find((tile) => contains(tile, -80.5, -4));
 		expect(far).toBeDefined();
 		expect(far?.z).toBeLessThan(Number(near?.z) - 3);
+	});
+
+	it("selects z16 and z17 at engineering distances within the working-set budget", () => {
+		const result = selectTiles(
+			params({
+				cameraPosition: cameraAbove(-76.39, -11.84, 2200),
+				maxZoom: MAX_IMAGERY_ZOOM_LEVEL,
+				maxTiles: LOD_TILE_BUDGET_COUNT,
+			}),
+		);
+		expect(result.display.some((tile) => tile.z === 16)).toBe(true);
+		expect(
+			result.display.find((tile) => contains(tile, -76.39, -11.84))?.z,
+		).toBe(17);
+		expect(result.needed.size).toBeLessThanOrEqual(LOD_TILE_BUDGET_COUNT);
+		expect(
+			result.display.every((tile) => tile.z <= MAX_IMAGERY_ZOOM_LEVEL),
+		).toBe(true);
 	});
 
 	it("never exceeds the maximum zoom", () => {

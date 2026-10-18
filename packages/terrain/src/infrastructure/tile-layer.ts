@@ -1,5 +1,6 @@
 import { MAX_TILE_ATTEMPTS_COUNT, TILE_RETRY_DELAY_MS } from "../constants";
 import type { TileRequest } from "../domain/lod";
+import { ancestorAtZoom, parseTileKey, tileKey } from "../domain/tile-math";
 import type { TileId } from "../domain/types";
 import { LruCache } from "./lru-cache";
 import { RequestScheduler } from "./request-scheduler";
@@ -12,6 +13,7 @@ export interface TileLayerOptions<Resource extends Disposable> {
 	load: (tile: TileId, signal: AbortSignal) => Promise<Resource>;
 	/** Resource used after `maxAttempts` failures, so a broken tile never blocks refinement forever. */
 	fallback?: (tile: TileId) => Resource;
+	maxZoom?: number;
 	capacity: number;
 	maxConcurrent: number;
 	maxAttempts?: number;
@@ -57,11 +59,11 @@ export class TileLayer<Resource extends Disposable> {
 	}
 
 	isReady(key: string): boolean {
-		return this.cache.has(key);
+		return this.cache.has(this.sourceKey(key));
 	}
 
 	get(key: string): Resource | undefined {
-		return this.cache.peek(key);
+		return this.cache.peek(this.sourceKey(key));
 	}
 
 	/**
@@ -77,8 +79,28 @@ export class TileLayer<Resource extends Disposable> {
 	 * Requests no longer wanted are cancelled.
 	 */
 	update(requests: readonly TileRequest[], retain: ReadonlySet<string>): void {
+		let sourceRequests = requests;
+		const retainedSourceKeys = new Set(
+			[...retain].map((key) => this.sourceKey(key)),
+		);
+		if (this.options.maxZoom !== undefined) {
+			const deduplicatedRequests = new Map<string, TileRequest>();
+			for (const request of requests) {
+				const tile = ancestorAtZoom(request.tile, this.options.maxZoom);
+				const key = tileKey(tile);
+				const existingRequest = deduplicatedRequests.get(key);
+				if (
+					!existingRequest ||
+					(existingRequest.prefetch && !request.prefetch) ||
+					(Boolean(existingRequest.prefetch) === Boolean(request.prefetch) &&
+						request.priority < existingRequest.priority)
+				)
+					deduplicatedRequests.set(key, { ...request, tile, key });
+			}
+			sourceRequests = [...deduplicatedRequests.values()];
+		}
 		const pinned = new Set<string>();
-		for (const key of retain) {
+		for (const key of retainedSourceKeys) {
 			if (this.cache.get(key) !== undefined) pinned.add(key);
 		}
 
@@ -86,7 +108,7 @@ export class TileLayer<Resource extends Disposable> {
 			const failure = this.failures.get(key);
 			return failure !== undefined && failure.retryAt > this.now();
 		};
-		const missing = requests
+		const missing = sourceRequests
 			.filter(
 				(request) =>
 					!request.prefetch &&
@@ -104,7 +126,7 @@ export class TileLayer<Resource extends Disposable> {
 
 		// Uncached retained tiles still claim their future cache slot.
 		const reserved = new Set([
-			...retain,
+			...retainedSourceKeys,
 			...needed.map((request) => request.key),
 		]).size;
 		const prefetchBudget =
@@ -112,7 +134,7 @@ export class TileLayer<Resource extends Disposable> {
 				? 0
 				: Math.max(0, this.options.capacity - reserved);
 		const prefetch: TileRequest[] = [];
-		const candidates = requests
+		const candidates = sourceRequests
 			.filter((request) => request.prefetch && !pinned.has(request.key))
 			.sort(
 				(firstRequest, secondRequest) =>
@@ -141,6 +163,12 @@ export class TileLayer<Resource extends Disposable> {
 		this.failures.clear();
 		this.pinned = new Set();
 		this.cache.clear();
+	}
+
+	private sourceKey(key: string): string {
+		return this.options.maxZoom === undefined
+			? key
+			: tileKey(ancestorAtZoom(parseTileKey(key), this.options.maxZoom));
 	}
 
 	private async fetch(

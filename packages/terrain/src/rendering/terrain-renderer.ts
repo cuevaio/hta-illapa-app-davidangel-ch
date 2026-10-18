@@ -1,6 +1,7 @@
 import { type BufferGeometry, Group, Mesh, type Vector3 } from "three";
 import { type LocalFrame, mercatorToLocal } from "../domain/local-frame";
 import {
+	ancestorAtZoom,
 	ancestorUvTransform,
 	parentOf,
 	tileBoundsMercator,
@@ -16,7 +17,16 @@ import type { HeightResource, ImageryResource } from "./tile-resources";
 
 interface TileMesh extends Mesh<BufferGeometry, TerrainMaterial> {}
 
-import { GRID_SEGMENTS_COUNT, TRANSITION_MS } from "../constants";
+import {
+	GRID_SEGMENTS_COUNT,
+	MAX_ELEVATION_ZOOM_LEVEL,
+	TRANSITION_MS,
+} from "../constants";
+
+interface SampledImagery {
+	tile: TileId;
+	texture: NonNullable<ImageryResource["texture"]>;
+}
 
 interface ActiveTile {
 	mesh: TileMesh;
@@ -107,9 +117,26 @@ export class TerrainRenderer {
 				1 / height.tile.height,
 			);
 			uniforms.uHeightOffset.value = height.tile.offset;
-			const imagery = textures.imagery(key)?.texture ?? null;
-			uniforms.uImagery.value = imagery;
+			const heightUv = ancestorUvTransform(
+				tile,
+				ancestorAtZoom(tile, MAX_ELEVATION_ZOOM_LEVEL),
+			);
+			uniforms.uHeightUv.value.set(
+				heightUv.offsetU,
+				heightUv.offsetV,
+				heightUv.scale,
+			);
+			const imagery = this.findImagery(tile, textures);
+			uniforms.uImagery.value = imagery?.texture ?? null;
 			uniforms.uHasImagery.value = imagery ? 1 : 0;
+			if (imagery) {
+				const imageryUv = ancestorUvTransform(tile, imagery.tile);
+				uniforms.uImageryUv.value.set(
+					imageryUv.offsetU,
+					imageryUv.offsetV,
+					imageryUv.scale,
+				);
+			}
 			const centerDistanceX =
 				uniforms.uOrigin.value.x + uniforms.uSize.value / 2 - cameraPosition.x;
 			const centerDistanceZ =
@@ -169,6 +196,19 @@ export class TerrainRenderer {
 		this.geometry.dispose();
 	}
 
+	private findImagery(
+		tile: TileId,
+		textures: TileTextures,
+	): SampledImagery | undefined {
+		let ancestor: TileId | null = tile;
+		while (ancestor) {
+			const texture = textures.imagery(tileKey(ancestor))?.texture;
+			if (texture) return { tile: ancestor, texture };
+			ancestor = parentOf(ancestor);
+		}
+		return undefined;
+	}
+
 	private activate(
 		tile: TileId,
 		previous: ReadonlySet<string>,
@@ -199,18 +239,17 @@ export class TerrainRenderer {
 			ancestor = parentOf(ancestor);
 		if (!ancestor) return entry;
 		entry.refining = true;
-		const ancestorKey = tileKey(ancestor);
-		const texture = textures.imagery(ancestorKey)?.texture ?? null;
-		if (texture) {
-			const ancestorUv = ancestorUvTransform(tile, ancestor);
+		const imagery = this.findImagery(ancestor, textures);
+		if (imagery) {
+			const ancestorUv = ancestorUvTransform(tile, imagery.tile);
 			const uniforms = mesh.material.uniforms;
-			uniforms.uParentImagery.value = texture;
+			uniforms.uParentImagery.value = imagery.texture;
 			uniforms.uParentUv.value.set(
 				ancestorUv.offsetU,
 				ancestorUv.offsetV,
 				ancestorUv.scale,
 			);
-			entry.fadeKey = ancestorKey;
+			entry.fadeKey = tileKey(imagery.tile);
 		}
 		return entry;
 	}

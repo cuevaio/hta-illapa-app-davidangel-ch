@@ -1,10 +1,11 @@
 const PERU_BOUNDS = { west: -81.4, south: -18.4, east: -68.6, north: 0 };
 
 import { describe, expect, it, vi } from "vitest";
+import { MAX_ELEVATION_ZOOM_LEVEL } from "../constants";
 import { createLocalFrame, lonLatToLocal } from "../domain/local-frame";
 import type { TileRequest } from "../domain/lod";
 import { type LodParams, selectTiles } from "../domain/lod";
-import { tileKey } from "../domain/tile-math";
+import { childrenOf, tileKey } from "../domain/tile-math";
 import type { TileId } from "../domain/types";
 import { TileLayer } from "./tile-layer";
 
@@ -25,6 +26,43 @@ function resource(name: string) {
 }
 
 describe("TileLayer", () => {
+	it("deduplicates overzoomed elevation requests and retains only their z15 source", async () => {
+		const load = vi.fn(async (tile: TileId) => resource(tileKey(tile)));
+		const layer = new TileLayer({
+			load,
+			maxZoom: MAX_ELEVATION_ZOOM_LEVEL,
+			capacity: 1,
+			maxConcurrent: 4,
+		});
+		const ancestor = { z: 15, x: 9430, y: 17469 };
+		const descendants = childrenOf(ancestor).flatMap((child) => [
+			child,
+			...childrenOf(child),
+		]);
+		const requests = descendants.map((tile) => ({
+			tile,
+			key: tileKey(tile),
+			priority: tile.z,
+		}));
+		const retained = new Set(requests.map((request) => request.key));
+		layer.update(requests, retained);
+		await flush();
+		expect(load).toHaveBeenCalledTimes(1);
+		expect(load.mock.calls[0]?.[0]).toEqual(ancestor);
+		expect(layer.stats.cached).toBe(1);
+		for (const tile of descendants) {
+			expect(layer.isReady(tileKey(tile))).toBe(true);
+			expect(layer.get(tileKey(tile))).toBe(layer.get(tileKey(ancestor)));
+		}
+		layer.update(requests, retained);
+		await flush();
+		expect(load).toHaveBeenCalledTimes(1);
+		layer.update([tileRequest(15, ancestor.x + 1, ancestor.y)], retained);
+		await flush();
+		expect(load).toHaveBeenCalledTimes(1);
+		layer.clear();
+	});
+
 	it("loads requested tiles and reports them ready", async () => {
 		const onLoaded = vi.fn();
 		const layer = new TileLayer({

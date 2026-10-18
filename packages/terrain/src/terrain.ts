@@ -81,6 +81,7 @@ export function createTerrain(options: TerrainOptions): Terrain {
 	const heights = new TileLayer<HeightResource>({
 		load: async (tile, signal) =>
 			resources.createHeight(await loadHeightTile(decoderPool, tile, signal)),
+		maxZoom: ELEVATION_SOURCE.maxZoom,
 		capacity: HEIGHT_CACHE_CAPACITY_COUNT,
 		maxConcurrent: HEIGHT_REQUEST_CONCURRENCY_COUNT,
 		onLoaded: markDirty,
@@ -140,7 +141,7 @@ export function createTerrain(options: TerrainOptions): Terrain {
 					orthographic: cameraView.orthographic,
 					frame,
 					rootZoom: ROOT_ZOOM_LEVEL,
-					maxZoom: ELEVATION_SOURCE.maxZoom,
+					maxZoom: clip ? ELEVATION_SOURCE.maxZoom : IMAGERY_SOURCE.maxZoom,
 					bounds: {
 						west: -HALF_CIRCLE_DEG,
 						east: HALF_CIRCLE_DEG,

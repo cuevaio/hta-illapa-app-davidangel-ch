@@ -46,6 +46,7 @@ const vertexShader = `
 attribute float aSkirt;
 uniform sampler2D uHeight;
 uniform vec2 uHeightTexel;
+uniform vec3 uHeightUv;
 uniform float uHeightOffset;
 uniform vec2 uOrigin;
 uniform float uSize;
@@ -56,7 +57,7 @@ varying vec3 vLocal;
 
 float heightAt(vec2 uv) {
   // Map tile edges onto edge texel centers.
-  vec2 sampleUv = uHeightTexel * 0.5 + clamp(uv, 0.0, 1.0) * (1.0 - uHeightTexel);
+  vec2 sampleUv = uHeightTexel * 0.5 + clamp(uHeightUv.xy + uv * uHeightUv.z, 0.0, 1.0) * (1.0 - uHeightTexel);
   return texture2D(uHeight, sampleUv).r + uHeightOffset;
 }
 
@@ -92,12 +93,14 @@ const fragmentShader = `
 #include <logdepthbuf_pars_fragment>
 uniform sampler2D uHeight;
 uniform sampler2D uImagery;
+uniform vec3 uImageryUv;
 uniform float uHasImagery;
 uniform sampler2D uParentImagery;
 uniform vec3 uParentUv;
 uniform float uParentFade;
 uniform float uMorph;
 uniform vec2 uHeightTexel;
+uniform vec3 uHeightUv;
 uniform float uHeightOffset;
 uniform float uSize;
 uniform vec3 uSunDirection;
@@ -109,7 +112,7 @@ varying vec2 vUv;
 varying vec3 vLocal;
 
 float rawHeight(vec2 uv) {
-  vec2 sampleUv = uHeightTexel * 0.5 + clamp(uv, 0.0, 1.0) * (1.0 - uHeightTexel);
+  vec2 sampleUv = uHeightTexel * 0.5 + clamp(uHeightUv.xy + uv * uHeightUv.z, 0.0, 1.0) * (1.0 - uHeightTexel);
   return texture2D(uHeight, sampleUv).r + uHeightOffset;
 }
 
@@ -118,7 +121,7 @@ void main() {
   #include <logdepthbuf_fragment>
   // Normals follow the geomorph: at morph 0 the differences span two texels,
   // matching the parent's coarser texel spacing.
-  vec2 sampleStep = uHeightTexel * (2.0 - uMorph);
+  vec2 sampleStep = uHeightTexel / uHeightUv.z * (2.0 - uMorph);
   float heightLeft = rawHeight(vUv - vec2(sampleStep.x, 0.0));
   float heightRight = rawHeight(vUv + vec2(sampleStep.x, 0.0));
   float heightNorth = rawHeight(vUv - vec2(0.0, sampleStep.y));
@@ -129,7 +132,7 @@ void main() {
   // Imagery already contains baked shadows; apply gentle relief lighting.
   float lighting = ${IMAGERY_AMBIENT_RATIO} + ${IMAGERY_DIFFUSE_RATIO} * diffuse;
   vec3 color = uFallbackColor * lighting;
-  if (uHasImagery > 0.5) color = texture2D(uImagery, vUv).rgb * lighting;
+  if (uHasImagery > 0.5) color = texture2D(uImagery, uImageryUv.xy + vUv * uImageryUv.z).rgb * lighting;
   if (uParentFade > 0.0) {
     vec3 parentColor = texture2D(uParentImagery, uParentUv.xy + vUv * uParentUv.z).rgb * lighting;
     color = mix(color, parentColor, uParentFade);
@@ -148,6 +151,8 @@ export interface TileUniforms extends SharedTerrainUniforms {
 	uMorph: IUniform<number>;
 	uSegments: IUniform<number>;
 	uHeightTexel: IUniform<Vector2>;
+	uHeightUv: IUniform<Vector3>;
+	uImageryUv: IUniform<Vector3>;
 	uHeightOffset: IUniform<number>;
 	uOrigin: IUniform<Vector2>;
 	uSize: IUniform<number>;
@@ -174,6 +179,8 @@ export class TerrainMaterial extends ShaderMaterial {
 					1 / TERRARIUM_CHANNEL_RANGE_COUNT,
 				),
 			},
+			uHeightUv: { value: new Vector3(0, 0, 1) },
+			uImageryUv: { value: new Vector3(0, 0, 1) },
 			uHeightOffset: { value: 0 },
 			uOrigin: { value: new Vector2() },
 			uSize: { value: 1 },

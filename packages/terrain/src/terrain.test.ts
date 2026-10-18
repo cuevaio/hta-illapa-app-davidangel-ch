@@ -15,9 +15,16 @@ import type { DecodedHeightTile } from "./infrastructure/decode-protocol";
 import { TerrainMaterial } from "./rendering/terrain-material";
 import { createTerrain } from "./terrain";
 
-const { disposedTexture, terminatedWorker } = vi.hoisted(() => ({
+const {
+	disposedTexture,
+	terminatedWorker,
+	requestedHeightZooms,
+	requestedImageryZooms,
+} = vi.hoisted(() => ({
 	disposedTexture: vi.fn(),
 	terminatedWorker: vi.fn(),
+	requestedHeightZooms: new Set<number>(),
+	requestedImageryZooms: new Set<number>(),
 }));
 
 vi.mock("three", async (importOriginal) => {
@@ -44,19 +51,28 @@ vi.mock("./infrastructure/tile-sources", async (importOriginal) => {
 		await importOriginal<typeof import("./infrastructure/tile-sources")>();
 	return {
 		...original,
-		loadHeightTile: async (): Promise<DecodedHeightTile> => ({
-			heights: new Uint16Array(4),
-			offset: 2000,
-			width: 2,
-			height: 2,
-			min: 2000,
-			max: 2000,
-		}),
-		loadImageryTile: async (): Promise<ImageBitmap> => ({
-			width: 2,
-			height: 2,
-			close() {},
-		}),
+		loadHeightTile: async (
+			_pool: unknown,
+			tile: { z: number },
+		): Promise<DecodedHeightTile> => {
+			requestedHeightZooms.add(tile.z);
+			return {
+				heights: new Uint16Array(4),
+				offset: 2000,
+				width: 2,
+				height: 2,
+				min: 2000,
+				max: 2000,
+			};
+		},
+		loadImageryTile: async (tile: { z: number }): Promise<ImageBitmap> => {
+			requestedImageryZooms.add(tile.z);
+			return {
+				width: 2,
+				height: 2,
+				close() {},
+			};
+		},
 	};
 });
 
@@ -68,6 +84,8 @@ beforeEach(() => {
 			terminate = terminatedWorker;
 		},
 	);
+	requestedHeightZooms.clear();
+	requestedImageryZooms.clear();
 	disposedTexture.mockClear();
 	terminatedWorker.mockClear();
 });
@@ -154,4 +172,32 @@ it("streams, picks and disposes through the public API under a tabletop transfor
 	expect(terrain.group.children).toHaveLength(0);
 	expect(terrain.heightAt({ x: 0, z: 0 })).toBeNull();
 	expect(terrain.pick(worldRay)).toBeNull();
+});
+
+it("refines engineering views to real z17 imagery while retaining z15 elevation", async () => {
+	const now = vi.spyOn(performance, "now").mockReturnValue(0);
+	const terrain = createTerrain({
+		renderer: new WebGLRenderer(),
+		origin: { lat: -11.84, lng: -76.39 },
+	});
+	const camera = new PerspectiveCamera(50, 1, 1, 10_000);
+	camera.position.set(0, 2200, 200);
+	camera.lookAt(0, 2000, 0);
+	for (let frameIndex = 0; frameIndex < 60; frameIndex++) {
+		now.mockReturnValue(frameIndex * LOD_MIN_INTERVAL_MS);
+		terrain.update(camera);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+	try {
+		expect(requestedImageryZooms.has(16)).toBe(true);
+		expect(requestedImageryZooms.has(17)).toBe(true);
+		expect(Math.max(...requestedImageryZooms)).toBe(17);
+		expect(Math.max(...requestedHeightZooms)).toBe(15);
+		expect(terrain.heightAt({ x: 0, z: 0 })).toBe(2000);
+		expect(
+			terrain.pick(new Ray(new Vector3(0, 2500, 0), new Vector3(0, -1, 0)))?.y,
+		).toBeCloseTo(2000);
+	} finally {
+		terrain.dispose();
+	}
 });
