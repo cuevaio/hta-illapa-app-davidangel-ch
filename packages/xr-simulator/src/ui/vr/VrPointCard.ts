@@ -18,6 +18,8 @@ export interface VrPointCardActions {
 	setView(view: VrView): void;
 	/** Weather buttons (S8): "wx:<layer>" toggles, "wx:prev" / "wx:next" step the forecast time. */
 	weather?(id: string): void;
+	/** A button of the viewer's other simulators (S5), by mode id. */
+	openEntry?(id: string): void;
 }
 
 const CARD_W = 0.46;
@@ -27,6 +29,8 @@ const PX_PER_M = TEX_W / CARD_W;
 const TEX_H = 680;
 /** Extra height of the weather section (toggles, time step, values, attribution). */
 const WEATHER_TEX_H = 470;
+/** Extra height of the row of the viewer's other simulators. */
+const ENTRIES_TEX_H = 112;
 /** VR card icons of the weather toggles (in the order of the panel). */
 const WEATHER_ICONS: Record<string, IconName> = {
 	"wx:clouds": "cloud",
@@ -64,13 +68,20 @@ export class VrPointCard {
 	private readonly wxValues: TextBlock | null = null;
 	private readonly wxCredit: TextBlock | null = null;
 
-	/** `weather`: adds the weather section (S8); without it the card is exactly as before. */
+	/**
+	 * `weather`: adds the weather section (S8); `entries`: a row opening the viewer's other
+	 * simulators (S5). Without them the card is exactly as before.
+	 */
 	constructor(
 		scene: Scene,
 		private readonly actions: VrPointCardActions,
 		weather = false,
+		entries: CardAction[] = [],
 	) {
-		const texH = TEX_H + (weather ? WEATHER_TEX_H : 0);
+		const texH =
+			TEX_H +
+			(weather ? WEATHER_TEX_H : 0) +
+			(entries.length ? ENTRIES_TEX_H : 0);
 		this.mesh = MeshBuilder.CreatePlane(
 			"peru-vr-card",
 			{
@@ -107,6 +118,7 @@ export class VrPointCard {
 				{ id: "cancel", icon: "close", text: "Cancelar" },
 			]),
 		);
+		if (entries.length) root.addControl(this.row(entries));
 		root.addControl(this.label("Vista del mapa", 28, MUTED));
 		root.addControl(
 			this.row([
@@ -171,6 +183,7 @@ export class VrPointCard {
 		this.sync("simulate", false, !c.simulate);
 		this.sync("cancel", false, !c.cancel);
 		for (const v of c.views) this.sync(v.id, v.active, false);
+		for (const e of c.entries) this.sync(e.id, false, !e.enabled);
 		const w = c.weather;
 		if (!w || !this.wxValues) return;
 		for (const t of w.toggles) this.sync(t.id, t.active, t.disabled);
@@ -256,6 +269,8 @@ export class VrPointCard {
 			if (!b.isEnabled) return;
 			if (it.id === "simulate") this.actions.simulate();
 			else if (it.id === "cancel") this.actions.cancel();
+			else if (it.id.startsWith("mode:"))
+				this.actions.openEntry?.(it.id.slice("mode:".length));
 			else this.actions.setView(it.id as VrView);
 		});
 		this.buttons.set(it.id, { b, img, text, icon: it.icon, src: "" });

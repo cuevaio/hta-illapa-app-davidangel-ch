@@ -33,6 +33,7 @@ export function createTestProps(): StructureSceneProps {
 			placeTable: "Colocar maqueta",
 			undo: "Deshacer",
 			exitXr: "Salir de AR",
+			backToMap: "Volver al mapa del Perú",
 		},
 		onCreateStructure: vi.fn(),
 		onStructureChange: vi.fn(),

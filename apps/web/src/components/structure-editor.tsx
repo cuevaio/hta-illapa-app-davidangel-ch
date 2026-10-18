@@ -555,6 +555,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 								placeTable: labels.xrPlace,
 								undo: labels.undo,
 								exitXr: labels.xrExit,
+								backToMap: m.engineering_backToMap(),
 							},
 							onCreateStructure: (placed) => {
 								const kind = placed.template.kind;

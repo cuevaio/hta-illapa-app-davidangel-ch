@@ -3,6 +3,7 @@ import type {
 	ImageryMode,
 	ImagerySource,
 	ModeHost,
+	ModeXr,
 	SimulatorMode,
 	SiteTerrain,
 } from "@hack-the-andes-project/xr-simulator/viewer";
@@ -50,9 +51,17 @@ export class StructuresMode implements SimulatorMode {
 
 	async start() {}
 
+	/** From the screen, or from the VR map card: then the maquette takes the shared session (S5). */
 	async open() {
-		this.build();
-		this.host.showMode(this.id);
+		const resources = this.build();
+		if (!this.host.vr.inMap()) {
+			this.host.showMode(this.id);
+			return;
+		}
+		const modeXr = this.modeXr(resources, await resources.xr);
+		if (!modeXr) throw new Error(this.options.props().labels.terrainError);
+		if (!(await this.host.vr.enterFromMap(this.id, modeXr)))
+			this.host.showMode(this.id);
 	}
 
 	show() {
@@ -148,6 +157,7 @@ export class StructuresMode implements SimulatorMode {
 			runtime.clearPointer(),
 		);
 		const latest = () => this.options.props();
+		let resources: StructuresScene;
 		const xr = createStructureXr({
 			scene,
 			terrain,
@@ -164,18 +174,19 @@ export class StructuresMode implements SimulatorMode {
 				undo: props.labels.undo,
 				exit: props.labels.exitXr,
 				error: props.labels.terrainError,
+				backToMap: props.labels.backToMap,
 			},
 			webgpu: this.host.webgpu,
-			join: (member) =>
-				this.host.vr.started(
-					{
-						member,
-						enter: () => xr.then((controller) => controller.enter()),
-						pause: () => runtime.content.setEnabled(false),
-						resume: () => runtime.content.setEnabled(true),
-					},
-					"immersive-ar",
-				),
+			join: async () => {
+				const modeXr = this.modeXr(resources, await xr);
+				if (modeXr) await this.host.vr.started(modeXr, "immersive-ar");
+			},
+			mapReachable: () => this.host.vr.mapReachable(),
+			onBackToMap: () =>
+				void xr.then((controller) => {
+					const modeXr = this.modeXr(resources, controller);
+					if (modeXr) return this.host.vr.backToMap(modeXr);
+				}),
 			onUndo: () => latest().onUndo(),
 			onSupportChange: (supported) => {
 				if (!this.disposed) latest().onXrSupportChange(supported);
@@ -191,7 +202,7 @@ export class StructuresMode implements SimulatorMode {
 					runtime.labels.setStatus(latest().labels.terrainError);
 			},
 		});
-		const resources: StructuresScene = {
+		resources = {
 			scene,
 			terrain,
 			runtime,
@@ -201,6 +212,20 @@ export class StructuresMode implements SimulatorMode {
 		this.resources = resources;
 		this.loadTerrain(resources);
 		return resources;
+	}
+
+	private modeXr(
+		resources: StructuresScene,
+		controller: StructureXrController,
+	): ModeXr | null {
+		const member = controller.member;
+		if (!member) return null;
+		return {
+			member,
+			enter: (mode) => controller.enter(mode, false),
+			pause: () => resources.runtime.content.setEnabled(false),
+			resume: () => resources.runtime.content.setEnabled(true),
+		};
 	}
 
 	private loadTerrain(resources: StructuresScene) {

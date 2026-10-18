@@ -36,6 +36,15 @@ export interface ModeVr {
 	takeFromMap(modeId: string, xr: ModeXr): Promise<void>;
 	/** "Volver al mapa del Perú" in the mode's VR panel. */
 	backToMap(xr: ModeXr): Promise<void>;
+	/**
+	 * The VR map card opened the mode (S5): it takes the map's session, staying in VR. False when
+	 * no VR map is shown (the web flow then applies).
+	 */
+	enterFromMap(modeId: string, xr: ModeXr): Promise<boolean>;
+	/** The Peru map owns a running VR session (the card's actions come from inside the headset). */
+	inMap(): boolean;
+	/** "Volver al mapa del Perú" is possible from the mode's VR panel now. */
+	mapReachable(): boolean;
 }
 
 /** What the viewer shell shares with its simulator modes. */

@@ -58,6 +58,8 @@ export interface PointCardContent {
 	simulate: boolean;
 	cancel: boolean;
 	actions: CardAction[];
+	/** The viewer's other simulators (S5), opened at their own origin: "mode:<id>". */
+	entries: (CardAction & { enabled: boolean })[];
 	views: (CardAction & { active: boolean })[];
 	/** Weather section (S8), null without a weather client. */
 	weather: WeatherCardContent | null;
@@ -98,19 +100,35 @@ export function weatherCardContent(s: {
 	};
 }
 
+/** Card buttons of the viewer's other simulators: "mode:<id>". */
+export function entryActions(
+	entries: { id: string; label: string }[],
+): CardAction[] {
+	return entries.map((entry) => ({
+		id: `mode:${entry.id}`,
+		icon: "maquette",
+		text: entry.label,
+	}));
+}
+
 export function pointCardContent(s: {
 	picked: { lon: number; lat: number; height: number | null } | null;
 	busy: boolean;
 	error: string | null;
 	view: VrView;
 	weather?: WeatherCardContent | null;
+	entries?: { id: string; label: string }[];
+	/** Label of the simulator being opened from the card, while busy. */
+	opening?: string | null;
 }): PointCardContent {
 	return {
 		visible: s.picked !== null,
 		title: "Punto marcado",
 		coords: s.picked ? pointLabel(s.picked) : "",
 		status: s.busy
-			? "Descargando el terreno real de la zona (z11)…"
+			? s.opening
+				? `Abriendo ${s.opening}…`
+				: "Descargando el terreno real de la zona (z11)…"
 			: s.error
 				? `No se pudo preparar la simulación: ${s.error}`
 				: null,
@@ -120,6 +138,10 @@ export function pointCardContent(s: {
 			{ id: "simulate", icon: "play", text: "Simular aquí" },
 			{ id: "cancel", icon: "close", text: "Cancelar" },
 		],
+		entries: entryActions(s.entries ?? []).map((entry) => ({
+			...entry,
+			enabled: !s.busy,
+		})),
 		views: [
 			{ id: "vuelo", icon: "fly", text: "Vuelo", active: s.view === "vuelo" },
 			{

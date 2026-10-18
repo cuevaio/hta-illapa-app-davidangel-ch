@@ -33,7 +33,7 @@ import {
 	type Rig,
 	yawAbout,
 } from "../map/rig";
-import { pointCardContent } from "../ui/sections";
+import { entryActions, pointCardContent } from "../ui/sections";
 import { VrPointCard } from "../ui/vr/VrPointCard";
 import {
 	type GrabHand,
@@ -89,6 +89,8 @@ export class OverviewXr {
 	private cardShown = "";
 	private cardBusy = false;
 	private cardError: string | null = null;
+	/** Label of the simulator being opened from the card (S5); null for "Simular aquí". */
+	private cardOpening: string | null = null;
 	/** Maquette: table pose (XR metres) and the grip manipulation. */
 	private table: MaquettePose | null = null;
 	private readonly tableGrab = new TableGrab();
@@ -129,8 +131,10 @@ export class OverviewXr {
 						cancel: () => this.closeCard(true),
 						setView: (view) => this.link.dispatch({ type: "set-view", view }),
 						weather: (id) => this.host.weatherAction(id),
+						openEntry: (id) => this.openEntryFromCard(id),
 					},
 					this.host.weatherCard() !== null,
+					entryActions(this.host.entries()),
 				);
 				// Eye buffer height (WebGL layer); the LOD measures its screen-space error in it.
 				const layer = xr.baseExperience.sessionManager.session?.renderState
@@ -455,6 +459,21 @@ export class OverviewXr {
 		});
 	}
 
+	/** Another simulator from the card (S5): it opens at its own origin and takes the session. */
+	private openEntryFromCard(id: string): void {
+		if (this.cardBusy) return;
+		this.cardBusy = true;
+		this.cardError = null;
+		this.cardOpening =
+			this.host.entries().find((entry) => entry.id === id)?.label ?? null;
+		void this.host.openEntry(id).then((error) => {
+			this.cardBusy = false;
+			this.cardOpening = null;
+			this.cardError = error;
+			if (!error) this.card?.hide();
+		});
+	}
+
 	private syncCard(): void {
 		const card = this.card;
 		if (!card?.visible) return;
@@ -469,6 +488,8 @@ export class OverviewXr {
 			error: this.cardError,
 			view: this.view,
 			weather: this.host.weatherCard(),
+			entries: this.host.entries(),
+			opening: this.cardOpening,
 		});
 		const key = JSON.stringify(c);
 		if (key === this.cardShown) return;

@@ -142,6 +142,7 @@ export interface StructureSceneLabels {
 	placeTable: string;
 	undo: string;
 	exitXr: string;
+	backToMap: string;
 }
 
 export interface StructureSceneProps {

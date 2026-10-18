@@ -159,6 +159,10 @@ export interface FlightHost {
 	picked(): PickedPoint | null;
 	/** "Cancelar" on the VR card: forgets the marked point. */
 	clearPick(): void;
+	/** The viewer's other simulators, offered on the VR card too (S5). */
+	entries(): { id: string; label: string }[];
+	/** Opens one of them at its own origin; resolves with the error text, or null on success. */
+	openEntry(id: string): Promise<string | null>;
 	/** Runs the web "Simular aquí" flow on the marked point; resolves with the error text, or null on success. */
 	simulatePicked(): Promise<string | null>;
 	/**
@@ -230,6 +234,10 @@ export class PeruOverview implements FlightHost {
 	private readonly flyPad: HTMLElement;
 	private readonly vrBtn: HTMLButtonElement;
 	private readonly entryBtns: HTMLButtonElement[] = [];
+	private readonly entryOpeners = new Map<
+		string,
+		{ label: string; open: () => Promise<void> }
+	>();
 	private readonly lodInfo: HTMLElement;
 	private readonly imageryToggle: ImageryToggle;
 	private readonly weatherPanel: WeatherPanel | null = null;
@@ -596,7 +604,8 @@ export class PeruOverview implements FlightHost {
 	}
 
 	/** Another simulator of the viewer (src/viewer/SimulatorMode.ts), opened from the map at its own origin. */
-	addEntry(label: string, open: () => Promise<void>): void {
+	addEntry(id: string, label: string, open: () => Promise<void>): void {
+		this.entryOpeners.set(id, { label, open });
 		const button = document.createElement("button");
 		button.type = "button";
 		button.className = "peru-entry";
@@ -729,6 +738,21 @@ export class PeruOverview implements FlightHost {
 		this.pickInfo.textContent = "";
 		this.placeMarker();
 		this.syncDom();
+	}
+
+	entries(): { id: string; label: string }[] {
+		return [...this.entryOpeners].map(([id, { label }]) => ({ id, label }));
+	}
+
+	async openEntry(id: string): Promise<string | null> {
+		const entry = this.entryOpeners.get(id);
+		if (!entry) return `Simulador desconocido: ${id}`;
+		try {
+			await entry.open();
+			return null;
+		} catch (err) {
+			return err instanceof Error ? err.message : String(err);
+		}
 	}
 
 	simulatePicked(): Promise<string | null> {

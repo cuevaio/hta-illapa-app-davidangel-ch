@@ -78,6 +78,9 @@ export interface ModeXr {
 export interface ModeVr {
 	started(xr: ModeXr, mode: XRSessionMode): Promise<void>;
 	backToMap(xr: ModeXr): Promise<void>;
+	enterFromMap(modeId: string, xr: ModeXr): Promise<boolean>;
+	inMap(): boolean;
+	mapReachable(): boolean;
 }
 
 export interface ModeHost {

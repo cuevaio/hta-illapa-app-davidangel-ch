@@ -74,6 +74,53 @@ describe('pointCardContent (VR "Simular aquí" card)', () => {
 	});
 });
 
+describe("pointCardContent: the viewer's other simulators (S5)", () => {
+	const entries = [{ id: "structures", label: "Simulador de estructuras" }];
+
+	it("adds one button per other simulator, opening it at its own origin", () => {
+		const c = pointCardContent({
+			picked: P,
+			busy: false,
+			error: null,
+			view: "vuelo",
+			entries,
+		});
+		expect(c.entries).toEqual([
+			{
+				id: "mode:structures",
+				icon: "maquette",
+				text: "Simulador de estructuras",
+				enabled: true,
+			},
+		]);
+		expect(c.actions.map((a) => a.text)).toEqual(["Simular aquí", "Cancelar"]);
+	});
+
+	it("keeps the huayco-only card without other simulators", () => {
+		expect(
+			pointCardContent({ picked: P, busy: false, error: null, view: "vuelo" })
+				.entries,
+		).toEqual([]);
+	});
+
+	it("disables every action while a simulator opens and names it in the status", () => {
+		const c = pointCardContent({
+			picked: P,
+			busy: true,
+			error: null,
+			view: "vuelo",
+			entries,
+			opening: "Simulador de estructuras",
+		});
+		expect(c).toMatchObject({
+			simulate: false,
+			cancel: false,
+			status: "Abriendo Simulador de estructuras…",
+		});
+		expect(c.entries.map((e) => e.enabled)).toEqual([false]);
+	});
+});
+
 describe("panelFooter (simulator VR panel)", () => {
 	it('keeps "Salir de VR" and adds "Volver al mapa del Perú" only when the map is reachable', () => {
 		expect(panelFooter({ backToMap: false }).map((a) => a.text)).toEqual([

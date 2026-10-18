@@ -220,7 +220,7 @@ export class XrViewer {
 		}
 		for (const mode of modes)
 			if (mode.entryLabel)
-				overview.addEntry(mode.entryLabel, () => mode.open(null));
+				overview.addEntry(mode.id, mode.entryLabel, () => mode.open(null));
 		// XR renders through XRGPUBinding with WebGPU, or through WebGL; otherwise no button at all.
 		const xrRenderable = !this.webgpu || !caps.xrNeedsWebGLRenderer;
 		if (xrRenderable && caps.showVrButton)
@@ -309,6 +309,24 @@ export class XrViewer {
 			},
 			takeFromMap: (modeId, xr) => this.vrToMode(modeId, xr),
 			backToMap: (xr) => this.vrBackToMap(xr),
+			enterFromMap: async (modeId, xr) => {
+				if (this.vr.phase !== "map") return false;
+				this.vrDispatch({ type: "simulate" });
+				try {
+					await this.vrToMode(modeId, xr);
+					this.vrDispatch({ type: "simulated" });
+					return true;
+				} catch (err) {
+					this.vrDispatch({
+						type: "failed",
+						message: err instanceof Error ? err.message : String(err),
+					});
+					throw err;
+				}
+			},
+			inMap: () => this.vr.phase === "map",
+			mapReachable: () =>
+				canReturnToMap(this.vr, this.overview?.available ?? false),
 		};
 		return {
 			engine,
