@@ -32,6 +32,7 @@ import {
 	ROUTE_REVIEW_INELIGIBLE_LINE_OPACITY_RATIO,
 } from "./map-constants";
 import {
+	AttributionControl,
 	Layer,
 	type MapRef,
 	MapView,
@@ -252,6 +253,7 @@ function RouteReviewMapCanvas({
 		<MapView
 			ref={mapRef}
 			cooperativeGestures
+			attributionControl={false}
 			onLoad={(event) => {
 				const container = event.target.getContainer();
 				setViewportSize({
@@ -284,6 +286,7 @@ function RouteReviewMapCanvas({
 			cursor={hover ? "pointer" : undefined}
 		>
 			<NavigationControl position="top-right" />
+			<AttributionControl position="top-right" compact />
 			{colors["--foreground"] ? (
 				<>
 					{layers.map(({ source, routes }) => (
@@ -452,13 +455,13 @@ export function RouteReviewMap(props: RouteReviewMapProps) {
 					{props.labels.calculating}
 				</div>
 			) : null}
-			<div className="absolute inset-x-3 bottom-3 hidden xl:block">
+			<div className="absolute inset-x-3 bottom-3 z-10 hidden xl:block">
 				<RouteReviewLegend
 					horizonLabel={props.labels.horizon(props.horizon)}
 					labels={props.labels}
 				/>
 			</div>
-			<div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 xl:hidden">
+			<div className="absolute inset-x-3 bottom-3 z-10 flex items-end justify-between gap-2 xl:hidden">
 				<div className="flex flex-col gap-2">
 					{legendOpen ? (
 						<RouteReviewLegend
