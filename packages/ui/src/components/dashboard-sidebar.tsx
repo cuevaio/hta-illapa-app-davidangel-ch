@@ -45,6 +45,9 @@ export interface DashboardSidebarProps {
 	expandLabel: string;
 	collapseLabel: string;
 	preferencesLabel: string;
+	groupLabel?: string;
+	tagline?: string;
+	navigationLabel?: string;
 }
 
 export function DashboardSidebar({
@@ -55,6 +58,9 @@ export function DashboardSidebar({
 	expandLabel,
 	collapseLabel,
 	preferencesLabel,
+	groupLabel = "Centro de operaciones · Perú",
+	tagline = "Clima, vías y flota en un solo lugar.",
+	navigationLabel = "Navegación principal",
 }: DashboardSidebarProps) {
 	const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
 	const collapsed = state === "collapsed" && !isMobile;
@@ -130,10 +136,10 @@ export function DashboardSidebar({
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarGroupLabel className="type-label!">
-						Centro de operaciones · Perú
+						{groupLabel}
 					</SidebarGroupLabel>
 					<SidebarGroupContent>
-						<nav aria-label="Navegación principal">
+						<nav aria-label={navigationLabel}>
 							<SidebarMenu>
 								{items.map((item) => (
 									<SidebarMenuItem key={item.id}>
@@ -188,7 +194,7 @@ export function DashboardSidebar({
 			<SidebarSeparator />
 			<SidebarFooter className="gap-3 p-2">
 				<p className="type-label text-muted-foreground group-data-[collapsible=icon]:hidden">
-					Clima, vías y flota en un solo lugar.
+					{tagline}
 				</p>
 				{account(collapsed)}
 			</SidebarFooter>

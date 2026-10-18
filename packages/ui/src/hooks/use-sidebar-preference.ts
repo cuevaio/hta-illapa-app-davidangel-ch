@@ -17,7 +17,10 @@ interface SidebarPreference {
 const useSidebarLayoutEffect =
 	typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-export function useSidebarPreference(storageKey: string): SidebarPreference {
+export function useSidebarPreference(
+	storageKey: string,
+	defaultOpen?: boolean,
+): SidebarPreference {
 	const [viewportExpanded, setViewportExpanded] = useState(true);
 	const [preference, setPreference] = useState<SidebarPreferenceState>({
 		storageKey,
@@ -72,6 +75,7 @@ export function useSidebarPreference(storageKey: string): SidebarPreference {
 	return {
 		open:
 			(preference.storageKey === storageKey ? preference.choice : null) ??
+			defaultOpen ??
 			viewportExpanded,
 		setOpen,
 	};

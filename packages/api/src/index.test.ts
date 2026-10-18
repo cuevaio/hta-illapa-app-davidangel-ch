@@ -17,6 +17,7 @@ import * as riskRoutes from "@hack-the-andes-project/business/risk/compare-route
 import * as routeReviewEvaluation from "@hack-the-andes-project/business/route-review/evaluate";
 import { ROUTE_REVIEW_PLACES } from "@hack-the-andes-project/business/route-review/places";
 import * as routing from "@hack-the-andes-project/business/routing/osrm";
+import { DEFAULT_USER_ROLE } from "@hack-the-andes-project/db/schema/auth";
 import type { vehicle } from "@hack-the-andes-project/db/schema/fleet";
 import { call, createRouterClient } from "@orpc/server";
 import { createRequestLogger } from "evlog";
@@ -82,6 +83,7 @@ const session = {
 		name: "Fleet Owner",
 		email: "owner@example.com",
 		emailVerified: true,
+		role: DEFAULT_USER_ROLE,
 		createdAt,
 		updatedAt: createdAt,
 	},

@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { DEFAULT_USER_ROLE } from "@hack-the-andes-project/db/schema/auth";
 import {
 	afterAll,
 	afterEach,
@@ -52,6 +53,7 @@ describe("organization database hooks", () => {
 		email: "owner@example.com",
 		emailVerified: false,
 		image: null,
+		role: DEFAULT_USER_ROLE,
 		createdAt,
 		updatedAt: createdAt,
 	};

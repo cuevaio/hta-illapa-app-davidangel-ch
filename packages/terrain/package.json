@@ -1,0 +1,22 @@
+{
+	"name": "@hack-the-andes-project/terrain",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./*": "./src/*.ts"
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"three": "catalog:"
+	},
+	"devDependencies": {
+		"@hack-the-andes-project/config": "workspace:*",
+		"@types/three": "catalog:",
+		"typescript": "^6.0.3",
+		"vitest": "catalog:"
+	}
+}

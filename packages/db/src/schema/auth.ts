@@ -18,6 +18,10 @@ import {
 	TIMESTAMP_PRECISION_DIGITS,
 } from "./constants";
 
+export const USER_ROLES = ["fleet", "engineer"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+export const DEFAULT_USER_ROLE: UserRole = "fleet";
+
 // No FOREIGN KEY constraints: the database is shared with other projects, so
 // relationships live in drizzle relations only and join columns get indexes.
 export const user = mysqlTable("user", {
@@ -26,6 +30,10 @@ export const user = mysqlTable("user", {
 	email: varchar("email", { length: 255 }).notNull().unique(),
 	emailVerified: boolean("email_verified").default(false).notNull(),
 	image: text("image"),
+	role: varchar("role", { length: STATUS_LENGTH_CHARS })
+		.$type<UserRole>()
+		.default(DEFAULT_USER_ROLE)
+		.notNull(),
 	createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { fsp: 3 })
 		.defaultNow()
