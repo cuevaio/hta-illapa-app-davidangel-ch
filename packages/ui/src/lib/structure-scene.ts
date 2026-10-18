@@ -5,6 +5,7 @@ import type {
 	StructureStatus,
 	TunnelSectionShape,
 } from "@hack-the-andes-project/business/structures/catalog";
+import type { CorridorLandmark } from "@hack-the-andes-project/business/structures/landmarks";
 import type { GeoPoint } from "@hack-the-andes-project/terrain/types";
 import type { XRStore } from "@react-three/xr";
 import type { Incident } from "./incident";
@@ -85,9 +86,38 @@ export type PlacementTool =
 	| { kind: Exclude<StructureKind, "entity"> }
 	| { primitive: StructurePrimitiveKind };
 
-export interface SceneFocusRequest {
+export type SceneCameraRequest =
+	| { kind: "focus_structure"; structureId: string; requestId: number }
+	| {
+			kind: "frame_exposure";
+			structureId: string;
+			radiusM: number;
+			requestId: number;
+	  }
+	| { kind: "focus_point"; point: GeoPoint; requestId: number }
+	| { kind: "overview"; requestId: number }
+	| { kind: "north_up"; requestId: number };
+
+export type PrimitiveTarget = "selection" | "new_entity";
+
+export type TransformMode = "translate" | "rotate" | "scale";
+
+export interface SceneCursor {
+	point: GeoPoint;
+	elevationM: number;
+	slopePercent: number;
+}
+
+export interface SceneInsets {
+	topPx: number;
+	rightPx: number;
+	bottomPx: number;
+	leftPx: number;
+}
+
+export interface SceneExposureRing {
 	structureId: string;
-	requestId: number;
+	radiusM: number;
 }
 
 export interface SceneIncidentMarker {
@@ -100,11 +130,18 @@ export interface SceneIncidentMarker {
 export type TerrainStatus = "loading" | "ready" | "error";
 
 export interface StructureSceneLabels {
-	placementHint: string;
-	cancelPlacement: string;
+	canvas: string;
+	outsideTerrain: string;
+	span: string;
+	heightDifference: string;
+	length: string;
+	slope: string;
+	abutment: string;
+	portal: string;
+	point: string;
+	placeTable: string;
 	undo: string;
 	exitXr: string;
-	terrainAttribution: string;
 }
 
 export interface StructureSceneProps {
@@ -112,16 +149,23 @@ export interface StructureSceneProps {
 	structures: SceneStructure[];
 	selectedStructureId: string | null;
 	selectedElementId: string | null;
+	hoveredStructureId: string | null;
 	placementTool: PlacementTool | null;
-	focusRequest: SceneFocusRequest | null;
+	primitiveTarget: PrimitiveTarget;
+	transformMode: TransformMode;
+	cameraRequest: SceneCameraRequest | null;
+	exposureRing: SceneExposureRing | null;
 	incidentMarkers: SceneIncidentMarker[];
+	landmarks: CorridorLandmark[];
+	insets: SceneInsets;
+	locale: string;
 	xrStore: XRStore;
 	labels: StructureSceneLabels;
 	onCreateStructure: (placed: PlacedStructure) => void;
 	onStructureChange: (structure: SceneStructure) => void;
 	onSelectStructure: (structureId: string | null) => void;
 	onSelectElement: (elementId: string | null) => void;
-	onCancelPlacement: () => void;
+	onCursorChange: (cursor: SceneCursor | null) => void;
 	onUndo: () => void;
 	onTerrainStatusChange: (status: TerrainStatus) => void;
 	className?: string;
