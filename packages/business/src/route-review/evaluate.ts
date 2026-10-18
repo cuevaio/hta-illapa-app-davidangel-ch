@@ -107,6 +107,8 @@ export async function evaluateRouteReview({
 	log,
 	fetchImpl,
 }: EvaluateRouteReviewInput): Promise<AssembledRouteReview> {
+	const startedAt = performance.now();
+	const elapsedMs = () => Math.round(performance.now() - startedAt);
 	const bounds = routingBounds(origin, destination);
 	const [{ edges, nodes }, routingAssessments, incidentRows, altRoutes] =
 		await Promise.all([
@@ -161,6 +163,7 @@ export async function evaluateRouteReview({
 				.from(poi)
 				.where(and(eq(poi.active, true), eq(poi.kind, "alt_route"))),
 		]);
+	const loadedMs = elapsedMs();
 
 	const incidents = incidentRows.map(
 		({ occurredAt, sourceUpdatedAt, firstSeenAt, ...row }) => ({
@@ -268,8 +271,10 @@ export async function evaluateRouteReview({
 					]
 				: [],
 	);
+	const routedMs = elapsedMs();
 
 	const routedDetours = await routingDetours;
+	const detoursRoutedMs = elapsedMs();
 	const detourFailures = routedDetours.flatMap((result) =>
 		result.status === "rejected" ? [String(result.reason)] : [],
 	);
@@ -319,20 +324,29 @@ export async function evaluateRouteReview({
 		}),
 	);
 
-	log.set({
-		routeReview: {
-			illapaRoutes: illapaRoutes.length,
-			sutranDetours: detours.length,
-			sutranDetourFailures: detourFailures,
-			blockedEdges: blockedEdgeIds.size,
-		},
-	});
-
-	return assembleRouteReview({
+	const review = assembleRouteReview({
 		routes: [...illapaRoutes, ...sutranRoutes],
 		assessments: [...routingAssessments, ...detourAssessments],
 		incidents,
 		departureAt,
 		now,
 	});
+
+	log.set({
+		routeReview: {
+			illapaRoutes: illapaRoutes.length,
+			sutranDetours: detours.length,
+			sutranDetourFailures: detourFailures,
+			blockedEdges: blockedEdgeIds.size,
+			// Milliseconds from the start at which each step ended. The detours
+			// are routed while the closures and the other paths are worked out.
+			timingsMs: {
+				loaded: loadedMs,
+				routed: routedMs,
+				detoursRouted: detoursRoutedMs,
+				assembled: elapsedMs(),
+			},
+		},
+	});
+	return review;
 }
