@@ -171,3 +171,14 @@ export interface StructureSceneProps {
 	onTerrainStatusChange: (status: TerrainStatus) => void;
 	className?: string;
 }
+
+export interface SceneXrRequest {
+	requestId: number;
+}
+
+export interface BabylonStructureSceneProps
+	extends Omit<StructureSceneProps, "xrStore"> {
+	xrRequest: SceneXrRequest | null;
+	onXrSupportChange: (supported: boolean) => void;
+	onXrSessionChange: (active: boolean) => void;
+}
