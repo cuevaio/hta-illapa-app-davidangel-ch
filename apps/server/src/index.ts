@@ -30,8 +30,11 @@ import { cors } from "hono/cors";
 import {
 	AUTH_PREFIX,
 	CORS_PREFLIGHT_MAX_AGE_S,
+	DEMO_REQUEST_RATE_LIMIT_MAX_REQUESTS,
+	DEMO_REQUEST_RATE_LIMIT_WINDOW_MS,
 	HTTP_STATUS_FORBIDDEN,
 	HTTP_STATUS_PAYLOAD_TOO_LARGE,
+	HTTP_STATUS_TOO_MANY_REQUESTS,
 	MAX_REQUEST_BODY_BYTES,
 	PUBLIC_PATHS,
 	RPC_PREFIX,
@@ -75,6 +78,13 @@ interface Variables {
 }
 
 const app = new Hono<{ Variables: Variables }>();
+
+interface DemoRequestWindow {
+	count: number;
+	expiresAt: number;
+}
+
+const demoRequestWindows = new Map<string | undefined, DemoRequestWindow>();
 
 // Hono's executionCtx getter throws when there is no ExecutionContext
 // (Node test runs); degrade to letting the promise float.
@@ -135,6 +145,28 @@ app.use(
 			),
 	}),
 );
+
+app.post(DEMO_REQUESTS_PATH, async (context, next) => {
+	const now = Date.now();
+	for (const [clientIp, window] of demoRequestWindows) {
+		if (window.expiresAt <= now) demoRequestWindows.delete(clientIp);
+	}
+	const clientIp = context.req.header(ENV.CLIENT_IP_HEADER);
+	let window = demoRequestWindows.get(clientIp);
+	if (!window) {
+		window = { count: 0, expiresAt: now + DEMO_REQUEST_RATE_LIMIT_WINDOW_MS };
+		demoRequestWindows.set(clientIp, window);
+	}
+	if (window.count >= DEMO_REQUEST_RATE_LIMIT_MAX_REQUESTS) {
+		context.get("log").set({ demoRequest: { throttled: true } });
+		return context.json(
+			{ error: "too_many_demo_requests" },
+			HTTP_STATUS_TOO_MANY_REQUESTS,
+		);
+	}
+	window.count += 1;
+	return next();
+});
 
 // Global auth guard: every route requires a session unless it is listed in
 // PUBLIC_PATHS, lives under /api/auth/*, or is a PUBLIC_PROCEDURE_PATHS
