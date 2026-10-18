@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { compareRouteCandidates, peakRiskAssessment } from "./ranking";
+import {
+	compareRouteCandidates,
+	peakRiskAssessment,
+	tripWindowRiskAssessment,
+} from "./ranking";
 
 function candidate(
 	name: string,
@@ -48,5 +52,36 @@ describe("compareRouteCandidates", () => {
 			"risky",
 			"ineligible-safe",
 		]);
+	});
+});
+
+describe("tripWindowRiskAssessment", () => {
+	const risk = [
+		{ horizon: "now" as const, level: "moderate" as const, score: 34 },
+		{ horizon: "24h" as const, level: "moderate" as const, score: 44 },
+		{ horizon: "72h" as const, level: "critical" as const, score: 79 },
+	];
+	const evaluatedAt = new Date("2026-10-18T11:00:00Z");
+
+	it("reads the horizon that covers the trip's arrival, not a later storm", () => {
+		expect(
+			tripWindowRiskAssessment(
+				risk,
+				new Date("2026-10-18T11:15:00Z"),
+				5.5 * 60 * 60,
+				evaluatedAt,
+			),
+		).toMatchObject({ horizon: "24h", score: 44 });
+	});
+
+	it("reads the longest horizon for a trip arriving days later", () => {
+		expect(
+			tripWindowRiskAssessment(
+				risk,
+				new Date("2026-10-20T10:00:00Z"),
+				5.5 * 60 * 60,
+				evaluatedAt,
+			),
+		).toMatchObject({ horizon: "72h", score: 79 });
 	});
 });

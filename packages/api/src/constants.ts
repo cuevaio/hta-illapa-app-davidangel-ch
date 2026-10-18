@@ -27,24 +27,20 @@ export const DEMO_HAZARD_ROUTE_NOT_FOUND_MESSAGE =
 	"No encontramos un incidente activo en carretera cerca de este camión. Prueba con otro camión o marca el destino en el mapa.";
 export const DEMO_CLEAR_ROUTE_NOT_FOUND_MESSAGE =
 	"No encontramos una ruta sin incidentes cerca de este camión. Prueba con otro camión o marca el destino en el mapa.";
-export const TRIP_NOT_FOUND_MESSAGE = "No encontramos ese viaje.";
 export const TRIP_NOT_ACTIVE_MESSAGE =
 	"Solo se pueden cancelar o completar viajes activos.";
 export const SAME_ORIGIN_AND_DESTINATION_MESSAGE =
 	"Elige un destino distinto del origen.";
-export const VEHICLE_NOT_FOUND_MESSAGE = "No encontramos ese vehículo.";
-export const VEHICLE_PROFILE_REQUIRED_MESSAGE =
-	"Indica el tipo de vehículo y sus ejes antes de revisar la ruta.";
-export const ROUTE_REVIEW_NOT_FOUND_MESSAGE =
-	"Esta revisión ya no está disponible. Vuelve a revisar la ruta.";
-export const ROUTE_CANDIDATE_NOT_FOUND_MESSAGE =
-	"Esa ruta ya no está entre las alternativas de la revisión.";
-export const TRIP_NOT_PLANNED_MESSAGE =
-	"Solo se pueden iniciar viajes planificados.";
-export const VEHICLE_GPS_REQUIRED_MESSAGE =
-	"Solo puedes iniciar viajes de vehículos conectados por GPS.";
-export const VEHICLE_TRIP_ALREADY_ACTIVE_MESSAGE =
-	"Este vehículo ya tiene un viaje en curso. Complétalo o cancélalo antes de iniciar otro.";
+export {
+	ROUTE_CANDIDATE_NOT_FOUND_MESSAGE,
+	ROUTE_REVIEW_NOT_FOUND_MESSAGE,
+	TRIP_NOT_FOUND_MESSAGE,
+	TRIP_NOT_PLANNED_MESSAGE,
+	VEHICLE_GPS_REQUIRED_MESSAGE,
+	VEHICLE_NOT_FOUND_MESSAGE,
+	VEHICLE_PROFILE_REQUIRED_MESSAGE,
+	VEHICLE_TRIP_ALREADY_ACTIVE_MESSAGE,
+} from "@hack-the-andes-project/business/fleet/constants";
 export const ALERT_NOT_FOUND_MESSAGE = "No encontramos esa alerta.";
 export const ALERT_NOT_OPEN_MESSAGE =
 	"Solo se pueden confirmar alertas abiertas.";
@@ -62,15 +58,6 @@ export const MIN_LONGITUDE_DEG = -180;
 export const MAX_LONGITUDE_DEG = 180;
 export const INVALID_BOUNDING_BOX_MESSAGE =
 	"Bounding box must have west <= east and south <= north.";
-
-export const GEOJSON_TYPE_PROPERTY = "type";
-export const GEOJSON_POINT = "Point";
-export const GEOJSON_MULTI_POINT = "MultiPoint";
-export const GEOJSON_LINE_STRING = "LineString";
-export const GEOJSON_MULTI_LINE_STRING = "MultiLineString";
-export const GEOJSON_POLYGON = "Polygon";
-export const GEOJSON_MULTI_POLYGON = "MultiPolygon";
-export const GEOJSON_GEOMETRY_COLLECTION = "GeometryCollection";
 
 // Procedures reachable without a session. The server's global auth guard lets
 // these through, and the web batch link keeps them out of batches so a public

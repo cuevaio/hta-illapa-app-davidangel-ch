@@ -3,6 +3,7 @@ import {
 	boolean,
 	double,
 	index,
+	int,
 	json,
 	text,
 	timestamp,
@@ -31,7 +32,12 @@ export type GpsProvider = (typeof GPS_PROVIDERS)[number];
 export const CONNECTION_STATUSES = ["active", "error"] as const;
 export type ConnectionStatus = (typeof CONNECTION_STATUSES)[number];
 
-export const TRIP_STATUSES = ["active", "completed", "cancelled"] as const;
+export const TRIP_STATUSES = [
+	"planned",
+	"active",
+	"completed",
+	"cancelled",
+] as const;
 export type TripStatus = (typeof TRIP_STATUSES)[number];
 
 export const ALERT_STATUSES = ["open", "acknowledged", "resolved"] as const;
@@ -84,10 +90,11 @@ export const vehicle = mysqlTable(
 		organizationId: varchar("organization_id", {
 			length: ID_LENGTH_CHARS,
 		}).notNull(),
-		connectionId: varchar("connection_id", {
-			length: ID_LENGTH_CHARS,
-		}).notNull(),
-		externalId: varchar("external_id", { length: TEXT_LENGTH_CHARS }).notNull(),
+		connectionId: varchar("connection_id", { length: ID_LENGTH_CHARS }),
+		externalId: varchar("external_id", { length: TEXT_LENGTH_CHARS }),
+		vehicleTypeId: varchar("vehicle_type_id", { length: TEXT_LENGTH_CHARS }),
+		axleCount: int("axle_count"),
+		grossWeightKg: double("gross_weight_kg"),
 		name: varchar("name", { length: TEXT_LENGTH_CHARS }).notNull(),
 		plate: varchar("plate", { length: VEHICLE_PLATE_LENGTH_CHARS }),
 		lastLat: double("last_lat"),
@@ -137,6 +144,34 @@ export const vehiclePosition = mysqlTable(
 	],
 );
 
+export const routeReview = mysqlTable(
+	"route_review",
+	{
+		id: varchar("id", { length: ID_LENGTH_CHARS }).primaryKey(),
+		organizationId: varchar("organization_id", {
+			length: ID_LENGTH_CHARS,
+		}).notNull(),
+		vehicleId: varchar("vehicle_id", { length: ID_LENGTH_CHARS }).notNull(),
+		originPlaceId: varchar("origin_place_id", {
+			length: TEXT_LENGTH_CHARS,
+		}).notNull(),
+		destinationPlaceId: varchar("destination_place_id", {
+			length: TEXT_LENGTH_CHARS,
+		}).notNull(),
+		departureAt: timestamp("departure_at", {
+			fsp: TIMESTAMP_PRECISION_DIGITS,
+		}).notNull(),
+		review: json("review").$type<unknown>().notNull(),
+		evaluatedAt: timestamp("evaluated_at", {
+			fsp: TIMESTAMP_PRECISION_DIGITS,
+		}).notNull(),
+		createdAt: timestamp("created_at", { fsp: TIMESTAMP_PRECISION_DIGITS })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [index("routeReview_organizationId_idx").on(table.organizationId)],
+);
+
 export const trip = mysqlTable(
 	"trip",
 	{
@@ -145,6 +180,17 @@ export const trip = mysqlTable(
 			length: ID_LENGTH_CHARS,
 		}).notNull(),
 		vehicleId: varchar("vehicle_id", { length: ID_LENGTH_CHARS }).notNull(),
+		reviewId: varchar("review_id", { length: ID_LENGTH_CHARS }),
+		chosenCandidate: json("chosen_candidate").$type<unknown>(),
+		chosenCandidateId: varchar("chosen_candidate_id", {
+			length: TEXT_LENGTH_CHARS,
+		}),
+		originPlaceId: varchar("origin_place_id", { length: TEXT_LENGTH_CHARS }),
+		destinationPlaceId: varchar("destination_place_id", {
+			length: TEXT_LENGTH_CHARS,
+		}),
+		departureAt: timestamp("departure_at", { fsp: TIMESTAMP_PRECISION_DIGITS }),
+		startedAt: timestamp("started_at", { fsp: TIMESTAMP_PRECISION_DIGITS }),
 		name: varchar("name", { length: TEXT_LENGTH_CHARS }).notNull(),
 		originLat: double("origin_lat").notNull(),
 		originLng: double("origin_lng").notNull(),

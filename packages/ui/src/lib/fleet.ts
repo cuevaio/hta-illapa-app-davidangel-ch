@@ -45,7 +45,7 @@ export interface FleetTrip {
 	routeGeometry: LineString;
 	routeDistanceM: number;
 	routeDurationS: number;
-	status: "active" | "completed" | "cancelled";
+	status: "planned" | "active" | "completed" | "cancelled";
 	etaAt: Date | null;
 	openAlertCount: number;
 }

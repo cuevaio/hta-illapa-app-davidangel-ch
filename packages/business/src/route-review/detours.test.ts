@@ -23,11 +23,15 @@ describe("parseMaxAxleCount", () => {
 		).toBe(5);
 	});
 
-	it("returns null without a numeric limit", () => {
-		expect(parseMaxAxleCount(null)).toBeNull();
+	it("reads a double-axle truck limit as two axles", () => {
 		expect(
 			parseMaxAxleCount("Vehiculos permitidos: hasta camiones doble eje"),
-		).toBeNull();
+		).toBe(2);
+	});
+
+	it("returns null without a limit", () => {
+		expect(parseMaxAxleCount(null)).toBeNull();
+		expect(parseMaxAxleCount("Transitabilidad de vehículos")).toBeNull();
 	});
 });
 

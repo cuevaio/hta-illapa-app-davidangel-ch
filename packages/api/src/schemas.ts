@@ -1,4 +1,8 @@
 import {
+	geometrySchema as businessGeometrySchema,
+	lineStringSchema,
+} from "@hack-the-andes-project/business/geojson-schemas";
+import {
 	ID_LENGTH_CHARS,
 	TEXT_LENGTH_CHARS,
 } from "@hack-the-andes-project/db/schema/constants";
@@ -17,14 +21,6 @@ import type { Geometry } from "geojson";
 import { z } from "zod";
 
 import {
-	GEOJSON_GEOMETRY_COLLECTION,
-	GEOJSON_LINE_STRING,
-	GEOJSON_MULTI_LINE_STRING,
-	GEOJSON_MULTI_POINT,
-	GEOJSON_MULTI_POLYGON,
-	GEOJSON_POINT,
-	GEOJSON_POLYGON,
-	GEOJSON_TYPE_PROPERTY,
 	INVALID_BOUNDING_BOX_MESSAGE,
 	MAX_LATITUDE_DEG,
 	MAX_LONGITUDE_DEG,
@@ -32,6 +28,9 @@ import {
 	MIN_LATITUDE_DEG,
 	MIN_LONGITUDE_DEG,
 } from "./constants";
+
+export const geometrySchema: z.ZodType<Geometry> = businessGeometrySchema;
+export { lineStringSchema };
 
 const latitudeSchema = z.number().min(MIN_LATITUDE_DEG).max(MAX_LATITUDE_DEG);
 const longitudeSchema = z
@@ -68,58 +67,6 @@ export const boundingBoxSchema = z
 		{ message: INVALID_BOUNDING_BOX_MESSAGE },
 	);
 
-const positionSchema = z.array(z.number());
-const geometryBaseSchema = z.object({
-	bbox: z
-		.union([
-			z.tuple([z.number(), z.number(), z.number(), z.number()]),
-			z.tuple([
-				z.number(),
-				z.number(),
-				z.number(),
-				z.number(),
-				z.number(),
-				z.number(),
-			]),
-		])
-		.optional(),
-});
-
-export const lineStringSchema = geometryBaseSchema.extend({
-	type: z.literal(GEOJSON_LINE_STRING),
-	coordinates: z.array(positionSchema),
-});
-
-export const geometrySchema: z.ZodType<Geometry> = z.lazy(() =>
-	z.discriminatedUnion(GEOJSON_TYPE_PROPERTY, [
-		geometryBaseSchema.extend({
-			type: z.literal(GEOJSON_POINT),
-			coordinates: positionSchema,
-		}),
-		geometryBaseSchema.extend({
-			type: z.literal(GEOJSON_MULTI_POINT),
-			coordinates: z.array(positionSchema),
-		}),
-		lineStringSchema,
-		geometryBaseSchema.extend({
-			type: z.literal(GEOJSON_MULTI_LINE_STRING),
-			coordinates: z.array(z.array(positionSchema)),
-		}),
-		geometryBaseSchema.extend({
-			type: z.literal(GEOJSON_POLYGON),
-			coordinates: z.array(z.array(positionSchema)),
-		}),
-		geometryBaseSchema.extend({
-			type: z.literal(GEOJSON_MULTI_POLYGON),
-			coordinates: z.array(z.array(z.array(positionSchema))),
-		}),
-		geometryBaseSchema.extend({
-			type: z.literal(GEOJSON_GEOMETRY_COLLECTION),
-			geometries: z.array(geometrySchema),
-		}),
-	]),
-);
-
 export const connectionSummarySchema = z.object({
 	id: z.string(),
 	provider: z.enum(GPS_PROVIDERS),
@@ -147,8 +94,8 @@ export const tripStatusSchema = z.object({
 export const vehicleSummarySchema = z.object({
 	id: z.string(),
 	organizationId: z.string(),
-	connectionId: z.string(),
-	externalId: z.string(),
+	connectionId: z.string().nullable(),
+	externalId: z.string().nullable(),
 	name: z.string(),
 	plate: z.string().nullable(),
 	lastLat: latitudeSchema.nullable(),

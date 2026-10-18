@@ -40,7 +40,9 @@ export function RouteReviewHorizonToggle({
 							{labels.horizon(horizon)}
 						</TooltipTrigger>
 						<TooltipContent>
-							{horizon === "now" ? labels.horizon(horizon) : labels.horizonHelp}
+							{horizon === "now"
+								? labels.horizon(horizon)
+								: labels.horizonHelp(horizon)}
 						</TooltipContent>
 					</Tooltip>
 				))}

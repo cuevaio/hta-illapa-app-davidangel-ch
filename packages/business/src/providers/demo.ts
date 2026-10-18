@@ -5,6 +5,7 @@ import type { LineString } from "geojson";
 import { z } from "zod";
 
 import { KMH_TO_MPS, MS_PER_SECOND } from "../constants";
+import { VEHICLE_TYPES } from "../route-review/vehicle-types";
 import {
 	DEMO_HEADING_LOOKAHEAD_M,
 	DEMO_TIME_ACCELERATION_FACTOR,
@@ -27,7 +28,7 @@ export interface DemoTrip {
 }
 
 export interface DemoFleetVehicle {
-	externalId: string;
+	externalId: string | null;
 	lastLat: number | null;
 	lastLng: number | null;
 	activeTrip: DemoTrip | null;
@@ -39,6 +40,7 @@ export function simulateDemoPositions(
 ): ProviderPosition[] {
 	return fleet.flatMap(
 		({ externalId, lastLat, lastLng, activeTrip }): ProviderPosition[] => {
+			if (externalId === null) return [];
 			if (!activeTrip) {
 				const parkedAt =
 					lastLat !== null && lastLng !== null
@@ -114,7 +116,10 @@ export const demoProvider: GpsProvider<DemoCredentials> = {
 	credentialsSchema: demoCredentialsSchema,
 	async validateCredentials() {},
 	async listVehicles() {
-		return DEMO_VEHICLES.map(({ externalId, name, plate }) => ({
+		return DEMO_VEHICLES.map(({ externalId, name, plate, vehicleTypeId }) => ({
+			vehicleTypeId,
+			axleCount: VEHICLE_TYPES[vehicleTypeId].axleCount,
+			grossWeightKg: VEHICLE_TYPES[vehicleTypeId].grossWeightKg,
 			externalId,
 			name,
 			plate,

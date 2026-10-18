@@ -2,7 +2,7 @@ import { TRIP_NOT_FOUND_MESSAGE } from "@hack-the-andes-project/api/constants";
 import type { PlannedTrip } from "@hack-the-andes-project/api/route-review-schemas";
 import { MS_PER_MINUTE } from "@hack-the-andes-project/business/constants";
 import { ROUTE_REVIEW_PLACES } from "@hack-the-andes-project/business/route-review/places";
-import { peakRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
+import { tripWindowRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
 import type { RouteRiskHorizon } from "@hack-the-andes-project/business/route-review/risk";
 import {
 	Alert,
@@ -41,7 +41,7 @@ import { getRouteReviewLabels } from "@/lib/route-review-labels";
 import {
 	invalidateRouteReviewQueries,
 	routeReviewClient,
-	routeReviewQueries,
+	useRouteReviewQueries,
 } from "@/lib/route-review-queries";
 import { m } from "@/paraglide/messages";
 
@@ -50,6 +50,7 @@ export const Route = createFileRoute("/_auth/dashboard/fleet_/viajes/$tripId")({
 	remountDeps: ({ params }) => params.tripId,
 });
 function PlannedTripPage() {
+	const routeReviewQueries = useRouteReviewQueries();
 	const { tripId } = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -89,9 +90,19 @@ function PlannedTripPage() {
 		mutationFn: () => routeReviewClient.trips.reevaluate({ id: tripId }),
 		onSuccess: async (updated) => {
 			const before = trip
-				? peakRiskAssessment(trip.chosenCandidate.risk)
+				? tripWindowRiskAssessment(
+						trip.chosenCandidate.risk,
+						trip.departureAt,
+						trip.chosenCandidate.durationS,
+						trip.lastEvaluatedAt,
+					)
 				: undefined;
-			const after = peakRiskAssessment(updated.chosenCandidate.risk);
+			const after = tripWindowRiskAssessment(
+				updated.chosenCandidate.risk,
+				updated.departureAt,
+				updated.chosenCandidate.durationS,
+				updated.lastEvaluatedAt,
+			);
 			const recommended = updated.review.candidates.find(
 				(candidate) => candidate.id === updated.review.recommendedCandidateId,
 			);
