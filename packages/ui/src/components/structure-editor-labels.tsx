@@ -1,5 +1,6 @@
 export interface StructureEditorLabels {
 	title: string;
+	structures: string;
 	autosave: string;
 	saving: string;
 	notSaved: string;

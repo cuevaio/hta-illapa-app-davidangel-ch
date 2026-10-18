@@ -65,7 +65,7 @@ function EngineeringLayout() {
 			<DashboardSidebar
 				items={[
 					{
-						id: "structures",
+						id: "simulators",
 						label: m.engineering_title(),
 						icon: StructureEditorNavigationIcon,
 						link: <Link to="/ingenieria" />,

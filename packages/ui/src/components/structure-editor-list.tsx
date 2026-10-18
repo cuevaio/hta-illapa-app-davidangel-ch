@@ -31,10 +31,10 @@ export function StructureEditorList({
 	onRetry,
 }: StructureEditorListProps) {
 	return (
-		<section className="flex min-h-0 flex-1 flex-col" aria-label={labels.title}>
+		<section className="flex min-h-0 flex-1 flex-col" aria-label={labels.structures}>
 			<Separator />
 			<h2 className="type-label p-3">
-				{labels.title} · {structures.length}
+				{labels.structures} · {structures.length}
 			</h2>
 			<div
 				className="min-h-0 flex-1 overflow-y-auto p-2 pt-0"

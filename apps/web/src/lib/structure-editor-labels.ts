@@ -3,6 +3,7 @@ import { m } from "../paraglide/messages";
 export function structureEditorLabels() {
 	return {
 		title: m.engineering_title(),
+		structures: m.engineering_structures(),
 		autosave: m.engineering_autosave(),
 		saving: m.engineering_saving(),
 		notSaved: m.engineering_notSaved(),
