@@ -26,7 +26,7 @@
 	"route_review_rule": "Rule",
 	"route_review_valid": "Valid",
 	"route_review_risk": "Risk",
-	"route_review_horizon_help": "What is expected over the next 24 hours",
+	"route_review_horizon_help": "What is expected over the next {window}",
 	"route_review_view_map": "View on map ↑",
 	"route_review_map_label": "Candidate routes map",
 	"route_review_legend": "Legend",
