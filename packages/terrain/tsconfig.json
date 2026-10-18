@@ -1,0 +1,9 @@
+{
+	"extends": "@hack-the-andes-project/config/tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"types": []
+	},
+	"include": ["src/**/*.ts"]
+}

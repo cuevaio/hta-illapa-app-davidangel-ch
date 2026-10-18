@@ -50,6 +50,11 @@ catalog:
   ai: ^7.0.143
   "@ai-sdk/typesafe-ai": ^3.0.21
   aws4fetch: ^1.0.20
+  three: 0.186.1
+  "@types/three": 0.186.0
+  "@react-three/fiber": 9.8.1
+  "@react-three/drei": 10.7.9
+  "@react-three/xr": 6.6.31
 minimumReleaseAgeExclude:
   - '@ai-sdk/provider-utils@5.0.62'
   - '@ai-sdk/provider@4.0.29'
