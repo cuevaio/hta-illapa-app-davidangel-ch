@@ -1,7 +1,6 @@
 import type {
 	Structure,
-	StructureFields,
-	StructureUpdateInput,
+	StructureInput,
 } from "@hack-the-andes-project/api/structure-schemas";
 
 import { ISO_DATE_PATTERN } from "@/fixtures/route-review/constants";
@@ -58,19 +57,22 @@ export const structureFixtureClient = {
 		list: () => respond(() => structures),
 		get: ({ id }: { id: string }) =>
 			respond(() => structures[findStructureIndex(id)]),
-		create: (fields: StructureFields) =>
+		create: (input: StructureInput) =>
 			respond(() => {
+				const existing = structures.find(
+					(structure) => structure.id === input.id,
+				);
+				if (existing) return existing;
 				const now = new Date();
 				const structure: Structure = {
-					...fields,
-					id: crypto.randomUUID(),
+					...input,
 					createdAt: now,
 					updatedAt: now,
 				};
 				structures.push(structure);
 				return structure;
 			}),
-		update: ({ id, ...fields }: StructureUpdateInput) =>
+		update: ({ id, ...fields }: StructureInput) =>
 			respond(() => {
 				const index = findStructureIndex(id);
 				const structure: Structure = {

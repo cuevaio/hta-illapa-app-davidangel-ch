@@ -124,7 +124,8 @@ export const structureSchema = structureFieldsSchema.extend({
 	updatedAt: z.date(),
 });
 
-export const structureUpdateInputSchema = structureFieldsSchema.extend({
+// The client mints the id so a retried or restored create is idempotent.
+export const structureInputSchema = structureFieldsSchema.extend({
 	id: fleetIdSchema,
 });
 
@@ -145,5 +146,4 @@ export interface StructureElement
 export interface StructureFields
 	extends z.infer<typeof structureFieldsSchema> {}
 export interface Structure extends z.infer<typeof structureSchema> {}
-export interface StructureUpdateInput
-	extends z.infer<typeof structureUpdateInputSchema> {}
+export interface StructureInput extends z.infer<typeof structureInputSchema> {}
