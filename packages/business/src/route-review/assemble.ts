@@ -29,7 +29,6 @@ import {
 } from "../risk/constants";
 import { strongestOfficialAlert } from "../risk/exposure";
 import { scoreCurrentRisk } from "../risk/score";
-import { compareRouteCandidates } from "./ranking";
 import {
 	type RouteRecommendationDecision,
 	recommendRoute,
@@ -627,9 +626,13 @@ export function assembleRouteReview({
 			: recommendable
 		).map(({ id }) => id),
 	);
-	const [recommended] = candidates
+	const [recommended] = drafts
 		.filter(({ id }) => recommendableIds.has(id))
-		.toSorted(compareRouteCandidates);
+		.toSorted(
+			(first, second) =>
+				windowScore(first) - windowScore(second) ||
+				first.durationS - second.durationS,
+		);
 
 	return {
 		horizons: REVIEW_HORIZONS,
