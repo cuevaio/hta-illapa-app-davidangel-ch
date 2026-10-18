@@ -1,0 +1,54 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Sign up creates an account, asks for a profile and opens an empty fleet dashboard
+tags:
+  - auth
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- tapOn: "Crea una"
+- extendedWaitUntil:
+    visible: "Crea tu cuenta"
+    timeout: 10000
+- tapOn:
+    id: auth-name
+- inputText: "E2E Maestro"
+- tapOn:
+    id: auth-email
+- inputText: ${NEW_EMAIL}
+- tapOn:
+    id: auth-password
+- inputText: ${NEW_PASSWORD}
+- tapOn: "Crear cuenta"
+- extendedWaitUntil:
+    visible: "¿Cómo vas a usar ILLAPA?"
+    timeout: 30000
+- assertVisible: "Planifico rutas de flota"
+- assertVisible: "Gestiono infraestructura vial"
+- assertNotVisible: "Actual"
+- assertNotVisible: "Volver"
+- takeScreenshot: 01-profile-picker
+- tapOn: "Planifico rutas de flota"
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- assertNotVisible: "Mostrar flota"
+- assertNotVisible: "Estás en la demo"
+- assertVisible: ${NEW_EMAIL}
+- takeScreenshot: 02-empty-map
+- tapOn: "Flota"
+- extendedWaitUntil:
+    visible: "Tu flota aún no tiene vehículos"
+    timeout: 30000
+- takeScreenshot: 03-empty-fleet
+- tapOn: "Alertas"
+- extendedWaitUntil:
+    visible: "No tienes alertas abiertas"
+    timeout: 30000
+- takeScreenshot: 04-empty-alerts
+- tapOn: "Configuración"
+- extendedWaitUntil:
+    visible: "Conecta tu primer proveedor"
+    timeout: 30000
+- takeScreenshot: 05-empty-settings

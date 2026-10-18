@@ -1,0 +1,26 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Alertas renders open and acknowledged alerts
+tags:
+  - fleet-pages
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 45000
+- tapOn: "Alertas"
+- extendedWaitUntil:
+    visible: "Riesgos por delante"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "No tienes alertas abiertas|Alertas de viajes"
+    timeout: 30000
+- assertNotVisible: ".*[a-z]+_[a-z]+_[a-z]+.*"
+- takeScreenshot: 01-open-alerts
+- tapOn: "Mostrar reconocidas"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "No hay alertas para mostrar|Alertas de viajes"
+    timeout: 30000
+- takeScreenshot: 02-with-acknowledged

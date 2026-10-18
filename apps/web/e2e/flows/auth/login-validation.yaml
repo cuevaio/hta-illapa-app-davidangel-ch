@@ -1,0 +1,24 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Login form validates empty and malformed fields
+tags:
+  - auth
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- tapOn: "Entrar"
+- assertVisible: "Ingresa un correo válido."
+- assertVisible: "Ingresa tu contraseña."
+- takeScreenshot: 01-empty-submit
+- tapOn:
+    id: auth-email
+- inputText: "not-an-email"
+- tapOn:
+    id: auth-password
+- inputText: "any-password"
+- tapOn: "Entrar"
+- assertVisible: "Ingresa un correo válido."
+- assertNotVisible: "Ingresa tu contraseña."
+- assertVisible: "Inicia sesión"
+- takeScreenshot: 02-invalid-email

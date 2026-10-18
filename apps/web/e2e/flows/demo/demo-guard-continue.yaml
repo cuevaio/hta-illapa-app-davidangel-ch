@@ -1,0 +1,25 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Demo with a real session offers to keep the account
+tags:
+  - demo
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- openLink: ${APP_URL}/demo
+- extendedWaitUntil:
+    visible: "Ya tienes una sesión abierta"
+    timeout: 30000
+- assertVisible: "Entraste como ${EMAIL}.*"
+- assertVisible: "Seguir con mi cuenta"
+- assertVisible: "Cerrar sesión y abrir la demo"
+- takeScreenshot: 01-demo-choice
+- tapOn: "Seguir con mi cuenta"
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- assertNotVisible: "Estás en la demo"
+- assertVisible: ${EMAIL}
+- takeScreenshot: 02-own-dashboard

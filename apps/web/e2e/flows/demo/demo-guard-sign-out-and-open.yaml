@@ -1,0 +1,35 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Demo with a real session can sign out and open the demo, then sign back in
+tags:
+  - demo
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- openLink: ${APP_URL}/demo
+- extendedWaitUntil:
+    visible: "Cerrar sesión y abrir la demo"
+    timeout: 30000
+- evalScript: ${output.switchStartedAt = Date.now()}
+- tapOn: "Cerrar sesión y abrir la demo"
+- extendedWaitUntil:
+    visible: "Estás en la demo"
+    timeout: 30000
+- evalScript: ${output.switchMs = Date.now() - output.switchStartedAt}
+- assertVisible: "demo@illapa.app"
+- assertNotVisible: ${EMAIL}
+- takeScreenshot: 01-demo-after-switch-${output.switchMs}ms
+- openLink: ${APP_URL}/login
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- takeScreenshot: 02-login-during-demo
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- assertNotVisible: "Estás en la demo"
+- assertVisible: ${EMAIL}
+- takeScreenshot: 03-back-on-own-account

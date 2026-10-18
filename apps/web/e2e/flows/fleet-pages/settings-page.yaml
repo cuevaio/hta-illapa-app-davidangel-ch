@@ -1,0 +1,31 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Configuración lists GPS connections and the connect dialog cancels cleanly
+tags:
+  - fleet-pages
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 45000
+- tapOn: "Configuración"
+- extendedWaitUntil:
+    visible: "Conexiones GPS"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "[0-9]+ vehículos"
+    timeout: 30000
+- assertVisible: "Última sincronización:.*"
+- assertNotVisible: "Conecta tu primer proveedor"
+- takeScreenshot: 01-connections
+- tapOn: "Conectar proveedor"
+- extendedWaitUntil:
+    visible: "Conectar proveedor GPS"
+    timeout: 10000
+- takeScreenshot: 02-connect-dialog
+- tapOn: "Cancelar"
+- extendedWaitUntil:
+    notVisible: "Conectar proveedor GPS"
+    timeout: 10000
+- assertVisible: "[0-9]+ vehículos"
+- takeScreenshot: 03-dialog-cancelled

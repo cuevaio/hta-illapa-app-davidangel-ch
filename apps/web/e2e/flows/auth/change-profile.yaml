@@ -1,0 +1,30 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Cambiar perfil reopens the role picker with the current role marked
+tags:
+  - auth
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- tapOn: ${EMAIL}
+- extendedWaitUntil:
+    visible: "Cambiar perfil"
+    timeout: 10000
+- takeScreenshot: 01-account-menu
+- tapOn: "Cambiar perfil"
+- extendedWaitUntil:
+    visible: "¿Cómo vas a usar ILLAPA?"
+    timeout: 20000
+- assertVisible:
+    text: "Actual"
+    leftOf: "Gestiono infraestructura vial"
+- assertVisible: "Volver"
+- takeScreenshot: 02-profile-current-fleet
+- tapOn: "Volver"
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 30000
+- assertNotVisible: "¿Cómo vas a usar ILLAPA?"
+- takeScreenshot: 03-back-on-dashboard

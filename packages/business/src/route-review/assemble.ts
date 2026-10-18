@@ -482,6 +482,7 @@ function buildCandidateDraft(
 			(byLength(lengthByRoad, ROUTE_NAME_ROAD_MIN_SHARE)
 				.slice(0, 2)
 				.join(" – ") ||
+				byLength(lengthByRoad, 0).slice(0, 2).join(" – ") ||
 				candidateId),
 		roadCodes: route.roadCodes ?? byLength(lengthByCode, ROUTE_CODE_MIN_SHARE),
 		// Built from the segments so the selected route's risk colours lie

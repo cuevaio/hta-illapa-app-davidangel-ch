@@ -1,0 +1,24 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Demo banner Crear cuenta leaves the demo and opens sign-up
+tags:
+  - demo
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- openLink: ${APP_URL}/demo
+- extendedWaitUntil:
+    visible: "Estás en la demo"
+    timeout: 30000
+- tapOn: "Crear cuenta"
+- extendedWaitUntil:
+    visible: "Crea tu cuenta"
+    timeout: 20000
+- assertNotVisible: "Estás en la demo"
+- takeScreenshot: 01-sign-up-after-demo
+- openLink: ${APP_URL}/dashboard
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- takeScreenshot: 02-demo-session-ended

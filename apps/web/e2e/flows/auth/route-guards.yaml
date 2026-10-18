@@ -1,0 +1,28 @@
+url: https://app-staging.52-21-151-223.sslip.io/dashboard
+name: Signed-out users are sent to login and signed-in users skip it
+tags:
+  - auth
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- takeScreenshot: 01-dashboard-signed-out
+- openLink: ${APP_URL}/dashboard/alerts
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- openLink: ${APP_URL}/perfil
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- openLink: ${APP_URL}/login
+- extendedWaitUntil:
+    visible: ".*incidentes encontrados.*"
+    timeout: 45000
+- assertNotVisible: "Inicia sesión"
+- takeScreenshot: 02-login-while-signed-in
