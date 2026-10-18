@@ -14,7 +14,6 @@ import {
 	BASELINE_SUSCEPTIBILITY_MIN,
 	DETOUR_MATCH_MIN_SHARE,
 	MS_PER_HOUR,
-	MS_PER_SECOND,
 	RECOMMENDATION_MAX_UNASSESSED_SHARE,
 	ROUTE_CODE_MIN_SHARE,
 	ROUTE_NAME_ROAD_MIN_SHARE,
@@ -29,6 +28,7 @@ import {
 } from "../risk/constants";
 import { strongestOfficialAlert } from "../risk/exposure";
 import { scoreCurrentRisk } from "../risk/score";
+import { HORIZON_BY_HOURS, tripWindowHours } from "./ranking";
 import {
 	type RouteRecommendationDecision,
 	recommendRoute,
@@ -41,16 +41,10 @@ import type {
 	RouteSignalKind,
 } from "./risk";
 
-const HORIZON_BY_HOURS: Record<RiskHorizonHours, RouteRiskHorizon> = {
-	24: "24h",
-	48: "48h",
-	72: "72h",
-};
 const REVIEW_HORIZONS: RouteRiskHorizon[] = [
 	"now",
 	...RISK_HORIZONS_HOURS.map((hours) => HORIZON_BY_HOURS[hours]),
 ];
-const [, , LONGEST_HORIZON_HOURS] = RISK_HORIZONS_HOURS;
 
 const SIGNAL_SOURCE_LABELS: Record<string, string> = {
 	sutran_alerts: "SUTRAN",
@@ -214,21 +208,6 @@ function riskAssessments(
 					},
 				];
 	});
-}
-
-// The trip window is the smallest stored horizon that still covers arrival.
-export function tripWindowHours(
-	departureAt: Date,
-	durationS: number,
-	now: Date,
-): RiskHorizonHours {
-	const hoursUntilArrival =
-		(departureAt.getTime() + durationS * MS_PER_SECOND - now.getTime()) /
-		MS_PER_HOUR;
-	return (
-		RISK_HORIZONS_HOURS.find((hours) => hours >= hoursUntilArrival) ??
-		LONGEST_HORIZON_HOURS
-	);
 }
 
 export function incidentSignal(
