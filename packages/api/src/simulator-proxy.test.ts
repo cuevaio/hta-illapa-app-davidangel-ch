@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HTTP_STATUS_BAD_GATEWAY, HTTP_STATUS_FORBIDDEN } from "./constants";
+import {
+	HTTP_STATUS_BAD_GATEWAY,
+	HTTP_STATUS_FORBIDDEN,
+	HTTP_STATUS_NOT_FOUND,
+} from "./constants";
 import { proxySimulatorRequest } from "./simulator-proxy";
 
 const log = { set: vi.fn() };
@@ -16,6 +20,7 @@ function proxy(role: string | undefined, url: string, headers?: HeadersInit) {
 		role,
 		pathPrefix: "/tiles-api",
 		upstreamBaseUrl: "http://tiles.internal:8080",
+		upstreamPaths: ["/tiles/", "/capas", "/salud"],
 		service: "tiles",
 		log,
 		fetch: upstreamFetch,
@@ -78,6 +83,19 @@ describe("simulator backend proxy", () => {
 		expect(log.set).toHaveBeenCalledWith({
 			simulatorProxy: { service: "tiles", status: 200 },
 		});
+	});
+
+	it.each([
+		"/tiles-api/metrics",
+		"/tiles-api/diagnostico",
+		"/tiles-api/",
+		"/tiles-api/capasX",
+	])("answers 404 to engineers for %s, which the viewer never requests", async (path) => {
+		const response = await proxy("engineer", `https://api.illapa.app${path}`);
+
+		expect(response.status).toBe(HTTP_STATUS_NOT_FOUND);
+		expect(await response.json()).toEqual({ error: "not_found" });
+		expect(upstreamFetch).not.toHaveBeenCalled();
 	});
 
 	it("passes backend error statuses through", async () => {

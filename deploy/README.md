@@ -57,8 +57,8 @@ Use the same values as the Workers (`apps/<app>/.env`, `apps/server/.env.product
 | `CREDENTIALS_ENCRYPTION_KEY` | yes | the same key as fleet-sync and the Workers |
 | `OSRM_BASE_URL` | yes | `https://router.project-osrm.org` |
 | `CLIENT_IP_HEADER` | yes | `x-real-ip` behind Traefik (the Workers keep the default `cf-connecting-ip`) |
-| `TILES_API_URL` | yes | origin of the tiles backend (`services/tiles`), proxied to engineers under `/tiles-api/*` |
-| `WEATHER_API_URL` | yes | origin of the weather backend (`services/weather`), proxied to engineers under `/weather-api/*` |
+| `TILES_API_URL` | yes | origin of the tiles backend (`services/tiles`), proxied to engineers under `/tiles-api/*` (only `/tiles/*`, `/capas`, `/salud`) |
+| `WEATHER_API_URL` | yes | origin of the weather backend (`services/weather`), proxied to engineers under `/weather-api/*` (only `/api/*`) |
 | `DEMO_RESET_SECRET` | no | at least 32 characters; leave it unset to keep `POST /api/demo/reset` off |
 | `SERVICE_VERSION` | no | |
 

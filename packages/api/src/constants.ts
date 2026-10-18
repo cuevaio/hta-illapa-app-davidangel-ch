@@ -2,6 +2,7 @@ export const MAX_LOGGED_ID_CHARS = 64;
 export const HTTP_STATUS_CREATED = 201;
 export const HTTP_STATUS_BAD_REQUEST = 400;
 export const HTTP_STATUS_FORBIDDEN = 403;
+export const HTTP_STATUS_NOT_FOUND = 404;
 export const HTTP_STATUS_BAD_GATEWAY = 502;
 
 export const MIN_FLEET_TEXT_LENGTH_CHARS = 1;

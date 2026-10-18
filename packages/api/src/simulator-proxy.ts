@@ -1,6 +1,10 @@
 import { canUseSimulators } from "@hack-the-andes-project/business/simulators";
 
-import { HTTP_STATUS_BAD_GATEWAY, HTTP_STATUS_FORBIDDEN } from "./constants";
+import {
+	HTTP_STATUS_BAD_GATEWAY,
+	HTTP_STATUS_FORBIDDEN,
+	HTTP_STATUS_NOT_FOUND,
+} from "./constants";
 import type { Context } from "./context";
 
 // Only what the tiles/weather backends use for content negotiation and
@@ -26,6 +30,10 @@ export interface SimulatorProxyInput {
 	role: string | null | undefined;
 	pathPrefix: string;
 	upstreamBaseUrl: string;
+	// Paths the viewer requests: an entry ending in "/" is a prefix, any other
+	// entry an exact path. Everything else (metrics, diagnostics pages) stays
+	// internal to the backend.
+	upstreamPaths: string[];
 	service: "tiles" | "weather";
 	log: Pick<Context["log"], "set">;
 	fetch?: typeof fetch;
@@ -47,6 +55,17 @@ export async function proxySimulatorRequest(input: SimulatorProxyInput) {
 
 	const requestUrl = new URL(input.request.url);
 	const upstreamPath = requestUrl.pathname.slice(input.pathPrefix.length);
+	const isViewerPath = input.upstreamPaths.some((allowedPath) =>
+		allowedPath.endsWith("/")
+			? upstreamPath.startsWith(allowedPath)
+			: upstreamPath === allowedPath,
+	);
+	if (!isViewerPath) {
+		return Response.json(
+			{ error: "not_found" },
+			{ status: HTTP_STATUS_NOT_FOUND },
+		);
+	}
 	const upstreamUrl = `${input.upstreamBaseUrl.replace(/\/$/, "")}${upstreamPath}${requestUrl.search}`;
 	const forwardedHeaders = new Headers();
 	for (const name of FORWARDED_REQUEST_HEADERS) {

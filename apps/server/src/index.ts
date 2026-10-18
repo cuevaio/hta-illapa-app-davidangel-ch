@@ -22,7 +22,9 @@ import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-reques
 import {
 	TILE_METADATA_HEADERS,
 	TILES_API_PATH,
+	TILES_API_UPSTREAM_PATHS,
 	WEATHER_API_PATH,
+	WEATHER_API_UPSTREAM_PATHS,
 } from "@hack-the-andes-project/business/simulators";
 import { createDb, type Database } from "@hack-the-andes-project/db";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
@@ -263,6 +265,7 @@ app.get(`${TILES_API_PATH}/*`, (c) =>
 		role: c.get("session")?.user.role,
 		pathPrefix: TILES_API_PATH,
 		upstreamBaseUrl: ENV.TILES_API_URL,
+		upstreamPaths: TILES_API_UPSTREAM_PATHS,
 		service: "tiles",
 		log: c.get("log"),
 	}),
@@ -274,6 +277,7 @@ app.get(`${WEATHER_API_PATH}/*`, (c) =>
 		role: c.get("session")?.user.role,
 		pathPrefix: WEATHER_API_PATH,
 		upstreamBaseUrl: ENV.WEATHER_API_URL,
+		upstreamPaths: WEATHER_API_UPSTREAM_PATHS,
 		service: "weather",
 		log: c.get("log"),
 	}),
