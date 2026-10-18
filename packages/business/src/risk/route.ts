@@ -95,32 +95,27 @@ function routingGraph(nodes: RoutingNode[], edges: RoutingEdge[]) {
 	return graph;
 }
 
-export function findRiskAwareRoutes({
+function riskAwareRouter({
 	nodes,
 	edges,
 	riskBySegment,
 	blockedEdgeIds,
 	origin,
 	destination,
-}: FindRiskAwareRoutesInput): RiskAwareRoutes {
+}: FindRiskAwareRoutesInput) {
 	const start = nearestNode(nodes, origin);
 	const end = nearestNode(nodes, destination);
-	if (!start || !end) {
-		return { fastest: null, safest: null };
-	}
-
 	const graph = routingGraph(nodes, edges);
 	const isOpen = (edge: RoutingEdge) => !blockedEdgeIds.has(edge.id);
 	const riskScore = (edge: RoutingEdge) =>
 		edge.segmentId === null ? undefined : riskBySegment.get(edge.segmentId);
-	const fastestCost = (edge: RoutingEdge) => edge.travelTimeS;
-	const safestCost = (edge: RoutingEdge) =>
-		edge.travelTimeS *
-		(1 + (RISK_TIME_PENALTY_FACTOR * (riskScore(edge) ?? 0)) / RISK_SCORE_MAX);
 
 	const route = (
 		cost: (edge: RoutingEdge) => number,
 	): RouteEvaluation | null => {
+		if (!start || !end) {
+			return null;
+		}
 		const pathNodes = aStar<RoutingNode, RoutingEdge>(graph, {
 			oriented: true,
 			blocked: (_from, _to, link) => !isOpen(link.data),
@@ -189,5 +184,28 @@ export function findRiskAwareRoutes({
 		};
 	};
 
-	return { fastest: route(fastestCost), safest: route(safestCost) };
+	return {
+		fastest: () => route((edge) => edge.travelTimeS),
+		safest: () =>
+			route(
+				(edge) =>
+					edge.travelTimeS *
+					(1 +
+						(RISK_TIME_PENALTY_FACTOR * (riskScore(edge) ?? 0)) /
+							RISK_SCORE_MAX),
+			),
+	};
+}
+
+export function findRiskAwareRoutes(
+	input: FindRiskAwareRoutesInput,
+): RiskAwareRoutes {
+	const router = riskAwareRouter(input);
+	return { fastest: router.fastest(), safest: router.safest() };
+}
+
+export function findFastestRoute(
+	input: FindRiskAwareRoutesInput,
+): RouteEvaluation | null {
+	return riskAwareRouter(input).fastest();
 }

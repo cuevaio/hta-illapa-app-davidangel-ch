@@ -24,7 +24,11 @@ import {
 	withinBounds,
 } from "../risk/compare-routes";
 import { OFFICIAL_ALERT_CATEGORIES } from "../risk/constants";
-import { findRiskAwareRoutes, type RouteEvaluation } from "../risk/route";
+import {
+	findFastestRoute,
+	findRiskAwareRoutes,
+	type RouteEvaluation,
+} from "../risk/route";
 import { fetchRouteCandidates } from "../routing/osrm";
 import {
 	type AssembledRouteReview,
@@ -171,8 +175,6 @@ export async function evaluateRouteReview({
 			? [{ ...closure, lat: closure.lat, lng: closure.lng }]
 			: [],
 	);
-	const blockedEdgeIds = await blockClosedEdges(db, edges, closures);
-
 	const riskBySegment = new Map(
 		routingAssessments.flatMap((assessment) =>
 			assessment.horizonHours === ROUTE_REVIEW_ROUTING_HORIZON_HOURS
@@ -183,25 +185,69 @@ export async function evaluateRouteReview({
 	const routingInput = { nodes, edges, riskBySegment, origin, destination };
 	// The direct route ignores closures so an interruption on it is shown and
 	// reroutes instead of silently disappearing from the list.
-	const direct = findRiskAwareRoutes({
+	const direct = findFastestRoute({
 		...routingInput,
 		blockedEdgeIds: new Set(),
 	});
-	const avoiding =
-		blockedEdgeIds.size > 0
-			? findRiskAwareRoutes({ ...routingInput, blockedEdgeIds })
-			: direct;
+	const directGeometries = await fetchEdgeGeometries(db, direct?.edgeIds ?? []);
+
+	// SUTRAN's detours apply when the stretch they replace is on the direct
+	// route: for Lima to Huancayo, the Carretera Central's Rutas 1 to 5.
+	const directLine: LineString | null = direct
+		? simplify(
+				{
+					type: "LineString",
+					coordinates: direct.edgeIds.flatMap((edgeId, index) => {
+						const coordinates = directGeometries.get(edgeId)?.coordinates ?? [];
+						return index === 0 ? coordinates : coordinates.slice(1);
+					}),
+				},
+				{ tolerance: DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG },
+			)
+		: null;
+	const detours = directLine
+		? groupSutranDetours(altRoutes)
+				.filter(({ tramos }) =>
+					tramos.some((tramo) => routeFollowsTramo(directLine, tramo)),
+				)
+				.flatMap(({ detours: regionDetours }) => regionDetours)
+		: [];
+	// OSRM takes about 0.7 s to answer the server, so the closures and the
+	// other paths are worked out while the detours are being routed.
+	const routingDetours = Promise.allSettled(
+		detours.map(async (detour) => {
+			const [route] = await fetchRouteCandidates({
+				baseUrl: osrmBaseUrl,
+				origin,
+				destination,
+				waypoints: detourAnchors(origin, detour.geometries),
+				fetchImpl,
+			});
+			if (!route) throw new Error(`OSRM found no route through ${detour.id}`);
+			return { detour, route };
+		}),
+	);
+
+	const blockedEdgeIds = await blockClosedEdges(db, edges, closures);
+	const avoiding = findRiskAwareRoutes({ ...routingInput, blockedEdgeIds });
 	const evaluations: [string, RouteEvaluation | null][] = [
-		["fastest", direct.fastest],
+		["fastest", direct],
 		["avoiding_closures", avoiding.fastest],
 		["safest", avoiding.safest],
 	];
 
 	const edgesById = new Map(edges.map((edge) => [edge.id, edge]));
-	const geometries = await fetchEdgeGeometries(db, [
-		...new Set(
-			evaluations.flatMap(([, evaluation]) => evaluation?.edgeIds ?? []),
-		),
+	const geometries = new Map([
+		...directGeometries,
+		...(await fetchEdgeGeometries(db, [
+			...new Set(
+				evaluations.flatMap(([, evaluation]) =>
+					(evaluation?.edgeIds ?? []).filter(
+						(edgeId) => !directGeometries.has(edgeId),
+					),
+				),
+			),
+		])),
 	]);
 	const illapaRoutes = evaluations.flatMap(
 		([role, evaluation]): ReviewRoute[] =>
@@ -223,40 +269,7 @@ export async function evaluateRouteReview({
 				: [],
 	);
 
-	// SUTRAN's detours apply when the stretch they replace is on the direct
-	// route: for Lima to Huancayo, the Carretera Central's Rutas 1 to 5.
-	const directRoute = illapaRoutes[0];
-	const directLine: LineString | null = directRoute
-		? simplify(
-				{
-					type: "LineString",
-					coordinates: directRoute.edges.flatMap(({ geometry }, index) =>
-						index === 0 ? geometry.coordinates : geometry.coordinates.slice(1),
-					),
-				},
-				{ tolerance: DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG },
-			)
-		: null;
-	const detours = directLine
-		? groupSutranDetours(altRoutes)
-				.filter(({ tramos }) =>
-					tramos.some((tramo) => routeFollowsTramo(directLine, tramo)),
-				)
-				.flatMap(({ detours: regionDetours }) => regionDetours)
-		: [];
-	const routedDetours = await Promise.allSettled(
-		detours.map(async (detour) => {
-			const [route] = await fetchRouteCandidates({
-				baseUrl: osrmBaseUrl,
-				origin,
-				destination,
-				waypoints: detourAnchors(origin, detour.geometries),
-				fetchImpl,
-			});
-			if (!route) throw new Error(`OSRM found no route through ${detour.id}`);
-			return { detour, route };
-		}),
-	);
+	const routedDetours = await routingDetours;
 	const detourFailures = routedDetours.flatMap((result) =>
 		result.status === "rejected" ? [String(result.reason)] : [],
 	);
