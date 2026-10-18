@@ -58,6 +58,8 @@ export const ROUTE_REVIEW_DEPARTURE_WINDOW_MS = HOURS_PER_DAY * MS_PER_HOUR;
 export { VEHICLE_PLATE_LENGTH_CHARS } from "@hack-the-andes-project/db/schema/constants";
 // PRD step 3: each path is split into segments of about 5 km.
 export const ROUTE_REVIEW_SEGMENT_LENGTH_M = 5_000;
+// About 11 m: route lines lose vertices the map cannot show at route zoom.
+export const ROUTE_LINE_SIMPLIFY_TOLERANCE_DEG = 0.0001;
 // Static susceptibility (0–1, risk/score.ts) from which a segment counts as
 // baseline exposure: roughly mass-movement class 4 on a steep slope.
 export const BASELINE_SUSCEPTIBILITY_MIN = 0.6;
@@ -76,6 +78,9 @@ export const DETOUR_PIECE_LENGTH_M = 1_000;
 export const DETOUR_SEGMENT_MATCH_RADIUS_M = 600;
 export const DETOUR_TRAMO_MATCH_RADIUS_M = 1_000;
 export const DETOUR_TRAMO_SAMPLE_POINTS = 20;
+// About 110 m: the direct route is only compared with tramos within 1 km, so
+// it is simplified well past what the map needs before the comparison.
+export const DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG = 0.001;
 // Share of a candidate's length that may lack a current assessment for it to
 // still be recommended: a mostly unscored detour looks safe only for lack of
 // data.

@@ -95,7 +95,7 @@ function review(
 }
 
 describe("assembleRouteReview", () => {
-	it("splits a route into segments of about 5 km with the route geometry", () => {
+	it("splits a route into segments of about 5 km with a simplified route line", () => {
 		const [candidate] = review().candidates;
 
 		expect(
@@ -105,8 +105,17 @@ describe("assembleRouteReview", () => {
 			[5_000, 10_000],
 			[10_000, 12_000],
 		]);
-		expect(candidate?.geometry.coordinates).toHaveLength(13);
-		expect(candidate?.segments[0]?.geometry.coordinates).toHaveLength(6);
+		// The straight road keeps only its segment ends, and the route line runs
+		// through exactly those points.
+		expect(
+			candidate?.segments.map(({ geometry }) => geometry.coordinates.length),
+		).toEqual([2, 2, 2]);
+		expect(candidate?.geometry.coordinates).toEqual([
+			road[0]?.geometry.coordinates[0],
+			road[4]?.geometry.coordinates[1],
+			road[9]?.geometry.coordinates[1],
+			road[11]?.geometry.coordinates[1],
+		]);
 		expect(candidate).toMatchObject({
 			id: "illapa:fastest",
 			source: "illapa",

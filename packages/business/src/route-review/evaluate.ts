@@ -5,11 +5,15 @@ import {
 } from "@hack-the-andes-project/db/schema/risk";
 import { incident, poi } from "@hack-the-andes-project/db/schema/scraper";
 import { bbox } from "@turf/bbox";
-import { and, eq, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { simplify } from "@turf/simplify";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
 import type { LineString } from "geojson";
 
-import { ROUTE_REVIEW_ROUTING_HORIZON_HOURS } from "../constants";
+import {
+	DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG,
+	ROUTE_REVIEW_ROUTING_HORIZON_HOURS,
+} from "../constants";
 import type { LatLng } from "../hazards/types";
 import {
 	type Bounds,
@@ -59,6 +63,7 @@ async function loadAssessments(
 	db: Database,
 	bounds: Bounds,
 	now: Date,
+	excludedBounds?: Bounds,
 ): Promise<ReviewAssessment[]> {
 	return db
 		.select({
@@ -76,6 +81,13 @@ async function loadAssessments(
 			and(
 				gt(segmentRiskAssessment.validUntil, now),
 				withinBounds(roadSegment, bounds),
+				excludedBounds &&
+					or(
+						lt(roadSegment.lat, excludedBounds.south),
+						gt(roadSegment.lat, excludedBounds.north),
+						lt(roadSegment.lng, excludedBounds.west),
+						gt(roadSegment.lng, excludedBounds.east),
+					),
 			),
 		);
 }
@@ -215,12 +227,15 @@ export async function evaluateRouteReview({
 	// route: for Lima to Huancayo, the Carretera Central's Rutas 1 to 5.
 	const directRoute = illapaRoutes[0];
 	const directLine: LineString | null = directRoute
-		? {
-				type: "LineString",
-				coordinates: directRoute.edges.flatMap(({ geometry }, index) =>
-					index === 0 ? geometry.coordinates : geometry.coordinates.slice(1),
-				),
-			}
+		? simplify(
+				{
+					type: "LineString",
+					coordinates: directRoute.edges.flatMap(({ geometry }, index) =>
+						index === 0 ? geometry.coordinates : geometry.coordinates.slice(1),
+					),
+				},
+				{ tolerance: DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG },
+			)
 		: null;
 	const detours = directLine
 		? groupSutranDetours(altRoutes)
@@ -250,7 +265,7 @@ export async function evaluateRouteReview({
 	);
 
 	// Detours leave the routing box, so their segments and assessments are
-	// read for their own extent.
+	// read for their own extent, minus the assessments already read for it.
 	const [west, south, east, north] = bbox({
 		type: "GeometryCollection",
 		geometries: detourRoutes.map(({ route }) => route.geometry),
@@ -267,7 +282,7 @@ export async function evaluateRouteReview({
 						})
 						.from(roadSegment)
 						.where(withinBounds(roadSegment, detourBounds)),
-					loadAssessments(db, detourBounds, now),
+					loadAssessments(db, detourBounds, now, bounds),
 				])
 			: [[], []];
 	const sutranRoutes = detourRoutes.map(
@@ -291,17 +306,6 @@ export async function evaluateRouteReview({
 		}),
 	);
 
-	const assessmentKey = (assessment: ReviewAssessment) =>
-		`${assessment.segmentId}:${assessment.horizonHours}`;
-	const assessments = [
-		...new Map(
-			[...routingAssessments, ...detourAssessments].map((assessment) => [
-				assessmentKey(assessment),
-				assessment,
-			]),
-		).values(),
-	];
-
 	log.set({
 		routeReview: {
 			illapaRoutes: illapaRoutes.length,
@@ -313,7 +317,7 @@ export async function evaluateRouteReview({
 
 	return assembleRouteReview({
 		routes: [...illapaRoutes, ...sutranRoutes],
-		assessments,
+		assessments: [...routingAssessments, ...detourAssessments],
 		incidents,
 		departureAt,
 		now,
