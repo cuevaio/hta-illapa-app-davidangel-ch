@@ -1,15 +1,19 @@
-import { fromHalfFloat } from "../domain/half-float";
+import type { DecodedHeightTile } from "../infrastructure/decode-protocol";
+import { fromHalfFloat } from "./half-float";
 import {
 	lonLatToMercator,
 	lonLatToTile,
 	tileBoundsMercator,
 	tileKey,
-} from "../domain/tile-math";
-import type { HeightResource } from "./tile-resources";
+} from "./tile-math";
+
+export interface HeightDataResource {
+	readonly tile: DecodedHeightTile;
+}
 
 export class HeightSampler {
 	constructor(
-		private readonly lookup: (key: string) => HeightResource | undefined,
+		private readonly lookup: (key: string) => HeightDataResource | undefined,
 		private readonly maxZoom: number,
 	) {}
 

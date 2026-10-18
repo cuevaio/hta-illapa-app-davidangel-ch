@@ -1,12 +1,9 @@
-import { DataTexture } from "three";
 import { describe, expect, it } from "vitest";
-import { encodeHalfHeights } from "../domain/half-float";
-import { mercatorToLonLat, tileBoundsMercator } from "../domain/tile-math";
-import { HeightSampler } from "./height-sampler";
-import type { HeightResource } from "./tile-resources";
+import { encodeHalfHeights } from "./half-float";
+import { type HeightDataResource, HeightSampler } from "./height-sampler";
+import { mercatorToLonLat, tileBoundsMercator } from "./tile-math";
 
-const resource: HeightResource = {
-	texture: new DataTexture(),
+const resource: HeightDataResource = {
 	tile: {
 		heights: encodeHalfHeights(new Float32Array([-100, 0, 100, 200]), -100),
 		offset: -100,
@@ -15,7 +12,6 @@ const resource: HeightResource = {
 		min: -100,
 		max: 200,
 	},
-	dispose() {},
 };
 
 describe("CPU height sampling", () => {

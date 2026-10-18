@@ -9,12 +9,12 @@ import {
 	type WebGLRenderer,
 } from "three";
 import { MAX_TEXTURE_ANISOTROPY_RATIO } from "../constants";
+import type { HeightDataResource } from "../domain/height-sampler";
 import type { DecodedHeightTile } from "../infrastructure/decode-protocol";
 import type { Disposable } from "../infrastructure/tile-layer";
 
-export interface HeightResource extends Disposable {
+export interface HeightResource extends HeightDataResource, Disposable {
 	readonly texture: DataTexture;
-	readonly tile: DecodedHeightTile;
 }
 
 export interface ImageryResource extends Disposable {

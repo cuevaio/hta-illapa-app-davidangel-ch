@@ -20,6 +20,8 @@ export const IMAGERY_SOURCE = {
 export const ELEVATION_ATTRIBUTION =
 	"Elevation: Tilezen Joerd / AWS Terrain Tiles (Mapzen and data providers)";
 
+export const TERRAIN_ATTRIBUTION = `${ELEVATION_ATTRIBUTION} · ${IMAGERY_SOURCE.attribution}`;
+
 export async function loadHeightTile(
 	pool: DecoderPool,
 	tile: TileId,

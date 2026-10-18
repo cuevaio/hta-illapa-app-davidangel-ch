@@ -18,6 +18,7 @@ import {
 	ROOT_ZOOM_LEVEL,
 	TRANSITION_FRAME_INTERVAL_MS,
 } from "./constants";
+import { HeightSampler } from "./domain/height-sampler";
 import {
 	createLocalFrame,
 	localToLonLat,
@@ -28,14 +29,12 @@ import { intersectHeightfield } from "./domain/raymarch";
 import { DecoderPool } from "./infrastructure/decoder-pool";
 import { TileLayer } from "./infrastructure/tile-layer";
 import {
-	ELEVATION_ATTRIBUTION,
 	ELEVATION_SOURCE,
 	IMAGERY_SOURCE,
 	loadHeightTile,
 	loadImageryTile,
 } from "./infrastructure/tile-sources";
 import { LocalCameraView } from "./rendering/camera-view";
-import { HeightSampler } from "./rendering/height-sampler";
 import { createSharedUniforms } from "./rendering/terrain-material";
 import { TerrainRenderer } from "./rendering/terrain-renderer";
 import { ThreeFrustum } from "./rendering/three-frustum";
@@ -46,7 +45,7 @@ import {
 } from "./rendering/tile-resources";
 import type { Terrain, TerrainClip, TerrainOptions } from "./types";
 
-export const TERRAIN_ATTRIBUTION = `${ELEVATION_ATTRIBUTION} · ${IMAGERY_SOURCE.attribution}`;
+export { TERRAIN_ATTRIBUTION } from "./infrastructure/tile-sources";
 
 export function createTerrain(options: TerrainOptions): Terrain {
 	const frame = createLocalFrame(options.origin.lng, options.origin.lat);
