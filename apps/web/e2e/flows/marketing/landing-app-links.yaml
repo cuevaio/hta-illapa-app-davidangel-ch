@@ -1,0 +1,42 @@
+url: https://staging.52-21-151-223.sslip.io/
+name: Marketing CTAs open the staging app (login, sign-up and demo)
+tags:
+  - marketing
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Despacha sabiendo qué pasa en la ruta."
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn: "Ya tengo cuenta"
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- takeScreenshot: 01-ya-tengo-cuenta-login
+- back
+- extendedWaitUntil:
+    visible: "Despacha sabiendo qué pasa en la ruta."
+    timeout: 30000
+- tapOn: "Crear cuenta"
+- extendedWaitUntil:
+    visible: "Crea tu cuenta"
+    timeout: 30000
+- takeScreenshot: 02-crear-cuenta-sign-up
+- back
+- extendedWaitUntil:
+    visible: "Despacha sabiendo qué pasa en la ruta."
+    timeout: 30000
+- tapOn:
+    text: "Probar demo"
+    index: 1
+- extendedWaitUntil:
+    visible: "Estás en la demo"
+    timeout: 30000
+- takeScreenshot: 03-probar-demo
+- openLink: ${APP_URL}/dashboard/alerts
+- extendedWaitUntil:
+    visible: "Riesgos por delante"
+    timeout: 30000
+- assertVisible: "Estás en la demo"
+- takeScreenshot: 04-demo-session-lives-on-staging

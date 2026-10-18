@@ -18,14 +18,14 @@ interface DashboardNavigationEntry {
 }
 
 export const DASHBOARD_NAVIGATION: DashboardNavigationEntry[] = [
-	{ to: "/dashboard", label: "Mapa", icon: MapIcon, exact: true },
+	{ to: "/dashboard", label: m.nav_map(), icon: MapIcon, exact: true },
 	{
 		to: "/dashboard/revisar-ruta",
 		label: m.route_review_title(),
 		icon: RouteIcon,
 	},
-	{ to: "/dashboard/fleet", label: "Flota", icon: TruckIcon },
-	{ to: "/dashboard/alerts", label: "Alertas", icon: BellIcon },
-	{ to: "/dashboard/news", label: "Noticias", icon: NewspaperIcon },
-	{ to: "/dashboard/settings", label: "Configuración", icon: SettingsIcon },
+	{ to: "/dashboard/fleet", label: m.nav_fleet(), icon: TruckIcon },
+	{ to: "/dashboard/alerts", label: m.nav_alerts(), icon: BellIcon },
+	{ to: "/dashboard/news", label: m.nav_news(), icon: NewspaperIcon },
+	{ to: "/dashboard/settings", label: m.nav_settings(), icon: SettingsIcon },
 ];

@@ -1,6 +1,8 @@
-export const PERU_CENTER_LATITUDE_DEG = -9.19;
-export const PERU_CENTER_LONGITUDE_DEG = -75.0152;
-export const PERU_INITIAL_ZOOM_LEVEL = 5;
+export const PERU_WEST_LONGITUDE_DEG = -81.4;
+export const PERU_SOUTH_LATITUDE_DEG = -18.4;
+export const PERU_EAST_LONGITUDE_DEG = -68.6;
+export const PERU_NORTH_LATITUDE_DEG = -0.03;
+export const PERU_FIT_PADDING_PX = 40;
 export const INCIDENT_FILL_OPACITY_RATIO = 0.08;
 export const INCIDENT_LINE_WIDTH_PX = 3;
 export const INCIDENT_POINT_RADIUS_PX = 6;
@@ -20,9 +22,11 @@ export const CARTO_LIGHT_STYLE_URL =
 	"https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 export const PERU_INITIAL_VIEW_STATE = {
-	latitude: PERU_CENTER_LATITUDE_DEG,
-	longitude: PERU_CENTER_LONGITUDE_DEG,
-	zoom: PERU_INITIAL_ZOOM_LEVEL,
+	bounds: [
+		[PERU_WEST_LONGITUDE_DEG, PERU_SOUTH_LATITUDE_DEG],
+		[PERU_EAST_LONGITUDE_DEG, PERU_NORTH_LATITUDE_DEG],
+	] satisfies [[number, number], [number, number]],
+	fitBoundsOptions: { padding: PERU_FIT_PADDING_PX },
 };
 
 export const FLEET_ROUTE_WIDTH_PX = 4;

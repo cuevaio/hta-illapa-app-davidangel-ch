@@ -1,0 +1,34 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Login page renders in ES and EN, light and dark
+tags:
+  - auth
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Inicia sesión"
+    timeout: 30000
+- assertVisible: "Entra al centro de operaciones de tu flota."
+- assertVisible: "Correo electrónico"
+- assertVisible: "Contraseña"
+- assertVisible: "Entrar"
+- assertVisible: "Crea una"
+- assertVisible: "Tu flota, un paso adelante del clima y la carretera."
+- takeScreenshot: 01-login-es-light
+- tapOn:
+    id: "base-ui-.*"
+    rightOf: "ES"
+- takeScreenshot: 02-login-es-dark
+- tapOn: "ES"
+- tapOn: "English"
+- extendedWaitUntil:
+    visible: "EN"
+    timeout: 15000
+- takeScreenshot: 03-login-en-dark
+- assertVisible:
+    text: "Sign in"
+    label: "Sign-in form is translated to English (known gap, see report)"
+    optional: true
+- tapOn:
+    id: "base-ui-.*"
+    rightOf: "EN"
+- takeScreenshot: 04-login-en-light

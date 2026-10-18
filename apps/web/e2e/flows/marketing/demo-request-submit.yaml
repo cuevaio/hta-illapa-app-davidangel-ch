@@ -1,0 +1,28 @@
+url: https://staging.52-21-151-223.sslip.io/
+name: Demo request form submits a request
+tags:
+  - marketing
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Solicitar una demo"
+    timeout: 30000
+- tapOn: "Solicitar una demo"
+- extendedWaitUntil:
+    visible: "Enviar solicitud"
+    timeout: 10000
+- tapOn:
+    id: ".*-name"
+- inputText: "E2E Maestro Test"
+- tapOn:
+    id: ".*-company"
+- inputText: "E2E Maestro"
+- tapOn:
+    id: ".*-email"
+- inputText: ${REQUEST_EMAIL}
+- takeScreenshot: 01-filled
+- tapOn: "Enviar solicitud"
+- extendedWaitUntil:
+    visible: "Recibimos tu solicitud. Pronto nos pondremos en contacto contigo."
+    timeout: 20000
+- takeScreenshot: 02-sent

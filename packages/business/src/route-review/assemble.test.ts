@@ -34,8 +34,19 @@ function edge(index: number, roadCode = "PE-22"): ReviewEdge {
 }
 
 const road = Array.from({ length: 12 }, (_, index) => edge(index));
+const cantaRoad = road.map((roadEdge) => ({
+	...edge(Number(roadEdge.id.slice(1)), "PE-20"),
+	id: `d${roadEdge.id}`,
+	segmentId: `d${roadEdge.segmentId}`,
+	roadName: "Vía Canta",
+	travelTimeS: 90,
+}));
 
-function illapaRoute(role: string, edges: ReviewEdge[]): ReviewRoute {
+function illapaRoute(
+	role: string,
+	edges: ReviewEdge[],
+	saferAlternativeTo: string | null = null,
+): ReviewRoute {
 	return {
 		id: `illapa:${role}`,
 		source: "illapa",
@@ -43,6 +54,7 @@ function illapaRoute(role: string, edges: ReviewEdge[]): ReviewRoute {
 		roadCodes: null,
 		eligibility: { eligible: true, maxAxleCount: null, restriction: null },
 		edges,
+		saferAlternativeTo,
 	};
 }
 
@@ -236,6 +248,10 @@ describe("assembleRouteReview", () => {
 				segmentIds: ["illapa:fastest:2"],
 			}),
 		]);
+		expect(candidate?.recommendation).toMatchObject({
+			action: "continue",
+			rule: "forecast_below_high",
+		});
 	});
 
 	it("flags forecast rain inside the trip window and delays without a lower alternative", () => {
@@ -289,22 +305,18 @@ describe("assembleRouteReview", () => {
 	});
 
 	it("recommends by the risk inside the trip window, not a later storm", () => {
-		const detour = road.map((roadEdge) => ({
-			...edge(Number(roadEdge.id.slice(1)), "PE-20"),
-			id: `d${roadEdge.id}`,
-			segmentId: `d${roadEdge.segmentId}`,
-			roadName: "Vía Canta",
-			travelTimeS: 90,
-		}));
 		const assessments = [
 			...quietAssessments.filter(({ segmentId }) => segmentId !== "s1"),
 			...assessmentsFor("s1", { 24: 20, 48: 20, 72: 90 }),
-			...detour.flatMap((detourEdge) =>
-				assessmentsFor(detourEdge.segmentId, { 24: 40, 48: 40, 72: 40 }),
+			...cantaRoad.flatMap((cantaEdge) =>
+				assessmentsFor(cantaEdge.segmentId, { 24: 40, 48: 40, 72: 40 }),
 			),
 		];
 		const result = review({
-			routes: [illapaRoute("fastest", road), illapaRoute("safest", detour)],
+			routes: [
+				illapaRoute("fastest", road),
+				illapaRoute("safest", cantaRoad, "illapa:fastest"),
+			],
 			assessments,
 		});
 
@@ -312,22 +324,18 @@ describe("assembleRouteReview", () => {
 	});
 
 	it("recommends the lower-risk route and reroutes the risky one", () => {
-		const detour = road.map((roadEdge) => ({
-			...edge(Number(roadEdge.id.slice(1)), "PE-20"),
-			id: `d${roadEdge.id}`,
-			segmentId: `d${roadEdge.segmentId}`,
-			roadName: "Vía Canta",
-			travelTimeS: 90,
-		}));
 		const assessments = [
 			...quietAssessments.filter(({ segmentId }) => segmentId !== "s1"),
 			...assessmentsFor("s1", { 24: 78, 48: 78, 72: 78 }),
-			...detour.flatMap((detourEdge) =>
-				assessmentsFor(detourEdge.segmentId, { 24: 20, 48: 20, 72: 20 }),
+			...cantaRoad.flatMap((cantaEdge) =>
+				assessmentsFor(cantaEdge.segmentId, { 24: 20, 48: 20, 72: 20 }),
 			),
 		];
 		const result = review({
-			routes: [illapaRoute("fastest", road), illapaRoute("safest", detour)],
+			routes: [
+				illapaRoute("fastest", road),
+				illapaRoute("safest", cantaRoad, "illapa:fastest"),
+			],
 			assessments,
 		});
 
@@ -349,6 +357,25 @@ describe("assembleRouteReview", () => {
 				routes: [illapaRoute("fastest", road), illapaRoute("safest", road)],
 			}).candidates.map(({ id }) => id),
 		).toEqual(["illapa:fastest"]);
+	});
+
+	it("drops a safer path that lowers no horizon's risk of the path it was merged into", () => {
+		const result = review({
+			routes: [
+				illapaRoute("fastest", road),
+				illapaRoute("avoiding_closures", road),
+				illapaRoute("safest", cantaRoad, "illapa:avoiding_closures"),
+			],
+			assessments: [
+				...quietAssessments,
+				...cantaRoad.flatMap((cantaEdge) =>
+					assessmentsFor(cantaEdge.segmentId, { 24: 10, 48: 12, 72: 12 }),
+				),
+			],
+		});
+
+		expect(result.candidates.map(({ id }) => id)).toEqual(["illapa:fastest"]);
+		expect(result.recommendedCandidateId).toBe("illapa:fastest");
 	});
 
 	it("lists the four horizons", () => {
@@ -373,6 +400,7 @@ describe("assembleRouteReview", () => {
 				roadCode: null,
 				roadName: null,
 			})),
+			saferAlternativeTo: null,
 		};
 		const result = review({
 			routes: [illapaRoute("fastest", road), detour],

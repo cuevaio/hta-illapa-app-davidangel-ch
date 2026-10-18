@@ -1,0 +1,22 @@
+url: https://app-staging.52-21-151-223.sslip.io/demo
+name: Revisar ruta from the public demo
+tags:
+  - demo
+  - critical
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*Estás en la demo.*"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Elige un vehículo"
+    timeout: 30000
+- takeScreenshot: 01-demo-landing
+- tapOn: "Elige un vehículo"
+- tapOn: "Tracto 01 · Callao · DEM-101.*"
+- tapOn: "Revisar"
+- extendedWaitUntil:
+    visible: ".*rutas · Tracto 01 · Callao · 5 ejes.*"
+    timeout: 60000
+- assertVisible: "Recomendada"
+- takeScreenshot: 02-demo-results

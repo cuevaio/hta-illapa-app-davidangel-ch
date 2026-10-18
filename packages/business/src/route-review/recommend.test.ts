@@ -64,6 +64,40 @@ describe("recommendRoute", () => {
 		});
 	});
 
+	it("continues with caution on a forecast below high, even with baseline exposure", () => {
+		expect(
+			recommendRoute({
+				...quiet,
+				windowLevel: "moderate",
+				signals: [
+					{ kind: "baseline", roadStatus: null },
+					{ kind: "forecast", roadStatus: null },
+				],
+			}),
+		).toEqual({
+			action: "continue",
+			rule: "forecast_below_high",
+			suggestedDepartureAt: null,
+			expectedDelayS: null,
+		});
+		expect(
+			recommendRoute({
+				...quiet,
+				signals: [{ kind: "forecast", roadStatus: null }],
+			}),
+		).toMatchObject({ action: "continue", rule: "forecast_below_high" });
+	});
+
+	it("keeps a high forecast ahead of the forecast-below-high rule", () => {
+		expect(
+			recommendRoute({
+				...quiet,
+				windowLevel: "high",
+				signals: [{ kind: "forecast", roadStatus: null }],
+			}),
+		).toMatchObject({ action: "delay", rule: "forecast_in_window" });
+	});
+
 	it("continues with a note on baseline exposure only", () => {
 		expect(
 			recommendRoute({

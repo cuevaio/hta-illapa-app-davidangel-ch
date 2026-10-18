@@ -36,11 +36,12 @@ import {
 	recommendRoute,
 	routeRiskLevelForScore,
 } from "./recommend";
-import type {
-	RouteCandidateSource,
-	RouteRiskHorizon,
-	RouteRiskLevel,
-	RouteSignalKind,
+import {
+	ROUTE_RISK_LEVELS,
+	type RouteCandidateSource,
+	type RouteRiskHorizon,
+	type RouteRiskLevel,
+	type RouteSignalKind,
 } from "./risk";
 
 const REVIEW_HORIZONS: RouteRiskHorizon[] = [
@@ -85,6 +86,8 @@ export interface ReviewRoute {
 	roadCodes: string[] | null;
 	eligibility: ReviewEligibility;
 	edges: ReviewEdge[];
+	// Listed only when its risk level is lower than this route's in some horizon.
+	saferAlternativeTo: string | null;
 }
 
 export interface ReviewAssessment {
@@ -480,6 +483,7 @@ function buildCandidateDraft(
 			(byLength(lengthByRoad, ROUTE_NAME_ROAD_MIN_SHARE)
 				.slice(0, 2)
 				.join(" – ") ||
+				byLength(lengthByRoad, 0).slice(0, 2).join(" – ") ||
 				candidateId),
 		roadCodes: route.roadCodes ?? byLength(lengthByCode, ROUTE_CODE_MIN_SHARE),
 		// Built from the segments so the selected route's risk colours lie
@@ -536,25 +540,42 @@ export function assembleRouteReview({
 				DETOUR_MATCH_MIN_SHARE * lengthM,
 		);
 	};
-	const seenRoutes = new Set<string>();
+	const routeKey = (route: ReviewRoute) =>
+		route.edges.map(({ id }) => id).join(",");
+	const draftsByRouteKey = new Map<string, ReviewCandidateDraft>();
 	const drafts = routes.flatMap((route) => {
-		const routeKey = route.edges.map(({ id }) => id).join(",");
 		if (
-			seenRoutes.has(routeKey) ||
+			draftsByRouteKey.has(routeKey(route)) ||
 			(route.source === "illapa" && matchesDetour(route))
 		) {
 			return [];
 		}
-		seenRoutes.add(routeKey);
-		return [
-			buildCandidateDraft(
-				route,
-				assessmentsBySegment,
-				incidents,
-				departureAt,
-				now,
-			),
-		];
+		const draft = buildCandidateDraft(
+			route,
+			assessmentsBySegment,
+			incidents,
+			departureAt,
+			now,
+		);
+		draftsByRouteKey.set(routeKey(route), draft);
+		// The compared route may have been merged into an earlier one with the
+		// same edges, so its draft is found by its edges rather than its id.
+		const comparedRoute = routes.find(
+			({ id }) => id === route.saferAlternativeTo,
+		);
+		const comparedDraft =
+			comparedRoute && draftsByRouteKey.get(routeKey(comparedRoute));
+		return comparedDraft &&
+			!draft.risk.some(({ horizon, level }) =>
+				comparedDraft.risk.some(
+					(assessment) =>
+						assessment.horizon === horizon &&
+						ROUTE_RISK_LEVELS.indexOf(level) <
+							ROUTE_RISK_LEVELS.indexOf(assessment.level),
+				),
+			)
+			? []
+			: [draft];
 	});
 
 	const windowAssessment = (draft: ReviewCandidateDraft) =>

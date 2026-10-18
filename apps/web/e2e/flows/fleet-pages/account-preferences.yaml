@@ -1,0 +1,52 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Account menu theme, language and text size apply across pages
+tags:
+  - fleet-pages
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 45000
+- tapOn: ${EMAIL}
+- extendedWaitUntil:
+    visible: "Preferencias"
+    timeout: 10000
+- tapOn: "Oscuro"
+- takeScreenshot: 01-menu-dark
+- tapOn: "EN"
+- extendedWaitUntil:
+    visible: "Review route"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: 02-mapa-en-dark
+- tapOn: "Alertas|Alerts"
+- extendedWaitUntil:
+    visible: "Riesgos por delante|Risks ahead"
+    timeout: 30000
+- takeScreenshot: 03-alertas-en-dark
+- tapOn: "Flota|Fleet"
+- extendedWaitUntil:
+    visible: "Your fleet"
+    timeout: 30000
+- takeScreenshot: 04-fleet-en-dark
+- tapOn: ${EMAIL}
+- extendedWaitUntil:
+    visible: "Preferences"
+    timeout: 10000
+- assertVisible: "Text size"
+- assertVisible: "Change profile"
+- assertVisible: "Sign out"
+- tapOn: "L"
+- takeScreenshot: 05-menu-en-large
+- tapOn: "Review route"
+- extendedWaitUntil:
+    visible: "Choose a vehicle"
+    timeout: 30000
+- takeScreenshot: 06-review-route-en-large
+- tapOn: "Configuración|Settings"
+- extendedWaitUntil:
+    visible: "Conexiones GPS|GPS connections"
+    timeout: 30000
+- takeScreenshot: 07-settings-en-large

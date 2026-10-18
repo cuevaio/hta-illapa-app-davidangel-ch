@@ -1,0 +1,30 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Clicking an incident on the Mapa opens its details
+tags:
+  - fleet-pages
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: "[0-9]+ incidentes encontrados.*"
+    timeout: 45000
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    point: "762,575"
+- runFlow:
+    when:
+      notVisible: "Actualizado"
+    commands:
+      - tapOn:
+          point: "790,566"
+- extendedWaitUntil:
+    visible: "Actualizado"
+    timeout: 10000
+- assertVisible: "Fuente"
+- takeScreenshot: 01-incident-details
+- tapOn: "Close"
+- extendedWaitUntil:
+    notVisible: "Actualizado"
+    timeout: 10000
+- takeScreenshot: 02-details-closed
