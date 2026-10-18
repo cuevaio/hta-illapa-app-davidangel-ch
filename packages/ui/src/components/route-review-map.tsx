@@ -526,6 +526,11 @@ export function RouteReviewMap(props: RouteReviewMapProps) {
 						vehicleAxleCount={props.vehicleAxleCount}
 						vehicleName={props.vehicleName}
 						selectedCandidateId={props.selectedCandidateId}
+						candidates={props.candidates}
+						horizon={props.horizon}
+						origin={props.origin}
+						destination={props.destination}
+						onSelectCandidate={props.onSelectCandidate}
 					/>
 				</Suspense>
 			) : (

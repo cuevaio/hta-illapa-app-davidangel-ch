@@ -71,6 +71,21 @@ export interface TableCoordinateXZ {
 	positionZ: number;
 }
 
+export interface TableFrameCoordinate {
+	longitudeDegrees: number;
+	latitudeDegrees: number;
+}
+
+export interface TableFrame {
+	minLongitudeDegrees: number;
+	maxLongitudeDegrees: number;
+	minLatitudeDegrees: number;
+	maxLatitudeDegrees: number;
+	widthMeters: number;
+	depthMeters: number;
+	longestGroundMeters: number;
+}
+
 export interface GeographicCoordinateLonLat {
 	longitudeDegrees: number;
 	latitudeDegrees: number;

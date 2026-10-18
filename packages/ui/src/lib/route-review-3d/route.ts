@@ -14,6 +14,7 @@ import {
 	DEFAULT_MACRO_ELEVATION_M,
 	DELAYED_OFFSET_DISTANCE_M,
 	DETOUR_CORRIDOR_WEIGHT,
+	EARTH_METERS_PER_DEGREE,
 	EAST_PROGRESS_SPAN_DEG,
 	MANTARO_BASIN_HIGH_ELEVATION_M,
 	MANTARO_BASIN_LOW_ELEVATION_M,
@@ -58,7 +59,10 @@ import {
 	SMOOTHSTEP_CUBIC_COEFF_B,
 	TABLE_BASE_HEIGHT_M,
 	TABLE_DEPTH_M,
+	TABLE_FRAME_PADDING_RATIO,
 	TABLE_MAX_HEIGHT_M,
+	TABLE_MIN_LONGITUDE_COSINE,
+	TABLE_MIN_SPAN_DEG,
 	TABLE_WIDTH_M,
 	VALLEY_CARVE_RADIUS_DEG,
 } from "./constants";
@@ -71,6 +75,8 @@ import type {
 	ProjectedPointAtKm,
 	RouteCorridors,
 	TableCoordinateXZ,
+	TableFrame,
+	TableFrameCoordinate,
 } from "./types";
 
 const allCorridorSegments: CorridorSegmentProjection[] = [];
@@ -252,41 +258,160 @@ export function sampleTerrainElevationMeters(
 	);
 }
 
+function longestGroundMeters(
+	minLongitudeDegrees: number,
+	maxLongitudeDegrees: number,
+	minLatitudeDegrees: number,
+	maxLatitudeDegrees: number,
+): number {
+	const centerLatitudeDegrees = (minLatitudeDegrees + maxLatitudeDegrees) / 2;
+	const longitudeScale = Math.max(
+		Math.cos((centerLatitudeDegrees * Math.PI) / 180),
+		TABLE_MIN_LONGITUDE_COSINE,
+	);
+	const widthGroundMeters =
+		(maxLongitudeDegrees - minLongitudeDegrees) *
+		EARTH_METERS_PER_DEGREE *
+		longitudeScale;
+	const depthGroundMeters =
+		(maxLatitudeDegrees - minLatitudeDegrees) * EARTH_METERS_PER_DEGREE;
+	return Math.max(widthGroundMeters, depthGroundMeters);
+}
+
+export const PE22_TABLE_FRAME: TableFrame = {
+	minLongitudeDegrees: MIN_LON_DEG,
+	maxLongitudeDegrees: MAX_LON_DEG,
+	minLatitudeDegrees: MIN_LAT_DEG,
+	maxLatitudeDegrees: MAX_LAT_DEG,
+	widthMeters: TABLE_WIDTH_M,
+	depthMeters: TABLE_DEPTH_M,
+	longestGroundMeters: longestGroundMeters(
+		MIN_LON_DEG,
+		MAX_LON_DEG,
+		MIN_LAT_DEG,
+		MAX_LAT_DEG,
+	),
+};
+
+export function createTableFrame(
+	coordinates: readonly TableFrameCoordinate[],
+): TableFrame {
+	let minLongitudeDegrees = Number.POSITIVE_INFINITY;
+	let maxLongitudeDegrees = Number.NEGATIVE_INFINITY;
+	let minLatitudeDegrees = Number.POSITIVE_INFINITY;
+	let maxLatitudeDegrees = Number.NEGATIVE_INFINITY;
+
+	for (const coordinate of coordinates) {
+		if (coordinate.longitudeDegrees < minLongitudeDegrees) {
+			minLongitudeDegrees = coordinate.longitudeDegrees;
+		}
+		if (coordinate.longitudeDegrees > maxLongitudeDegrees) {
+			maxLongitudeDegrees = coordinate.longitudeDegrees;
+		}
+		if (coordinate.latitudeDegrees < minLatitudeDegrees) {
+			minLatitudeDegrees = coordinate.latitudeDegrees;
+		}
+		if (coordinate.latitudeDegrees > maxLatitudeDegrees) {
+			maxLatitudeDegrees = coordinate.latitudeDegrees;
+		}
+	}
+
+	if (
+		!Number.isFinite(minLongitudeDegrees) ||
+		!Number.isFinite(minLatitudeDegrees)
+	) {
+		return PE22_TABLE_FRAME;
+	}
+
+	const centerLongitudeDegrees =
+		(minLongitudeDegrees + maxLongitudeDegrees) / 2;
+	const centerLatitudeDegrees = (minLatitudeDegrees + maxLatitudeDegrees) / 2;
+	const longitudeSpanDegrees = Math.max(
+		(maxLongitudeDegrees - minLongitudeDegrees) *
+			(1 + TABLE_FRAME_PADDING_RATIO * 2),
+		TABLE_MIN_SPAN_DEG,
+	);
+	const latitudeSpanDegrees = Math.max(
+		(maxLatitudeDegrees - minLatitudeDegrees) *
+			(1 + TABLE_FRAME_PADDING_RATIO * 2),
+		TABLE_MIN_SPAN_DEG,
+	);
+	const framedMinLongitude = centerLongitudeDegrees - longitudeSpanDegrees / 2;
+	const framedMaxLongitude = centerLongitudeDegrees + longitudeSpanDegrees / 2;
+	const framedMinLatitude = centerLatitudeDegrees - latitudeSpanDegrees / 2;
+	const framedMaxLatitude = centerLatitudeDegrees + latitudeSpanDegrees / 2;
+	const framedLongestGroundMeters = longestGroundMeters(
+		framedMinLongitude,
+		framedMaxLongitude,
+		framedMinLatitude,
+		framedMaxLatitude,
+	);
+	const modelMetersPerGroundMeter = TABLE_WIDTH_M / framedLongestGroundMeters;
+	const centerLatitudeRadians = (centerLatitudeDegrees * Math.PI) / 180;
+	const longitudeScale = Math.max(
+		Math.cos(centerLatitudeRadians),
+		TABLE_MIN_LONGITUDE_COSINE,
+	);
+
+	return {
+		minLongitudeDegrees: framedMinLongitude,
+		maxLongitudeDegrees: framedMaxLongitude,
+		minLatitudeDegrees: framedMinLatitude,
+		maxLatitudeDegrees: framedMaxLatitude,
+		widthMeters:
+			longitudeSpanDegrees *
+			EARTH_METERS_PER_DEGREE *
+			longitudeScale *
+			modelMetersPerGroundMeter,
+		depthMeters:
+			latitudeSpanDegrees * EARTH_METERS_PER_DEGREE * modelMetersPerGroundMeter,
+		longestGroundMeters: framedLongestGroundMeters,
+	};
+}
+
 export function lonLatToTableXZ(
 	longitudeDegrees: number,
 	latitudeDegrees: number,
+	frame: TableFrame = PE22_TABLE_FRAME,
 ): TableCoordinateXZ {
 	const normalizedX =
-		(longitudeDegrees - MIN_LON_DEG) / (MAX_LON_DEG - MIN_LON_DEG);
+		(longitudeDegrees - frame.minLongitudeDegrees) /
+		(frame.maxLongitudeDegrees - frame.minLongitudeDegrees);
 	const normalizedZ =
-		(latitudeDegrees - MIN_LAT_DEG) / (MAX_LAT_DEG - MIN_LAT_DEG);
+		(latitudeDegrees - frame.minLatitudeDegrees) /
+		(frame.maxLatitudeDegrees - frame.minLatitudeDegrees);
 
 	return {
-		positionX: (normalizedX - 0.5) * TABLE_WIDTH_M,
-		positionZ: (0.5 - normalizedZ) * TABLE_DEPTH_M,
+		positionX: (normalizedX - 0.5) * frame.widthMeters,
+		positionZ: (0.5 - normalizedZ) * frame.depthMeters,
 	};
 }
 
 export function tableXZToLonLat(
 	positionX: number,
 	positionZ: number,
+	frame: TableFrame = PE22_TABLE_FRAME,
 ): GeographicCoordinateLonLat {
 	const longitudeDegrees =
-		MIN_LON_DEG +
-		(positionX / TABLE_WIDTH_M + 0.5) * (MAX_LON_DEG - MIN_LON_DEG);
+		frame.minLongitudeDegrees +
+		(positionX / frame.widthMeters + 0.5) *
+			(frame.maxLongitudeDegrees - frame.minLongitudeDegrees);
 	const latitudeDegrees =
-		MIN_LAT_DEG +
-		(0.5 - positionZ / TABLE_DEPTH_M) * (MAX_LAT_DEG - MIN_LAT_DEG);
+		frame.minLatitudeDegrees +
+		(0.5 - positionZ / frame.depthMeters) *
+			(frame.maxLatitudeDegrees - frame.minLatitudeDegrees);
 	return { longitudeDegrees, latitudeDegrees };
 }
 
 export function getTerrainHeightAtXZ(
 	positionX: number,
 	positionZ: number,
+	frame: TableFrame = PE22_TABLE_FRAME,
 ): number {
 	const { longitudeDegrees, latitudeDegrees } = tableXZToLonLat(
 		positionX,
 		positionZ,
+		frame,
 	);
 	const elevationMeters = sampleTerrainElevationMeters(
 		longitudeDegrees,
@@ -301,12 +426,14 @@ export function getTerrainHeightAtXZ(
 export function projectCoordinate(
 	longitudeDegrees: number,
 	latitudeDegrees: number,
+	frame: TableFrame = PE22_TABLE_FRAME,
 ): THREE.Vector3 {
 	const { positionX, positionZ } = lonLatToTableXZ(
 		longitudeDegrees,
 		latitudeDegrees,
+		frame,
 	);
-	const positionY = getTerrainHeightAtXZ(positionX, positionZ);
+	const positionY = getTerrainHeightAtXZ(positionX, positionZ, frame);
 	return new THREE.Vector3(positionX, positionY, positionZ);
 }
 
