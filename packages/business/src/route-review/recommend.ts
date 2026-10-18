@@ -67,6 +67,9 @@ export function recommendRoute({
 			"forecast_in_window",
 		);
 	}
+	if (signals.some((signal) => signal.kind === "forecast")) {
+		return decision("continue", "forecast_below_high");
+	}
 	if (signals.some((signal) => signal.kind === "baseline")) {
 		return decision("continue", "baseline_only");
 	}

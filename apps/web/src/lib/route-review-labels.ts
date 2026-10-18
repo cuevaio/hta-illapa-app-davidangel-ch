@@ -171,6 +171,7 @@ export function getRouteReviewLabels(): RouteReviewLabels {
 				confirmed_interruption: m.route_review_rule_confirmed_interruption,
 				confirmed_restriction: m.route_review_rule_confirmed_restriction,
 				forecast_in_window: m.route_review_rule_forecast_in_window,
+				forecast_below_high: m.route_review_rule_forecast_below_high,
 				baseline_only: m.route_review_rule_baseline_only,
 				nothing_relevant: m.route_review_rule_nothing_relevant,
 			})[rule](),

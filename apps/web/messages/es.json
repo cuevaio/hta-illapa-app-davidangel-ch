@@ -63,6 +63,7 @@
 	"route_review_rule_confirmed_interruption": "Interrupción confirmada: usa un desvío habilitado para tu vehículo.",
 	"route_review_rule_confirmed_restriction": "Restricción confirmada: considera la demora prevista.",
 	"route_review_rule_forecast_in_window": "Pronóstico alto o crítico durante el viaje: desvía si hay una ruta con menos riesgo; de lo contrario, retrasa.",
+	"route_review_rule_forecast_below_high": "Pronóstico moderado o bajo: continúa con precaución y revísalo antes de salir.",
 	"route_review_rule_baseline_only": "Solo exposición de base: continúa con precaución.",
 	"route_review_rule_nothing_relevant": "Sin señales relevantes: continúa.",
 	"route_review_road_restricted": "Tránsito restringido",

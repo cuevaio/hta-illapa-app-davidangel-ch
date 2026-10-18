@@ -63,6 +63,7 @@
 	"route_review_rule_confirmed_interruption": "Confirmed closure: use a detour eligible for your vehicle.",
 	"route_review_rule_confirmed_restriction": "Confirmed restriction: account for the expected delay.",
 	"route_review_rule_forecast_in_window": "High or critical forecast during the trip: reroute if a lower-risk path exists; otherwise delay.",
+	"route_review_rule_forecast_below_high": "Moderate or low forecast: continue with caution and check it again before leaving.",
 	"route_review_rule_baseline_only": "Baseline exposure only: continue with caution.",
 	"route_review_rule_nothing_relevant": "No relevant signals: continue.",
 	"route_review_road_restricted": "Restricted traffic",
