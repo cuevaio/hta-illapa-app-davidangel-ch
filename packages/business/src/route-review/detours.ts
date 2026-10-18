@@ -9,12 +9,14 @@ import {
 	DETOUR_SEGMENT_MATCH_RADIUS_M,
 	DETOUR_TRAMO_MATCH_RADIUS_M,
 	DETOUR_TRAMO_SAMPLE_POINTS,
+	DOUBLE_AXLE_TRUCK_AXLE_COUNT,
 } from "../constants";
 import type { LatLng } from "../hazards/types";
 import { METERS_PER_DEGREE_LATITUDE } from "../risk/constants";
 import type { ReviewEdge } from "./assemble";
 
 const MAX_AXLE_COUNT_PATTERN = /hasta\s+(\d+)\s+ejes/i;
+const DOUBLE_AXLE_TRUCK_PATTERN = /doble\s+eje/i;
 
 export interface AltRoutePoi {
 	id: string;
@@ -52,7 +54,10 @@ interface DetourRegionEntry {
 
 export function parseMaxAxleCount(restriction: string | null): number | null {
 	const match = restriction?.match(MAX_AXLE_COUNT_PATTERN);
-	return match?.[1] ? Number(match[1]) : null;
+	if (match?.[1]) return Number(match[1]);
+	return restriction && DOUBLE_AXLE_TRUCK_PATTERN.test(restriction)
+		? DOUBLE_AXLE_TRUCK_AXLE_COUNT
+		: null;
 }
 
 function lineStrings(geometry: Geometry | null): LineString[] {
