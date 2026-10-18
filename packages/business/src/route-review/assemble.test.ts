@@ -95,7 +95,7 @@ function review(
 }
 
 describe("assembleRouteReview", () => {
-	it("splits a route into segments of about 5 km with the route geometry", () => {
+	it("splits a route into segments of about 5 km with a simplified route line", () => {
 		const [candidate] = review().candidates;
 
 		expect(
@@ -105,8 +105,17 @@ describe("assembleRouteReview", () => {
 			[5_000, 10_000],
 			[10_000, 12_000],
 		]);
-		expect(candidate?.geometry.coordinates).toHaveLength(13);
-		expect(candidate?.segments[0]?.geometry.coordinates).toHaveLength(6);
+		// The straight road keeps only its segment ends, and the route line runs
+		// through exactly those points.
+		expect(
+			candidate?.segments.map(({ geometry }) => geometry.coordinates.length),
+		).toEqual([2, 2, 2]);
+		expect(candidate?.geometry.coordinates).toEqual([
+			road[0]?.geometry.coordinates[0],
+			road[4]?.geometry.coordinates[1],
+			road[9]?.geometry.coordinates[1],
+			road[11]?.geometry.coordinates[1],
+		]);
 		expect(candidate).toMatchObject({
 			id: "illapa:fastest",
 			source: "illapa",
@@ -242,6 +251,7 @@ describe("assembleRouteReview", () => {
 				kind: "forecast",
 				source: "Open-Meteo",
 				detail: "Hasta 32 mm en 24 h.",
+				incidentCategory: "rain_warning",
 				validFrom: now,
 				validUntil: new Date("2026-10-19T12:00:00Z"),
 				segmentIds: ["illapa:fastest:0"],
@@ -276,6 +286,29 @@ describe("assembleRouteReview", () => {
 			action: "continue",
 			rule: "baseline_only",
 		});
+	});
+
+	it("recommends by the risk inside the trip window, not a later storm", () => {
+		const detour = road.map((roadEdge) => ({
+			...edge(Number(roadEdge.id.slice(1)), "PE-20"),
+			id: `d${roadEdge.id}`,
+			segmentId: `d${roadEdge.segmentId}`,
+			roadName: "Vía Canta",
+			travelTimeS: 90,
+		}));
+		const assessments = [
+			...quietAssessments.filter(({ segmentId }) => segmentId !== "s1"),
+			...assessmentsFor("s1", { 24: 20, 48: 20, 72: 90 }),
+			...detour.flatMap((detourEdge) =>
+				assessmentsFor(detourEdge.segmentId, { 24: 40, 48: 40, 72: 40 }),
+			),
+		];
+		const result = review({
+			routes: [illapaRoute("fastest", road), illapaRoute("safest", detour)],
+			assessments,
+		});
+
+		expect(result.recommendedCandidateId).toBe("illapa:fastest");
 	});
 
 	it("recommends the lower-risk route and reroutes the risky one", () => {

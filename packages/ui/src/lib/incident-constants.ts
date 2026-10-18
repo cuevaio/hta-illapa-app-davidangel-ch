@@ -22,11 +22,45 @@ export const INCIDENT_SEVERITY_LABELS = {
 	info: "Informativa",
 };
 
-export const INCIDENT_SEVERITY_FILL_CLASSES = {
-	critical: "bg-risk-critical text-risk-critical-foreground",
-	warning: "bg-risk-high text-risk-high-foreground",
-	info: "bg-info text-info-foreground",
+export const INCIDENT_MARKER_TONE_CLASSES = {
+	low: {
+		filled: "bg-risk-low text-risk-low-foreground",
+		outline:
+			"border-risk-low bg-[color-mix(in_oklab,var(--risk-low)_8%,var(--card))]",
+	},
+	moderate: {
+		filled: "bg-risk-moderate text-risk-moderate-foreground",
+		outline:
+			"border-risk-moderate bg-[color-mix(in_oklab,var(--risk-moderate)_8%,var(--card))]",
+	},
+	high: {
+		filled: "bg-risk-high text-risk-high-foreground",
+		outline:
+			"border-risk-high bg-[color-mix(in_oklab,var(--risk-high)_8%,var(--card))]",
+	},
+	critical: {
+		filled: "bg-risk-critical text-risk-critical-foreground",
+		outline:
+			"border-risk-critical bg-[color-mix(in_oklab,var(--risk-critical)_8%,var(--card))]",
+	},
+	info: {
+		filled: "bg-info text-info-foreground",
+		outline: "border-info bg-[color-mix(in_oklab,var(--info)_8%,var(--card))]",
+	},
+	neutral: {
+		filled: "bg-muted-foreground text-background",
+		outline: "border-muted-foreground bg-card",
+	},
 };
+
+export const INCIDENT_SEVERITY_TONES = {
+	critical: "critical",
+	warning: "high",
+	info: "info",
+} satisfies Record<
+	keyof typeof INCIDENT_SEVERITY_LABELS,
+	keyof typeof INCIDENT_MARKER_TONE_CLASSES
+>;
 
 export const INCIDENT_SEVERITY_TEXT_CLASSES = {
 	critical: "text-risk-critical",

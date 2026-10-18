@@ -137,7 +137,8 @@ export function getRouteReviewLabels(): RouteReviewLabels {
 		ruleLabel: m.route_review_rule(),
 		valid: m.route_review_valid(),
 		risk: m.route_review_risk(),
-		horizonHelp: m.route_review_horizon_help(),
+		horizonHelp: (horizon) =>
+			m.route_review_horizon_help({ window: enums.horizons[horizon] }),
 		viewOnMap: m.route_review_view_map(),
 		mapLabel: m.route_review_map_label(),
 		legend: m.route_review_legend(),

@@ -8,7 +8,10 @@ import {
 } from "@hack-the-andes-project/ui/components/map";
 import { SeverityBadge } from "@hack-the-andes-project/ui/components/severity";
 import { useTokenColors } from "@hack-the-andes-project/ui/hooks/use-token-colors";
-import { INCIDENT_SEVERITY_LABELS } from "@hack-the-andes-project/ui/lib/incident-constants";
+import {
+	INCIDENT_SEVERITY_LABELS,
+	INCIDENT_SEVERITY_TONES,
+} from "@hack-the-andes-project/ui/lib/incident-constants";
 
 import {
 	HERO_MAP_MAX_ZOOM,
@@ -59,7 +62,7 @@ export default function HeroMap() {
 						>
 							<IncidentMarkerSymbol
 								category={hazard.category}
-								severity={hazard.severity}
+								tone={INCIDENT_SEVERITY_TONES[hazard.severity]}
 							/>
 						</span>
 					</MarkerContent>

@@ -7,3 +7,11 @@ export const MIN_NAME_LENGTH_CHARS = 2;
 
 export const SIDEBAR_EXPANDED_BREAKPOINT_PX = 1280;
 export const SIDEBAR_TOGGLE_SHORTCUT = "[";
+
+export const FONT_SIZE_STORAGE_KEY = "illapa-font-size";
+export const FONT_SIZE_DEFAULT = "md";
+export const FONT_SIZE_OPTIONS: readonly ["sm", "md", "lg"] = [
+	"sm",
+	"md",
+	"lg",
+];

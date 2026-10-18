@@ -8,15 +8,16 @@ import type {
 	IncidentSeverity,
 	RoadStatus,
 } from "@hack-the-andes-project/db/schema/scraper";
+import { simplify } from "@turf/simplify";
 import type { Geometry, LineString, Position } from "geojson";
 
 import {
 	BASELINE_SUSCEPTIBILITY_MIN,
 	DETOUR_MATCH_MIN_SHARE,
 	MS_PER_HOUR,
-	MS_PER_SECOND,
 	RECOMMENDATION_MAX_UNASSESSED_SHARE,
 	ROUTE_CODE_MIN_SHARE,
+	ROUTE_LINE_SIMPLIFY_TOLERANCE_DEG,
 	ROUTE_NAME_ROAD_MIN_SHARE,
 	ROUTE_REVIEW_ROUTING_HORIZON_HOURS,
 	ROUTE_REVIEW_SEGMENT_LENGTH_M,
@@ -29,7 +30,7 @@ import {
 } from "../risk/constants";
 import { strongestOfficialAlert } from "../risk/exposure";
 import { scoreCurrentRisk } from "../risk/score";
-import { compareRouteCandidates } from "./ranking";
+import { HORIZON_BY_HOURS, tripWindowHours } from "./ranking";
 import {
 	type RouteRecommendationDecision,
 	recommendRoute,
@@ -42,16 +43,10 @@ import type {
 	RouteSignalKind,
 } from "./risk";
 
-const HORIZON_BY_HOURS: Record<RiskHorizonHours, RouteRiskHorizon> = {
-	24: "24h",
-	48: "48h",
-	72: "72h",
-};
 const REVIEW_HORIZONS: RouteRiskHorizon[] = [
 	"now",
 	...RISK_HORIZONS_HOURS.map((hours) => HORIZON_BY_HOURS[hours]),
 ];
-const [, , LONGEST_HORIZON_HOURS] = RISK_HORIZONS_HOURS;
 
 const SIGNAL_SOURCE_LABELS: Record<string, string> = {
 	sutran_alerts: "SUTRAN",
@@ -217,21 +212,6 @@ function riskAssessments(
 	});
 }
 
-// The trip window is the smallest stored horizon that still covers arrival.
-export function tripWindowHours(
-	departureAt: Date,
-	durationS: number,
-	now: Date,
-): RiskHorizonHours {
-	const hoursUntilArrival =
-		(departureAt.getTime() + durationS * MS_PER_SECOND - now.getTime()) /
-		MS_PER_HOUR;
-	return (
-		RISK_HORIZONS_HOURS.find((hours) => hours >= hoursUntilArrival) ??
-		LONGEST_HORIZON_HOURS
-	);
-}
-
 export function incidentSignal(
 	incident: ReviewIncident,
 	kind: RouteSignalKind,
@@ -324,7 +304,10 @@ function buildCandidateDraft(
 			id: segmentIdForChunk(index),
 			startM,
 			endM: startM + lengthM,
-			geometry: concatenateLines(chunk.map(({ geometry }) => geometry)),
+			geometry: simplify(
+				concatenateLines(chunk.map(({ geometry }) => geometry)),
+				{ tolerance: ROUTE_LINE_SIMPLIFY_TOLERANCE_DEG },
+			),
 			risk: riskAssessments((horizon) => chunkScore(chunk, horizon)),
 		};
 		startM += lengthM;
@@ -427,7 +410,7 @@ function buildCandidateDraft(
 			validUntil: new Date(now.getTime() + windowHours * MS_PER_HOUR),
 			roadStatus: null,
 			incidentId: null,
-			incidentCategory: null,
+			incidentCategory: "rain_warning",
 			geometry: null,
 			segmentIds: forecastChunks.map(({ index }) => segmentIdForChunk(index)),
 		});
@@ -499,7 +482,9 @@ function buildCandidateDraft(
 				.join(" – ") ||
 				candidateId),
 		roadCodes: route.roadCodes ?? byLength(lengthByCode, ROUTE_CODE_MIN_SHARE),
-		geometry: concatenateLines(route.edges.map(({ geometry }) => geometry)),
+		// Built from the segments so the selected route's risk colours lie
+		// exactly on its line.
+		geometry: concatenateLines(segments.map(({ geometry }) => geometry)),
 		distanceM,
 		durationS,
 		eligibility: route.eligibility,
@@ -627,9 +612,13 @@ export function assembleRouteReview({
 			: recommendable
 		).map(({ id }) => id),
 	);
-	const [recommended] = candidates
+	const [recommended] = drafts
 		.filter(({ id }) => recommendableIds.has(id))
-		.toSorted(compareRouteCandidates);
+		.toSorted(
+			(first, second) =>
+				windowScore(first) - windowScore(second) ||
+				first.durationS - second.durationS,
+		);
 
 	return {
 		horizons: REVIEW_HORIZONS,

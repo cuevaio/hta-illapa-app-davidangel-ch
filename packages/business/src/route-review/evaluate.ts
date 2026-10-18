@@ -5,11 +5,15 @@ import {
 } from "@hack-the-andes-project/db/schema/risk";
 import { incident, poi } from "@hack-the-andes-project/db/schema/scraper";
 import { bbox } from "@turf/bbox";
-import { and, eq, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { simplify } from "@turf/simplify";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
 import type { LineString } from "geojson";
 
-import { ROUTE_REVIEW_ROUTING_HORIZON_HOURS } from "../constants";
+import {
+	DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG,
+	ROUTE_REVIEW_ROUTING_HORIZON_HOURS,
+} from "../constants";
 import type { LatLng } from "../hazards/types";
 import {
 	type Bounds,
@@ -20,7 +24,11 @@ import {
 	withinBounds,
 } from "../risk/compare-routes";
 import { OFFICIAL_ALERT_CATEGORIES } from "../risk/constants";
-import { findRiskAwareRoutes, type RouteEvaluation } from "../risk/route";
+import {
+	findFastestRoute,
+	findRiskAwareRoutes,
+	type RouteEvaluation,
+} from "../risk/route";
 import { fetchRouteCandidates } from "../routing/osrm";
 import {
 	type AssembledRouteReview,
@@ -59,6 +67,7 @@ async function loadAssessments(
 	db: Database,
 	bounds: Bounds,
 	now: Date,
+	excludedBounds?: Bounds,
 ): Promise<ReviewAssessment[]> {
 	return db
 		.select({
@@ -76,6 +85,13 @@ async function loadAssessments(
 			and(
 				gt(segmentRiskAssessment.validUntil, now),
 				withinBounds(roadSegment, bounds),
+				excludedBounds &&
+					or(
+						lt(roadSegment.lat, excludedBounds.south),
+						gt(roadSegment.lat, excludedBounds.north),
+						lt(roadSegment.lng, excludedBounds.west),
+						gt(roadSegment.lng, excludedBounds.east),
+					),
 			),
 		);
 }
@@ -91,10 +107,12 @@ export async function evaluateRouteReview({
 	log,
 	fetchImpl,
 }: EvaluateRouteReviewInput): Promise<AssembledRouteReview> {
+	const startedAt = performance.now();
+	const elapsedMs = () => Math.round(performance.now() - startedAt);
 	const bounds = routingBounds(origin, destination);
 	const [{ edges, nodes }, routingAssessments, incidentRows, altRoutes] =
 		await Promise.all([
-			loadRoadGraph(db, bounds),
+			loadRoadGraph(db),
 			loadAssessments(db, bounds, now),
 			db
 				.select({
@@ -145,6 +163,7 @@ export async function evaluateRouteReview({
 				.from(poi)
 				.where(and(eq(poi.active, true), eq(poi.kind, "alt_route"))),
 		]);
+	const loadedMs = elapsedMs();
 
 	const incidents = incidentRows.map(
 		({ occurredAt, sourceUpdatedAt, firstSeenAt, ...row }) => ({
@@ -159,8 +178,6 @@ export async function evaluateRouteReview({
 			? [{ ...closure, lat: closure.lat, lng: closure.lng }]
 			: [],
 	);
-	const blockedEdgeIds = await blockClosedEdges(db, edges, closures);
-
 	const riskBySegment = new Map(
 		routingAssessments.flatMap((assessment) =>
 			assessment.horizonHours === ROUTE_REVIEW_ROUTING_HORIZON_HOURS
@@ -171,25 +188,69 @@ export async function evaluateRouteReview({
 	const routingInput = { nodes, edges, riskBySegment, origin, destination };
 	// The direct route ignores closures so an interruption on it is shown and
 	// reroutes instead of silently disappearing from the list.
-	const direct = findRiskAwareRoutes({
+	const direct = findFastestRoute({
 		...routingInput,
 		blockedEdgeIds: new Set(),
 	});
-	const avoiding =
-		blockedEdgeIds.size > 0
-			? findRiskAwareRoutes({ ...routingInput, blockedEdgeIds })
-			: direct;
+	const directGeometries = await fetchEdgeGeometries(db, direct?.edgeIds ?? []);
+
+	// SUTRAN's detours apply when the stretch they replace is on the direct
+	// route: for Lima to Huancayo, the Carretera Central's Rutas 1 to 5.
+	const directLine: LineString | null = direct
+		? simplify(
+				{
+					type: "LineString",
+					coordinates: direct.edgeIds.flatMap((edgeId, index) => {
+						const coordinates = directGeometries.get(edgeId)?.coordinates ?? [];
+						return index === 0 ? coordinates : coordinates.slice(1);
+					}),
+				},
+				{ tolerance: DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG },
+			)
+		: null;
+	const detours = directLine
+		? groupSutranDetours(altRoutes)
+				.filter(({ tramos }) =>
+					tramos.some((tramo) => routeFollowsTramo(directLine, tramo)),
+				)
+				.flatMap(({ detours: regionDetours }) => regionDetours)
+		: [];
+	// OSRM takes about 0.7 s to answer the server, so the closures and the
+	// other paths are worked out while the detours are being routed.
+	const routingDetours = Promise.allSettled(
+		detours.map(async (detour) => {
+			const [route] = await fetchRouteCandidates({
+				baseUrl: osrmBaseUrl,
+				origin,
+				destination,
+				waypoints: detourAnchors(origin, detour.geometries),
+				fetchImpl,
+			});
+			if (!route) throw new Error(`OSRM found no route through ${detour.id}`);
+			return { detour, route };
+		}),
+	);
+
+	const blockedEdgeIds = await blockClosedEdges(db, edges, closures);
+	const avoiding = findRiskAwareRoutes({ ...routingInput, blockedEdgeIds });
 	const evaluations: [string, RouteEvaluation | null][] = [
-		["fastest", direct.fastest],
+		["fastest", direct],
 		["avoiding_closures", avoiding.fastest],
 		["safest", avoiding.safest],
 	];
 
 	const edgesById = new Map(edges.map((edge) => [edge.id, edge]));
-	const geometries = await fetchEdgeGeometries(db, [
-		...new Set(
-			evaluations.flatMap(([, evaluation]) => evaluation?.edgeIds ?? []),
-		),
+	const geometries = new Map([
+		...directGeometries,
+		...(await fetchEdgeGeometries(db, [
+			...new Set(
+				evaluations.flatMap(([, evaluation]) =>
+					(evaluation?.edgeIds ?? []).filter(
+						(edgeId) => !directGeometries.has(edgeId),
+					),
+				),
+			),
+		])),
 	]);
 	const illapaRoutes = evaluations.flatMap(
 		([role, evaluation]): ReviewRoute[] =>
@@ -210,38 +271,10 @@ export async function evaluateRouteReview({
 					]
 				: [],
 	);
+	const routedMs = elapsedMs();
 
-	// SUTRAN's detours apply when the stretch they replace is on the direct
-	// route: for Lima to Huancayo, the Carretera Central's Rutas 1 to 5.
-	const directRoute = illapaRoutes[0];
-	const directLine: LineString | null = directRoute
-		? {
-				type: "LineString",
-				coordinates: directRoute.edges.flatMap(({ geometry }, index) =>
-					index === 0 ? geometry.coordinates : geometry.coordinates.slice(1),
-				),
-			}
-		: null;
-	const detours = directLine
-		? groupSutranDetours(altRoutes)
-				.filter(({ tramos }) =>
-					tramos.some((tramo) => routeFollowsTramo(directLine, tramo)),
-				)
-				.flatMap(({ detours: regionDetours }) => regionDetours)
-		: [];
-	const routedDetours = await Promise.allSettled(
-		detours.map(async (detour) => {
-			const [route] = await fetchRouteCandidates({
-				baseUrl: osrmBaseUrl,
-				origin,
-				destination,
-				waypoints: detourAnchors(origin, detour.geometries),
-				fetchImpl,
-			});
-			if (!route) throw new Error(`OSRM found no route through ${detour.id}`);
-			return { detour, route };
-		}),
-	);
+	const routedDetours = await routingDetours;
+	const detoursRoutedMs = elapsedMs();
 	const detourFailures = routedDetours.flatMap((result) =>
 		result.status === "rejected" ? [String(result.reason)] : [],
 	);
@@ -250,7 +283,7 @@ export async function evaluateRouteReview({
 	);
 
 	// Detours leave the routing box, so their segments and assessments are
-	// read for their own extent.
+	// read for their own extent, minus the assessments already read for it.
 	const [west, south, east, north] = bbox({
 		type: "GeometryCollection",
 		geometries: detourRoutes.map(({ route }) => route.geometry),
@@ -267,7 +300,7 @@ export async function evaluateRouteReview({
 						})
 						.from(roadSegment)
 						.where(withinBounds(roadSegment, detourBounds)),
-					loadAssessments(db, detourBounds, now),
+					loadAssessments(db, detourBounds, now, bounds),
 				])
 			: [[], []];
 	const sutranRoutes = detourRoutes.map(
@@ -291,16 +324,13 @@ export async function evaluateRouteReview({
 		}),
 	);
 
-	const assessmentKey = (assessment: ReviewAssessment) =>
-		`${assessment.segmentId}:${assessment.horizonHours}`;
-	const assessments = [
-		...new Map(
-			[...routingAssessments, ...detourAssessments].map((assessment) => [
-				assessmentKey(assessment),
-				assessment,
-			]),
-		).values(),
-	];
+	const review = assembleRouteReview({
+		routes: [...illapaRoutes, ...sutranRoutes],
+		assessments: [...routingAssessments, ...detourAssessments],
+		incidents,
+		departureAt,
+		now,
+	});
 
 	log.set({
 		routeReview: {
@@ -308,14 +338,15 @@ export async function evaluateRouteReview({
 			sutranDetours: detours.length,
 			sutranDetourFailures: detourFailures,
 			blockedEdges: blockedEdgeIds.size,
+			// Milliseconds from the start at which each step ended. The detours
+			// are routed while the closures and the other paths are worked out.
+			timingsMs: {
+				loaded: loadedMs,
+				routed: routedMs,
+				detoursRouted: detoursRoutedMs,
+				assembled: elapsedMs(),
+			},
 		},
 	});
-
-	return assembleRouteReview({
-		routes: [...illapaRoutes, ...sutranRoutes],
-		assessments,
-		incidents,
-		departureAt,
-		now,
-	});
+	return review;
 }

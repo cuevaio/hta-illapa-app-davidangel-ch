@@ -21,6 +21,7 @@ import {
 	simulateDemoPositions,
 } from "../providers/index";
 import { planPositionUpdates } from "./decisions";
+import { importFleetVehicles } from "./import-vehicles";
 import { incomingValue } from "./sql";
 
 export interface SyncConnectionInput {
@@ -78,7 +79,10 @@ export async function syncConnection({
 								routeDurationS: trip.routeDurationS,
 								destinationLat: trip.destinationLat,
 								destinationLng: trip.destinationLng,
-								createdAt: trip.createdAt,
+								createdAt:
+									sql<Date>`coalesce(${trip.startedAt}, ${trip.createdAt})`.mapWith(
+										trip.createdAt,
+									),
 							},
 						})
 						.from(vehicle)
@@ -114,24 +118,7 @@ export async function syncConnection({
 				offset,
 				offset + FLEET_WRITE_BATCH_SIZE_ROWS,
 			);
-			await db
-				.insert(vehicle)
-				.values(
-					batch.map((entry) => ({
-						...entry,
-						id: crypto.randomUUID(),
-						organizationId: connection.organizationId,
-						connectionId: connection.id,
-						active: true,
-					})),
-				)
-				.onDuplicateKeyUpdate({
-					set: {
-						name: incomingValue(vehicle.name),
-						plate: incomingValue(vehicle.plate),
-						active: true,
-					},
-				});
+			await importFleetVehicles({ db, connection, vehicles: batch });
 			result.vehiclesSynced += batch.length;
 			const storedVehicles = await db
 				.select()

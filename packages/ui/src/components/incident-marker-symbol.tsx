@@ -1,17 +1,19 @@
 import type { Incident } from "../lib/incident";
-import { INCIDENT_SEVERITY_FILL_CLASSES } from "../lib/incident-constants";
+import { INCIDENT_MARKER_TONE_CLASSES } from "../lib/incident-constants";
 import { cn } from "../lib/utils";
 import { INCIDENT_CATEGORY_ICONS } from "./incident-icons";
 
 export interface IncidentMarkerSymbolProps {
 	category: Incident["category"];
-	severity: Incident["severity"];
+	tone: keyof typeof INCIDENT_MARKER_TONE_CLASSES;
+	variant?: "filled" | "outline";
 	className?: string;
 }
 
 export function IncidentMarkerSymbol({
 	category,
-	severity,
+	tone,
+	variant = "filled",
 	className,
 }: IncidentMarkerSymbolProps) {
 	const CategoryIcon = INCIDENT_CATEGORY_ICONS[category];
@@ -19,8 +21,10 @@ export function IncidentMarkerSymbol({
 		<span
 			aria-hidden="true"
 			className={cn(
-				"flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-background",
-				INCIDENT_SEVERITY_FILL_CLASSES[severity],
+				"flex size-7 shrink-0 items-center justify-center rounded-full border-2",
+				variant === "filled"
+					? cn("border-background", INCIDENT_MARKER_TONE_CLASSES[tone].filled)
+					: cn("text-foreground", INCIDENT_MARKER_TONE_CLASSES[tone].outline),
 				className,
 			)}
 		>

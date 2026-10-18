@@ -1,5 +1,5 @@
 import { distance } from "@turf/distance";
-import createGraph from "ngraph.graph";
+import createGraph, { type Graph } from "ngraph.graph";
 import { aStar } from "ngraph.path";
 
 import type { LatLng } from "../hazards/types";
@@ -68,49 +68,57 @@ function nearestNode(nodes: RoutingNode[], point: LatLng): RoutingNode | null {
 	return nearest;
 }
 
-export function findRiskAwareRoutes({
+// The road graph is cached per pipeline run, so every request passes the same
+// arrays and their routing graph is built once. Closures differ per request,
+// so they go through ngraph.path's `blocked` option instead of being left out
+// of the graph.
+const routingGraphs = new WeakMap<
+	RoutingEdge[],
+	{ nodes: RoutingNode[]; graph: Graph<RoutingNode, RoutingEdge> }
+>();
+
+function routingGraph(nodes: RoutingNode[], edges: RoutingEdge[]) {
+	const cached = routingGraphs.get(edges);
+	if (cached?.nodes === nodes) {
+		return cached.graph;
+	}
+	const graph = createGraph<RoutingNode, RoutingEdge>({ multigraph: true });
+	for (const node of nodes) {
+		graph.addNode(node.id, node);
+	}
+	for (const edge of edges) {
+		if (graph.hasNode(edge.fromNodeId) && graph.hasNode(edge.toNodeId)) {
+			graph.addLink(edge.fromNodeId, edge.toNodeId, edge);
+		}
+	}
+	routingGraphs.set(edges, { nodes, graph });
+	return graph;
+}
+
+function riskAwareRouter({
 	nodes,
 	edges,
 	riskBySegment,
 	blockedEdgeIds,
 	origin,
 	destination,
-}: FindRiskAwareRoutesInput): RiskAwareRoutes {
+}: FindRiskAwareRoutesInput) {
 	const start = nearestNode(nodes, origin);
 	const end = nearestNode(nodes, destination);
-	if (!start || !end) {
-		return { fastest: null, safest: null };
-	}
-
-	const graph = createGraph<RoutingNode, RoutingEdge>({ multigraph: true });
-	for (const node of nodes) {
-		graph.addNode(node.id, node);
-	}
-	// Closed edges are left out of the graph instead of using ngraph.path's
-	// `blocked` option: that option still queues the blocked neighbour, and an
-	// unreachable goal then comes back as a one-node "path".
-	for (const edge of edges) {
-		if (
-			!blockedEdgeIds.has(edge.id) &&
-			graph.hasNode(edge.fromNodeId) &&
-			graph.hasNode(edge.toNodeId)
-		) {
-			graph.addLink(edge.fromNodeId, edge.toNodeId, edge);
-		}
-	}
-
+	const graph = routingGraph(nodes, edges);
+	const isOpen = (edge: RoutingEdge) => !blockedEdgeIds.has(edge.id);
 	const riskScore = (edge: RoutingEdge) =>
 		edge.segmentId === null ? undefined : riskBySegment.get(edge.segmentId);
-	const fastestCost = (edge: RoutingEdge) => edge.travelTimeS;
-	const safestCost = (edge: RoutingEdge) =>
-		edge.travelTimeS *
-		(1 + (RISK_TIME_PENALTY_FACTOR * (riskScore(edge) ?? 0)) / RISK_SCORE_MAX);
 
 	const route = (
 		cost: (edge: RoutingEdge) => number,
 	): RouteEvaluation | null => {
+		if (!start || !end) {
+			return null;
+		}
 		const pathNodes = aStar<RoutingNode, RoutingEdge>(graph, {
 			oriented: true,
+			blocked: (_from, _to, link) => !isOpen(link.data),
 			distance: (_from, _to, link) => cost(link.data),
 			heuristic: (from, to) =>
 				distanceM(from.data, to.data) / MAX_ROAD_SPEED_MPS,
@@ -118,6 +126,8 @@ export function findRiskAwareRoutes({
 			.find(start.id, end.id)
 			// ngraph.path returns the path from destination back to origin.
 			.reverse();
+		// `blocked` still queues the node behind a closed edge, so a goal that
+		// only closures reach comes back as a one-node "path" without the start.
 		if (pathNodes[0]?.id !== start.id) {
 			return null;
 		}
@@ -132,6 +142,7 @@ export function findRiskAwareRoutes({
 				(_node, link) => {
 					if (
 						link.toId === toId &&
+						isOpen(link.data) &&
 						(cheapest === null || cost(link.data) < cost(cheapest))
 					) {
 						cheapest = link.data;
@@ -173,5 +184,28 @@ export function findRiskAwareRoutes({
 		};
 	};
 
-	return { fastest: route(fastestCost), safest: route(safestCost) };
+	return {
+		fastest: () => route((edge) => edge.travelTimeS),
+		safest: () =>
+			route(
+				(edge) =>
+					edge.travelTimeS *
+					(1 +
+						(RISK_TIME_PENALTY_FACTOR * (riskScore(edge) ?? 0)) /
+							RISK_SCORE_MAX),
+			),
+	};
+}
+
+export function findRiskAwareRoutes(
+	input: FindRiskAwareRoutesInput,
+): RiskAwareRoutes {
+	const router = riskAwareRouter(input);
+	return { fastest: router.fastest(), safest: router.safest() };
+}
+
+export function findFastestRoute(
+	input: FindRiskAwareRoutesInput,
+): RouteEvaluation | null {
+	return riskAwareRouter(input).fastest();
 }

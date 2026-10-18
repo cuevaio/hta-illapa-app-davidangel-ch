@@ -49,15 +49,20 @@ export const MIN_ROUTE_RISK_SCORE = 0;
 export const MAX_ROUTE_RISK_SCORE = 100;
 export const MIN_VEHICLE_AXLE_COUNT = 2;
 export const MAX_VEHICLE_AXLE_COUNT = 9;
+// SUTRAN writes some limits as "hasta camiones doble eje" instead of a count.
+export const DOUBLE_AXLE_TRUCK_AXLE_COUNT = 2;
 export const MINUTES_PER_HOUR = 60;
 export const HOURS_PER_DAY = 24;
 export const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
 export const MS_PER_HOUR = MINUTES_PER_HOUR * MS_PER_MINUTE;
 export const KG_PER_TONNE = 1_000;
 export const ROUTE_REVIEW_DEPARTURE_WINDOW_MS = HOURS_PER_DAY * MS_PER_HOUR;
+export const ROUTE_REVIEW_RETENTION_MS = HOURS_PER_DAY * MS_PER_HOUR;
 export { VEHICLE_PLATE_LENGTH_CHARS } from "@hack-the-andes-project/db/schema/constants";
 // PRD step 3: each path is split into segments of about 5 km.
 export const ROUTE_REVIEW_SEGMENT_LENGTH_M = 5_000;
+// About 11 m: route lines lose vertices the map cannot show at route zoom.
+export const ROUTE_LINE_SIMPLIFY_TOLERANCE_DEG = 0.0001;
 // Static susceptibility (0–1, risk/score.ts) from which a segment counts as
 // baseline exposure: roughly mass-movement class 4 on a steep slope.
 export const BASELINE_SUSCEPTIBILITY_MIN = 0.6;
@@ -76,6 +81,9 @@ export const DETOUR_PIECE_LENGTH_M = 1_000;
 export const DETOUR_SEGMENT_MATCH_RADIUS_M = 600;
 export const DETOUR_TRAMO_MATCH_RADIUS_M = 1_000;
 export const DETOUR_TRAMO_SAMPLE_POINTS = 20;
+// About 110 m: the direct route is only compared with tramos within 1 km, so
+// it is simplified well past what the map needs before the comparison.
+export const DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG = 0.001;
 // Share of a candidate's length that may lack a current assessment for it to
 // still be recommended: a mostly unscored detour looks safe only for lack of
 // data.
@@ -84,3 +92,12 @@ export const RECOMMENDATION_MAX_UNASSESSED_SHARE = 0.2;
 // or is listed among its road codes; shorter urban streets are left out.
 export const ROUTE_NAME_ROAD_MIN_SHARE = 0.25;
 export const ROUTE_CODE_MIN_SHARE = 0.05;
+
+export const GEOJSON_TYPE_PROPERTY = "type";
+export const GEOJSON_POINT = "Point";
+export const GEOJSON_MULTI_POINT = "MultiPoint";
+export const GEOJSON_LINE_STRING = "LineString";
+export const GEOJSON_MULTI_LINE_STRING = "MultiLineString";
+export const GEOJSON_POLYGON = "Polygon";
+export const GEOJSON_MULTI_POLYGON = "MultiPolygon";
+export const GEOJSON_GEOMETRY_COLLECTION = "GeometryCollection";

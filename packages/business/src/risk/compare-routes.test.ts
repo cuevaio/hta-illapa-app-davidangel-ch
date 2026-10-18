@@ -88,8 +88,20 @@ describe("closedEdgeIds", () => {
 		expect(
 			closedEdgeIds(
 				[
-					{ id: "pe22", roadCode: "PE-22", geometry: carreteraCentral },
-					{ id: "local", roadCode: "LM-115", geometry: parallelStreet },
+					{
+						id: "pe22",
+						roadCode: "PE-22",
+						lat: -11.844,
+						lng: -76.385,
+						geometry: carreteraCentral,
+					},
+					{
+						id: "local",
+						roadCode: "LM-115",
+						lat: -11.845,
+						lng: -76.385,
+						geometry: parallelStreet,
+					},
 				],
 				[closure],
 			),
@@ -99,7 +111,15 @@ describe("closedEdgeIds", () => {
 	it("blocks uncoded edges near a coded closure", () => {
 		expect(
 			closedEdgeIds(
-				[{ id: "untagged", roadCode: null, geometry: carreteraCentral }],
+				[
+					{
+						id: "untagged",
+						roadCode: null,
+						lat: -11.844,
+						lng: -76.385,
+						geometry: carreteraCentral,
+					},
+				],
 				[closure],
 			),
 		).toEqual(new Set(["untagged"]));
@@ -109,8 +129,20 @@ describe("closedEdgeIds", () => {
 		expect(
 			closedEdgeIds(
 				[
-					{ id: "pe22", roadCode: "PE-22", geometry: carreteraCentral },
-					{ id: "local", roadCode: "LM-115", geometry: parallelStreet },
+					{
+						id: "pe22",
+						roadCode: "PE-22",
+						lat: -11.844,
+						lng: -76.385,
+						geometry: carreteraCentral,
+					},
+					{
+						id: "local",
+						roadCode: "LM-115",
+						lat: -11.845,
+						lng: -76.385,
+						geometry: parallelStreet,
+					},
 				],
 				[{ ...closure, roadCode: null }],
 			),
@@ -120,7 +152,15 @@ describe("closedEdgeIds", () => {
 	it("ignores edges beyond the closure radius", () => {
 		expect(
 			closedEdgeIds(
-				[{ id: "pe22", roadCode: "PE-22", geometry: carreteraCentral }],
+				[
+					{
+						id: "pe22",
+						roadCode: "PE-22",
+						lat: -11.844,
+						lng: -76.385,
+						geometry: carreteraCentral,
+					},
+				],
 				[{ ...closure, lat: -11.86 }],
 			),
 		).toEqual(new Set());
