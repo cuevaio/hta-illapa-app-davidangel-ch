@@ -106,6 +106,30 @@ describe("findRiskAwareRoutes", () => {
 		expect(routes).toEqual({ fastest: null, safest: null });
 	});
 
+	it("takes the open one of two parallel roads when the faster one is closed", () => {
+		const routes = findRiskAwareRoutes({
+			nodes,
+			edges: [...edges, edge("B-D old road", 2, 4, 70, "risky")],
+			riskBySegment,
+			blockedEdgeIds: new Set(["B-D"]),
+			origin,
+			destination,
+		});
+
+		expect(routes.fastest?.edgeIds).toEqual(["A-B", "B-D old road"]);
+	});
+
+	it("keeps a closure to its own call when the graph is reused", () => {
+		const routingInput = { nodes, edges, riskBySegment, origin, destination };
+		findRiskAwareRoutes({ ...routingInput, blockedEdgeIds: new Set(["B-D"]) });
+		const routes = findRiskAwareRoutes({
+			...routingInput,
+			blockedEdgeIds: new Set(),
+		});
+
+		expect(routes.fastest?.edgeIds).toEqual(["A-B", "B-D"]);
+	});
+
 	it("returns no routes when an endpoint is too far from the graph", () => {
 		const routes = findRiskAwareRoutes({
 			nodes,
