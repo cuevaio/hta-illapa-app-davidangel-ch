@@ -6,11 +6,11 @@ import {
 	Vector3,
 	Viewport,
 } from "@babylonjs/core";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
 	SceneInsets,
 	StructureSceneProps,
 } from "../../lib/structure-scene";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import {
 	CAMERA_FAR_DISTANCE_RATIO,
 	CAMERA_FAR_M,
@@ -169,7 +169,7 @@ export class SceneCamera {
 
 	constructor(
 		private readonly scene: Scene,
-		private readonly terrain: BabylonTerrain,
+		private readonly terrain: StructureTerrain,
 	) {
 		this.camera = new ArcRotateCamera(
 			"structure-camera",

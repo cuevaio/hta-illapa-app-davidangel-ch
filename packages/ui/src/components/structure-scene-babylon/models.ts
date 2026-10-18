@@ -14,12 +14,12 @@ import {
 } from "@babylonjs/core";
 import type { StructureMaterial } from "@hack-the-andes-project/business/structures/catalog";
 import { bypassWidthM } from "@hack-the-andes-project/business/structures/geometry";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
 	PlacedStructure,
 	StructurePoint,
 	TunnelTemplate,
 } from "../../lib/structure-scene";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import {
 	ABUTMENT_DEPTH_M,
 	COLUMN_SEGMENTS_COUNT,
@@ -86,7 +86,7 @@ export function spanRotation(
 export function createStructureModel(
 	scene: Scene,
 	structure: PlacedStructure,
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 	palette: ScenePalette,
 	parent: TransformNode,
 	opacity = 1,
@@ -450,7 +450,7 @@ export interface RoadMeshes {
 export function createRoadMesh(
 	scene: Scene,
 	structure: PlacedStructure,
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 ): RoadMeshes {
 	const surface = new Mesh("bypass-road", scene);
 	const markings: Mesh[] = [];

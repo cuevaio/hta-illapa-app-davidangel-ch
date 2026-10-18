@@ -11,8 +11,8 @@ import {
 	WebXRSessionManager,
 	WebXRState,
 } from "@babylonjs/core";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import type { StructureXrController } from "../../lib/structure-xr-babylon";
 import { createStructureXr } from "../structure-xr-babylon";
 import {
@@ -92,7 +92,7 @@ function prepareSession() {
 	const xrCamera = new FreeCamera("xr", new Vector3(0, 1.7, 0), scene);
 	xrCamera.rotationQuaternion = Quaternion.Identity();
 	const content = new TransformNode("content", scene);
-	const terrain: BabylonTerrain = {
+	const terrain: StructureTerrain = {
 		root: new TransformNode("terrain", scene),
 		update: vi.fn(),
 		pick: vi.fn(() => null),
@@ -169,6 +169,8 @@ function prepareSession() {
 			exit: "Exit",
 			error: "XR error",
 		},
+		webgpu: false,
+		join: vi.fn(async () => {}),
 		onUndo: vi.fn(),
 		onSupportChange: vi.fn(),
 		onSessionChange: vi.fn(),
@@ -236,6 +238,36 @@ describe("XR session lifecycle", () => {
 		expect(state.terrain.setClip).toHaveBeenLastCalledWith(null);
 		expect(state.options.onSessionChange.mock.calls).toEqual([[true], [false]]);
 		expect(state.anchor.remove).toHaveBeenCalledOnce();
+	});
+
+	it("hands the running session to the viewer's shared XR session", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		expect(state.options.join).not.toHaveBeenCalled();
+		await controller.enter();
+		expect(state.options.join).toHaveBeenCalledOnce();
+		expect(state.options.join).toHaveBeenCalledWith({
+			baseExperience: state.experience,
+			input: expect.objectContaining({ dispose: expect.any(Function) }),
+		});
+		expect(state.options.onSessionChange.mock.calls).toEqual([[true]]);
+	});
+
+	it("renders through WebXR layers on a WebGPU engine only", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		expect(
+			state.experience.featuresManager.enableFeature,
+		).not.toHaveBeenCalledWith("xr-layers", expect.anything());
+		controller.dispose();
+		const webgpuState = prepareSession();
+		controller = await createStructureXr({
+			...webgpuState.options,
+			webgpu: true,
+		});
+		expect(
+			webgpuState.experience.featuresManager.enableFeature,
+		).toHaveBeenCalledWith("xr-layers", "stable");
 	});
 
 	it("offers a floor-relative fallback only after the surface search times out", async () => {

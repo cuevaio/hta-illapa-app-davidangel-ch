@@ -13,13 +13,13 @@ import {
 } from "@babylonjs/core";
 import { MAX_STRUCTURE_ELEMENTS } from "@hack-the-andes-project/business/structures/constants";
 import { terrainGradient } from "@hack-the-andes-project/business/structures/placement";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
 	SceneCursor,
 	SceneStructure,
 	StructureSceneProps,
 	TerrainStatus,
 } from "../../lib/structure-scene";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import { SceneCamera } from "./camera";
 import {
 	CLICK_THRESHOLD_PX,
@@ -109,7 +109,7 @@ export class StructureSceneRuntime {
 
 	constructor(
 		readonly scene: Scene,
-		readonly terrain: BabylonTerrain,
+		readonly terrain: StructureTerrain,
 		props: StructureSceneProps,
 		palette: ScenePalette,
 	) {

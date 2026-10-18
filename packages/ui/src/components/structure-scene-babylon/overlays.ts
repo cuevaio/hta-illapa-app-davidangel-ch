@@ -21,12 +21,11 @@ import {
 	structureGradePercent,
 	structureLengthM,
 } from "@hack-the-andes-project/business/structures/geometry";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
-import type { LocalPoint } from "@hack-the-andes-project/terrain/types";
 import type {
 	SceneStructure,
 	StructureSceneProps,
 } from "../../lib/structure-scene";
+import type { LocalPoint, StructureTerrain } from "../../lib/structure-terrain";
 import { modelFramePoints, type SceneCamera } from "./camera";
 import {
 	CHIP_FRACTION_DIGITS_COUNT,
@@ -92,7 +91,7 @@ export class SceneLabels {
 
 	constructor(
 		private readonly scene: Scene,
-		private readonly terrain: BabylonTerrain,
+		private readonly terrain: StructureTerrain,
 		private readonly parent: TransformNode,
 	) {
 		this.texture = AdvancedDynamicTexture.CreateFullscreenUI(
@@ -295,7 +294,7 @@ export class TerrainGrid {
 
 	constructor(
 		private readonly scene: Scene,
-		private readonly terrain: BabylonTerrain,
+		private readonly terrain: StructureTerrain,
 		private readonly parent: TransformNode,
 	) {
 		for (let axis = 0; axis < 2; axis++) {
@@ -391,7 +390,7 @@ export class TerrainGrid {
 
 export function createExposureRing(
 	scene: Scene,
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 	center: LocalPoint,
 	radiusM: number,
 	parent: TransformNode,

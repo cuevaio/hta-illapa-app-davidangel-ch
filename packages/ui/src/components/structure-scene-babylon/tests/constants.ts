@@ -28,6 +28,7 @@ export const TEST_STRUCTURE: SceneStructure = {
 	],
 };
 export const TEST_GROUND_M = 2_500;
+export const TEST_EARTH_RADIUS_M = 6_378_137;
 export const TEST_VIEW_WIDTH_PX = 1_200;
 export const TEST_VIEW_HEIGHT_PX = 800;
 export const TEST_CHARACTER_WIDTH_PX = 7;

@@ -9,6 +9,7 @@ import {
 	WebXRAnchorSystem,
 	WebXRControllerPointerSelection,
 	WebXRExperienceHelper,
+	WebXRFeatureName,
 	WebXRHandTracking,
 	WebXRHitTest,
 	WebXRInput,
@@ -107,6 +108,10 @@ export async function createStructureXr(
 			disableOnlineControllerRepository: true,
 			doNotLoadControllerMeshes: true,
 		});
+		const xrInput = input;
+		// A WebGPU engine renders XR through XRGPUBinding, which Babylon exposes via layers.
+		if (options.webgpu)
+			features.enableFeature(WebXRFeatureName.LAYERS, "stable");
 		visuals = createXrVisuals(
 			scene,
 			experience.camera,
@@ -342,8 +347,14 @@ export async function createStructureXr(
 							xrRenderTarget,
 						);
 						if (disposed) await experience.exitXRAsync();
+						else
+							await options.join({
+								baseExperience: experience,
+								input: xrInput,
+							});
 					} catch {
 						restoreDesktop();
+						if (sessionManager.inXRSession) void experience.exitXRAsync();
 						if (!disposed) reportError();
 					} finally {
 						entering = null;

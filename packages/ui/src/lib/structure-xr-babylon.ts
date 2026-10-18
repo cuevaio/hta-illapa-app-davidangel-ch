@@ -1,6 +1,6 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
-import type { LocalPoint } from "@hack-the-andes-project/terrain/types";
+import type { XrSessionMember } from "@hack-the-andes-project/xr-simulator/viewer";
+import type { LocalPoint, StructureTerrain } from "./structure-terrain";
 
 export interface StructureXrLabels {
 	placeTable: string;
@@ -11,10 +11,12 @@ export interface StructureXrLabels {
 
 export interface StructureXrOptions {
 	scene: Scene;
-	terrain: BabylonTerrain;
+	terrain: StructureTerrain;
 	content: TransformNode;
 	getFocus: () => LocalPoint | null;
 	labels: StructureXrLabels;
+	webgpu: boolean;
+	join: (member: XrSessionMember) => Promise<void>;
 	onUndo: () => void;
 	onSupportChange: (supported: boolean) => void;
 	onSessionChange: (active: boolean) => void;

@@ -1,4 +1,4 @@
-import { TERRAIN_ATTRIBUTION } from "@hack-the-andes-project/terrain";
+import { TERRAIN_ATTRIBUTION } from "@hack-the-andes-project/xr-simulator/viewer";
 import {
 	CompassIcon,
 	HouseIcon,

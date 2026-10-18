@@ -1,4 +1,3 @@
-export const DPR_MAX_RATIO = 2;
 export const HALF_RATIO = 0.5;
 export const DEGREES_PER_RADIAN = 180 / Math.PI;
 export const EULER_SINGULARITY_RATIO = 0.9999999;
@@ -35,7 +34,6 @@ export const SUN_INTENSITY_RATIO = 1.5;
 export const SUN_DIRECTION_M = { x: -3_000, y: -8_000, z: -4_000 };
 export const FOG_START_M = 25_000;
 export const FOG_END_M = 60_000;
-export const TERRAIN_LOAD_TIMEOUT_MS = 30_000;
 export const TERRAIN_REFRESH_INTERVAL_MS = 500;
 export const HEIGHT_CHANGE_EPSILON_M = 0.05;
 export const CURSOR_REPORT_INTERVAL_MS = 100;

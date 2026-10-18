@@ -883,22 +883,6 @@ importers:
         specifier: 'catalog:'
         version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
 
-  packages/terrain:
-    dependencies:
-      '@babylonjs/core':
-        specifier: 'catalog:'
-        version: 9.29.0
-    devDependencies:
-      '@hack-the-andes-project/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
-
   packages/tiles-schema: {}
 
   packages/ui:
@@ -921,9 +905,9 @@ importers:
       '@hack-the-andes-project/business':
         specifier: workspace:*
         version: link:../business
-      '@hack-the-andes-project/terrain':
+      '@hack-the-andes-project/xr-simulator':
         specifier: workspace:*
-        version: link:../terrain
+        version: link:../xr-simulator
       '@iwer/devui':
         specifier: 'catalog:'
         version: 2.5.0(@types/react@19.3.0)(immer@11.1.21)(iwer@2.5.0)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.1)(supports-color@8.1.1))(use-sync-external-store@1.7.0(react@19.3.1))
