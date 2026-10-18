@@ -19,7 +19,10 @@ import {
 	DEFAULT_ACCENT_COLOR,
 	DEFAULT_CARD_COLOR,
 	DEFAULT_FOREGROUND_COLOR,
+	DEFAULT_PRIMARY_COLOR,
+	DEFAULT_PRIMARY_FOREGROUND_COLOR,
 	DEFAULT_RING_COLOR,
+	DEFAULT_SECONDARY_COLOR,
 	HINT_DISTANCE_M,
 	HINT_FONT_SIZE_PX,
 	HINT_HEIGHT_M,
@@ -33,6 +36,7 @@ import {
 	PANEL_BUTTON_WIDTH_M,
 	PANEL_FIRST_BUTTON_OFFSET_RATIO,
 	PANEL_FONT_SIZE_PX,
+	PANEL_FONT_WEIGHT,
 	PANEL_HOVER_SCALE_RATIO,
 	PANEL_LABEL_OFFSET_M,
 	PANEL_PRESSED_SCALE_RATIO,
@@ -70,6 +74,13 @@ export function createXrVisuals(
 		styles.getPropertyValue("--foreground").trim() || DEFAULT_FOREGROUND_COLOR;
 	const accentColor =
 		styles.getPropertyValue("--accent").trim() || DEFAULT_ACCENT_COLOR;
+	const secondaryColor =
+		styles.getPropertyValue("--secondary").trim() || DEFAULT_SECONDARY_COLOR;
+	const primaryColor =
+		styles.getPropertyValue("--primary").trim() || DEFAULT_PRIMARY_COLOR;
+	const primaryForegroundColor =
+		styles.getPropertyValue("--primary-foreground").trim() ||
+		DEFAULT_PRIMARY_FOREGROUND_COLOR;
 	const ringColor =
 		styles.getPropertyValue("--ring").trim() || DEFAULT_RING_COLOR;
 	const textures: AdvancedDynamicTexture[] = [];
@@ -158,7 +169,7 @@ export function createXrVisuals(
 			utilityScene,
 		);
 		buttonMaterial.disableLighting = true;
-		buttonMaterial.emissiveColor = Color3.FromHexString(cardColor);
+		buttonMaterial.emissiveColor = Color3.FromHexString(secondaryColor);
 		buttonMesh.material = buttonMaterial;
 		materials.push(buttonMaterial);
 		const labelPlane = MeshBuilder.CreatePlane(
@@ -181,10 +192,11 @@ export function createXrVisuals(
 		);
 		const buttonLabel = new TextBlock(
 			`xr-action-text-${buttonIndex}`,
-			action.label,
+			action.label.toUpperCase(),
 		);
 		buttonLabel.color = foregroundColor;
 		buttonLabel.fontFamily = "Archivo Variable, sans-serif";
+		buttonLabel.fontWeight = PANEL_FONT_WEIGHT;
 		buttonLabel.fontSize = PANEL_FONT_SIZE_PX;
 		labelTexture.addControl(buttonLabel);
 		textures.push(labelTexture);
@@ -203,8 +215,9 @@ export function createXrVisuals(
 		let pressed = false;
 		const updateFeedback = () => {
 			buttonMaterial.emissiveColor = Color3.FromHexString(
-				hovered || pressed ? accentColor : cardColor,
+				pressed ? primaryColor : hovered ? accentColor : secondaryColor,
 			);
+			buttonLabel.color = pressed ? primaryForegroundColor : foregroundColor;
 			buttonMesh.scaling.setAll(
 				pressed
 					? PANEL_PRESSED_SCALE_RATIO
