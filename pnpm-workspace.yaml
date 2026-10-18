@@ -46,6 +46,7 @@ catalog:
   "@turf/along": ^7.4.0
   "@turf/bearing": ^7.4.0
   "@turf/destination": ^7.4.0
+  "@turf/simplify": ^7.4.0
   "@types/geojson": ^7946.0.16
   ai: ^7.0.143
   "@ai-sdk/typesafe-ai": ^3.0.21

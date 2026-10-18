@@ -8,6 +8,7 @@ import type {
 	IncidentSeverity,
 	RoadStatus,
 } from "@hack-the-andes-project/db/schema/scraper";
+import { simplify } from "@turf/simplify";
 import type { Geometry, LineString, Position } from "geojson";
 
 import {
@@ -17,6 +18,7 @@ import {
 	MS_PER_SECOND,
 	RECOMMENDATION_MAX_UNASSESSED_SHARE,
 	ROUTE_CODE_MIN_SHARE,
+	ROUTE_LINE_SIMPLIFY_TOLERANCE_DEG,
 	ROUTE_NAME_ROAD_MIN_SHARE,
 	ROUTE_REVIEW_ROUTING_HORIZON_HOURS,
 	ROUTE_REVIEW_SEGMENT_LENGTH_M,
@@ -324,7 +326,10 @@ function buildCandidateDraft(
 			id: segmentIdForChunk(index),
 			startM,
 			endM: startM + lengthM,
-			geometry: concatenateLines(chunk.map(({ geometry }) => geometry)),
+			geometry: simplify(
+				concatenateLines(chunk.map(({ geometry }) => geometry)),
+				{ tolerance: ROUTE_LINE_SIMPLIFY_TOLERANCE_DEG },
+			),
 			risk: riskAssessments((horizon) => chunkScore(chunk, horizon)),
 		};
 		startM += lengthM;
@@ -499,7 +504,9 @@ function buildCandidateDraft(
 				.join(" – ") ||
 				candidateId),
 		roadCodes: route.roadCodes ?? byLength(lengthByCode, ROUTE_CODE_MIN_SHARE),
-		geometry: concatenateLines(route.edges.map(({ geometry }) => geometry)),
+		// Built from the segments so the selected route's risk colours lie
+		// exactly on its line.
+		geometry: concatenateLines(segments.map(({ geometry }) => geometry)),
 		distanceM,
 		durationS,
 		eligibility: route.eligibility,

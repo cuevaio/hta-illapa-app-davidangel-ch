@@ -1,3 +1,4 @@
+import { bbox } from "@turf/bbox";
 import { distance } from "@turf/distance";
 import { nearestPointOnLine } from "@turf/nearest-point-on-line";
 import type { Geometry, LineString, Position } from "geojson";
@@ -10,6 +11,7 @@ import {
 	DETOUR_TRAMO_SAMPLE_POINTS,
 } from "../constants";
 import type { LatLng } from "../hazards/types";
+import { METERS_PER_DEGREE_LATITUDE } from "../risk/constants";
 import type { ReviewEdge } from "./assemble";
 
 const MAX_AXLE_COUNT_PATTERN = /hasta\s+(\d+)\s+ejes/i;
@@ -123,11 +125,22 @@ export function routeFollowsTramo(route: LineString, tramo: LineString) {
 		Math.floor(tramo.coordinates.length / DETOUR_TRAMO_SAMPLE_POINTS),
 	);
 	const samples = tramo.coordinates.filter((_, index) => index % step === 0);
-	const onRoute = samples.filter(
-		(position) =>
-			nearestPointOnLine(route, position, { units: "meters" }).properties
-				.pointDistance <= DETOUR_TRAMO_MATCH_RADIUS_M,
-	);
+	// Most of SUTRAN's tramos are elsewhere in Peru: a sample outside the
+	// route's box widened by the radius is off the route without measuring
+	// against every one of its vertices.
+	const [west = 0, south = 0, east = 0, north = 0] = bbox(route);
+	const latMarginDeg = DETOUR_TRAMO_MATCH_RADIUS_M / METERS_PER_DEGREE_LATITUDE;
+	const onRoute = samples.filter(([lng = 0, lat = 0]) => {
+		const lngMarginDeg = latMarginDeg / Math.cos((lat * Math.PI) / 180);
+		return (
+			lat >= south - latMarginDeg &&
+			lat <= north + latMarginDeg &&
+			lng >= west - lngMarginDeg &&
+			lng <= east + lngMarginDeg &&
+			nearestPointOnLine(route, [lng, lat], { units: "meters" }).properties
+				.pointDistance <= DETOUR_TRAMO_MATCH_RADIUS_M
+		);
+	});
 	return onRoute.length * 2 >= samples.length;
 }
 
@@ -214,12 +227,21 @@ export function splitIntoPseudoEdges(
 			),
 	);
 	const totalLengthM = lengths.reduce((total, lengthM) => total + lengthM, 0);
+	// Bands one match radius tall: a piece only measures the segments in its
+	// own band and the two next to it, not every segment the detours cross.
+	const bandDeg = DETOUR_SEGMENT_MATCH_RADIUS_M / METERS_PER_DEGREE_LATITUDE;
+	const segmentsByBand = Map.groupBy(segments, (segment) =>
+		Math.floor(segment.lat / bandDeg),
+	);
 
 	return pieces.map((coordinates, index) => {
 		const middle = coordinates[Math.floor(coordinates.length / 2)] ?? [0, 0];
+		const band = Math.floor((middle[1] ?? 0) / bandDeg);
 		let segmentId: string | null = null;
 		let nearestM = DETOUR_SEGMENT_MATCH_RADIUS_M;
-		for (const segment of segments) {
+		for (const segment of [band - 1, band, band + 1].flatMap(
+			(nearbyBand) => segmentsByBand.get(nearbyBand) ?? [],
+		)) {
 			const segmentDistanceM = distanceM(middle, [segment.lng, segment.lat]);
 			if (segmentDistanceM <= nearestM) {
 				nearestM = segmentDistanceM;

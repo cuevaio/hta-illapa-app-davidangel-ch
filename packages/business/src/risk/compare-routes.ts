@@ -1,6 +1,7 @@
 import type { Database } from "@hack-the-andes-project/db";
 import {
 	type RiskHorizonHours,
+	riskPipelineRun,
 	roadEdge,
 	roadNode,
 	roadSegment,
@@ -8,7 +9,7 @@ import {
 } from "@hack-the-andes-project/db/schema/risk";
 import { incident, poi } from "@hack-the-andes-project/db/schema/scraper";
 import { nearestPointOnLine } from "@turf/nearest-point-on-line";
-import { and, eq, gt, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lte } from "drizzle-orm";
 import type { MySqlColumn } from "drizzle-orm/mysql-core";
 import type { Geometry, LineString, Position } from "geojson";
 
@@ -20,7 +21,12 @@ import {
 	ROUTING_BOUNDS_MARGIN_DEG,
 	ROUTING_BOUNDS_SPAN_RATIO,
 } from "./constants";
-import { findRiskAwareRoutes, type RouteEvaluation } from "./route";
+import {
+	findRiskAwareRoutes,
+	type RouteEvaluation,
+	type RoutingEdge,
+	type RoutingNode,
+} from "./route";
 
 export interface CompareRiskAwareRoutesInput {
 	db: Database;
@@ -30,7 +36,18 @@ export interface CompareRiskAwareRoutesInput {
 	now: Date;
 }
 
-export interface ClosureCandidateEdge {
+export interface RoadGraphEdge extends RoutingEdge, LatLng {
+	roadCode: string | null;
+	roadName: string | null;
+}
+
+export interface RoadGraph {
+	pipelineRunId: string | null;
+	edges: RoadGraphEdge[];
+	nodes: RoutingNode[];
+}
+
+export interface ClosureCandidateEdge extends LatLng {
 	id: string;
 	roadCode: string | null;
 	geometry: LineString;
@@ -142,6 +159,15 @@ export function routingBounds(origin: LatLng, destination: LatLng): Bounds {
 	};
 }
 
+// Edges are short and located by their midpoint, so one this far from a
+// closure cannot reach it and its geometry is never measured.
+function isNearClosure(edge: LatLng, closure: LatLng) {
+	return (
+		Math.abs(edge.lat - closure.lat) <= CLOSURE_CANDIDATE_RADIUS_DEG &&
+		Math.abs(edge.lng - closure.lng) <= CLOSURE_CANDIDATE_RADIUS_DEG
+	);
+}
+
 // A closure on a coded road (SUTRAN reports PE-xx) must not close a nearby
 // street or bridge with another code. Edges without a code stay blockable:
 // OSM sometimes lacks the ref on the very road that is closed, and routing
@@ -155,6 +181,7 @@ export function closedEdgeIds(
 			.filter((edge) =>
 				closures.some(
 					(closure) =>
+						isNearClosure(edge, closure) &&
 						(closure.roadCode === null ||
 							edge.roadCode === null ||
 							closure.roadCode === edge.roadCode) &&
@@ -167,9 +194,23 @@ export function closedEdgeIds(
 	);
 }
 
+// The pipeline replaces the road graph in one transaction and records a run,
+// so the whole graph is read again only when a newer run exists instead of a
+// routing box's worth on every request.
+let cachedRoadGraph: RoadGraph | null = null;
+
 // Geometry stays out of the bulk load: only the chosen routes' edges and
 // closure candidates need it.
-export async function loadRoadGraph(db: Database, bounds: Bounds) {
+export async function loadRoadGraph(db: Database): Promise<RoadGraph> {
+	const [latestRun] = await db
+		.select({ id: riskPipelineRun.id })
+		.from(riskPipelineRun)
+		.orderBy(desc(riskPipelineRun.finishedAt))
+		.limit(1);
+	const pipelineRunId = latestRun?.id ?? null;
+	if (cachedRoadGraph?.pipelineRunId === pipelineRunId) {
+		return cachedRoadGraph;
+	}
 	const [edges, nodes] = await Promise.all([
 		db
 			.select({
@@ -184,14 +225,13 @@ export async function loadRoadGraph(db: Database, bounds: Bounds) {
 				lat: roadEdge.lat,
 				lng: roadEdge.lng,
 			})
-			.from(roadEdge)
-			.where(withinBounds(roadEdge, bounds)),
+			.from(roadEdge),
 		db
 			.select({ id: roadNode.id, lat: roadNode.lat, lng: roadNode.lng })
-			.from(roadNode)
-			.where(withinBounds(roadNode, bounds)),
+			.from(roadNode),
 	]);
-	return { edges, nodes };
+	cachedRoadGraph = { pipelineRunId, edges, nodes };
+	return cachedRoadGraph;
 }
 
 export async function blockClosedEdges(
@@ -200,11 +240,7 @@ export async function blockClosedEdges(
 	closures: RouteClosure[],
 ): Promise<Set<string>> {
 	const candidateEdges = edges.filter((edge) =>
-		closures.some(
-			(closure) =>
-				Math.abs(edge.lat - closure.lat) <= CLOSURE_CANDIDATE_RADIUS_DEG &&
-				Math.abs(edge.lng - closure.lng) <= CLOSURE_CANDIDATE_RADIUS_DEG,
-		),
+		closures.some((closure) => isNearClosure(edge, closure)),
 	);
 	const candidateGeometries = await fetchEdgeGeometries(
 		db,
@@ -229,7 +265,7 @@ export async function compareRiskAwareRoutes({
 	const bounds = routingBounds(origin, destination);
 
 	const [{ edges, nodes }, risks, closureIncidents] = await Promise.all([
-		loadRoadGraph(db, bounds),
+		loadRoadGraph(db),
 		db
 			.select({
 				segmentId: segmentRiskAssessment.segmentId,
