@@ -267,6 +267,10 @@ export async function evaluateRouteReview({
 								const geometry = geometries.get(edgeId);
 								return edge && geometry ? [{ ...edge, geometry }] : [];
 							}),
+							// Both avoid the closures, so the safest path is only worth
+							// listing when it lowers the risk of the faster one.
+							saferAlternativeTo:
+								role === "safest" ? "illapa:avoiding_closures" : null,
 						},
 					]
 				: [],
@@ -321,6 +325,7 @@ export async function evaluateRouteReview({
 				route.durationS,
 				detourSegments,
 			),
+			saferAlternativeTo: null,
 		}),
 	);
 

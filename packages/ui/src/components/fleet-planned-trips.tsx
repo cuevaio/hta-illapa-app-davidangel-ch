@@ -97,7 +97,7 @@ export function FleetPlannedTrips(props: FleetPlannedTripsProps) {
 	const missingTypeVehicles = vehicles.filter((vehicle) => !vehicle.profile);
 	const firstMissingVehicle = missingTypeVehicles[0];
 	return (
-		<div className="flex min-w-0 flex-col gap-6">
+		<div className="@container flex min-w-0 flex-col gap-6">
 			{firstMissingVehicle && (
 				<Alert variant="info">
 					<TriangleAlertIcon aria-hidden="true" />
@@ -173,7 +173,7 @@ export function FleetPlannedTrips(props: FleetPlannedTripsProps) {
 						<>
 							<div
 								aria-hidden="true"
-								className="type-label hidden gap-4 px-4 text-muted-foreground md:grid md:grid-cols-[1.2fr_1fr_1.5fr_1.3fr_1fr]"
+								className="type-label @4xl:grid hidden @4xl:grid-cols-[1.2fr_1fr_1.5fr_1.3fr_1fr] gap-4 px-4 text-muted-foreground"
 							>
 								{[
 									labels.route,
@@ -405,7 +405,7 @@ function FleetTripRow({
 	const recommendation = trip.chosenCandidate.recommendation;
 	const routeName = `${ROUTE_REVIEW_PLACES[trip.originPlaceId].name} → ${ROUTE_REVIEW_PLACES[trip.destinationPlaceId].name}`;
 	return (
-		<li className="relative grid min-w-0 gap-3 p-4 focus-within:z-10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-inset hover:bg-muted/50 md:grid-cols-[1.2fr_1fr_1.5fr_1.3fr_1fr]">
+		<li className="relative grid min-w-0 @4xl:grid-cols-[1.2fr_1fr_1.5fr_1.3fr_1fr] gap-3 p-4 focus-within:z-10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-inset hover:bg-muted/50">
 			<div className="min-w-0">
 				<div className="flex flex-wrap gap-1">
 					{history ? (
@@ -431,7 +431,7 @@ function FleetTripRow({
 				)}
 			</div>
 			<p className="type-data">
-				<span className="md:sr-only">{labels.departure} </span>
+				<span className="@4xl:sr-only">{labels.departure} </span>
 				{formatDeparture(trip.departureAt)}
 			</p>
 			<div className="min-w-0">
@@ -465,7 +465,7 @@ function FleetTripRow({
 				</div>
 			)}
 			<p className="type-data text-muted-foreground">
-				<span className="md:sr-only">{labels.evaluated} </span>
+				<span className="@4xl:sr-only">{labels.evaluated} </span>
 				{formatEvaluatedAgo(trip.lastEvaluatedAt)}
 				{now.getTime() - trip.lastEvaluatedAt.getTime() > staleEvaluationMs
 					? ` · ${labels.stale}`
@@ -473,7 +473,7 @@ function FleetTripRow({
 			</p>
 			<ChevronRightIcon
 				aria-hidden="true"
-				className="absolute top-4 right-2 size-4 md:top-1/2"
+				className="absolute @4xl:top-1/2 top-4 right-2 size-4"
 			/>
 		</li>
 	);

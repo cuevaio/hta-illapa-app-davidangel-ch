@@ -35,15 +35,24 @@ import {
 	INCIDENT_SINCE_PRESETS,
 } from "@/constants";
 import { useFleetQueries } from "@/lib/fleet-queries";
+import { m } from "@/paraglide/messages";
 import { client, orpc } from "@/utils/orpc";
 
+interface IncidentMapSearch {
+	flota?: boolean;
+}
+
 export const Route = createFileRoute("/_auth/dashboard/")({
+	validateSearch: (search: Record<string, unknown>): IncidentMapSearch => ({
+		flota: search.flota === true || undefined,
+	}),
 	component: IncidentMapPage,
 });
 
 function IncidentMapPage() {
 	const fleetQueries = useFleetQueries();
-	const [showFleet, setShowFleet] = useState(false);
+	const navigate = Route.useNavigate();
+	const { flota: showFleet = false } = Route.useSearch();
 	const vehiclesQuery = useQuery(fleetQueries.vehicles);
 	const tripsQuery = useQuery({ ...fleetQueries.trips, enabled: showFleet });
 	const [categories, setCategories] = useState<Incident["category"][]>([]);
@@ -115,21 +124,28 @@ function IncidentMapPage() {
 					<Switch
 						id="show-fleet"
 						checked={showFleet}
-						onCheckedChange={setShowFleet}
+						onCheckedChange={(checked) => {
+							void navigate({
+								search: { flota: checked || undefined },
+								replace: true,
+							});
+						}}
 					/>
-					<FieldLabel htmlFor="show-fleet">Mostrar flota</FieldLabel>
+					<FieldLabel htmlFor="show-fleet">
+						{m.dashboard_show_fleet()}
+					</FieldLabel>
 					{showFleet && tripsQuery.isPending && (
 						<span className="type-data text-muted-foreground">
-							Cargando rutas…
+							{m.dashboard_fleet_routes_loading()}
 						</span>
 					)}
 				</Field>
 			)}
 			{showFleet && (vehiclesQuery.isError || tripsQuery.isError) && (
 				<Alert variant="destructive">
-					<AlertTitle>No se pudo actualizar la flota</AlertTitle>
+					<AlertTitle>{m.dashboard_fleet_error()}</AlertTitle>
 					<AlertDescription>
-						Se muestran los últimos datos disponibles.
+						{m.dashboard_latest_data()}
 						<Button
 							variant="link"
 							onClick={() => {
@@ -137,7 +153,7 @@ function IncidentMapPage() {
 								void tripsQuery.refetch();
 							}}
 						>
-							Reintentar
+							{m.query_retry()}
 						</Button>
 					</AlertDescription>
 				</Alert>
@@ -149,23 +165,24 @@ function IncidentMapPage() {
 			/>
 			{incidentsQuery.isError && (
 				<Alert variant="destructive">
-					<AlertTitle>No se pudieron actualizar los incidentes</AlertTitle>
+					<AlertTitle>{m.dashboard_incidents_error()}</AlertTitle>
 					<AlertDescription>
 						{incidentsQuery.data
-							? "Se muestran los últimos datos disponibles. "
-							: "Verifica tu conexión. "}
+							? m.dashboard_latest_data()
+							: m.dashboard_check_connection()}{" "}
 						<Button variant="link" onClick={() => incidentsQuery.refetch()}>
-							Reintentar
+							{m.query_retry()}
 						</Button>
 					</AlertDescription>
 				</Alert>
 			)}
 			{incidents.length === DEFAULT_INCIDENT_LIMIT_ROWS && (
 				<Alert>
-					<AlertTitle>Se alcanzó el límite de resultados</AlertTitle>
+					<AlertTitle>{m.dashboard_incident_limit_title()}</AlertTitle>
 					<AlertDescription>
-						Se muestran los {DEFAULT_INCIDENT_LIMIT_ROWS} incidentes más
-						recientes. Usa los filtros para acotar la búsqueda.
+						{m.dashboard_incident_limit_description({
+							count: DEFAULT_INCIDENT_LIMIT_ROWS,
+						})}
 					</AlertDescription>
 				</Alert>
 			)}
@@ -184,7 +201,7 @@ function IncidentMapPage() {
 				{incidentsQuery.isPending && (
 					<output
 						className="pointer-events-none absolute top-3 left-3 flex w-56 flex-col gap-2 border border-border bg-popover p-3"
-						aria-label="Cargando incidentes"
+						aria-label={m.dashboard_incidents_loading()}
 					>
 						<Skeleton className="h-4 w-36" />
 						<Skeleton className="h-3 w-full" />
@@ -195,11 +212,11 @@ function IncidentMapPage() {
 					<div className="pointer-events-none absolute inset-x-3 top-3 flex justify-center">
 						<Empty className="max-w-sm border border-border bg-popover p-4">
 							<EmptyHeader>
-								<EmptyTitle>Sin incidentes para estos filtros</EmptyTitle>
+								<EmptyTitle>{m.dashboard_incidents_empty_title()}</EmptyTitle>
 								<EmptyDescription>
 									{severities.length
-										? "Prueba otras categorías o amplía el período."
-										: "Selecciona al menos una severidad para ver incidentes."}
+										? m.dashboard_incidents_empty_description()
+										: m.dashboard_incidents_no_severity()}
 								</EmptyDescription>
 							</EmptyHeader>
 						</Empty>
@@ -212,14 +229,15 @@ function IncidentMapPage() {
 			>
 				<span>
 					{incidentsQuery.isPending
-						? "Cargando incidentes…"
-						: `${incidents.length} incidentes encontrados`}
-					{Boolean(unlocatedCount) && ` · ${unlocatedCount} sin ubicación`}
+						? m.dashboard_incidents_loading()
+						: m.dashboard_incidents_found({ count: incidents.length })}
+					{Boolean(unlocatedCount) &&
+						` · ${m.dashboard_incidents_unlocated({ count: unlocatedCount })}`}
 				</span>
 				<span>
 					{incidentsQuery.isFetching
-						? "Actualizando…"
-						: "Actualización automática cada minuto"}
+						? m.dashboard_updating()
+						: m.dashboard_auto_refresh()}
 				</span>
 			</footer>
 			<IncidentDetails

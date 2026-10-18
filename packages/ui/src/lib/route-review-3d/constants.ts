@@ -365,3 +365,5 @@ export const DEFAULT_LANDMARK_OFFSET: LandmarkLabelOffset = {
 	offsetY: 0.045,
 	offsetZ: 0,
 };
+
+export const COMPACT_HUD_MEDIA_QUERY = "(max-width: 1279px)";

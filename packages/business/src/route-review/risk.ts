@@ -21,6 +21,7 @@ export const ROUTE_RECOMMENDATION_RULES = [
 	"confirmed_interruption",
 	"confirmed_restriction",
 	"forecast_in_window",
+	"forecast_below_high",
 	"baseline_only",
 	"nothing_relevant",
 ] as const;

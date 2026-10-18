@@ -82,9 +82,9 @@ function DashboardLayout() {
 			seenAlerts.current.ids.add(alert.id);
 			toast.warning(alert.title, {
 				id: `${sessionScope}:${alert.id}`,
-				description: `${alert.vehicleName ?? "Vehículo"} · ${alert.message}`,
+				description: `${alert.vehicleName ?? m.vehicle()} · ${alert.message}`,
 				action: {
-					label: "Ver alertas",
+					label: m.dashboard_view_alerts(),
 					onClick: () => navigate({ to: "/dashboard/alerts" }),
 				},
 			});
@@ -148,7 +148,7 @@ function DashboardLayout() {
 					<Separator orientation="vertical" className="h-4 md:hidden" />
 					<h1 className="type-heading min-w-0 truncate">
 						{navigationItems.find((item) => item.active)?.label ??
-							"Centro de operaciones"}
+							m.dashboard_operations_center()}
 					</h1>
 				</header>
 				<div className="flex min-h-0 flex-1 flex-col overflow-auto">

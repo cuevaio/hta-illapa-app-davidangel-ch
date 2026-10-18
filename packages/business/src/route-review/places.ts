@@ -6,13 +6,18 @@ export const ROUTE_REVIEW_PLACE_IDS = [
 	"la_oroya",
 	"tarma",
 	"jauja",
+] as const;
+// The others lie outside the road graph, so no route reaches them and they are
+// no longer offered; reviews stored before that still name them.
+export const KNOWN_ROUTE_REVIEW_PLACE_IDS = [
+	...ROUTE_REVIEW_PLACE_IDS,
 	"cerro_de_pasco",
 	"huanuco",
 	"canete",
 	"pisco",
 	"ayacucho",
 ] as const;
-export type RouteReviewPlaceId = (typeof ROUTE_REVIEW_PLACE_IDS)[number];
+export type RouteReviewPlaceId = (typeof KNOWN_ROUTE_REVIEW_PLACE_IDS)[number];
 
 export interface RouteReviewPlace extends LatLng {
 	name: string;

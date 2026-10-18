@@ -1,0 +1,25 @@
+url: https://app-staging.52-21-151-223.sslip.io/login
+name: Revisar ruta on a phone
+tags:
+  - fleet
+  - mobile
+---
+- launchApp
+- runFlow: ../../common/login.yaml
+- extendedWaitUntil:
+    visible: ".*incidentes.*|Mapa"
+    timeout: 30000
+- openLink: ${APP_URL}/dashboard/revisar-ruta
+- extendedWaitUntil:
+    visible: "Elige un vehículo"
+    timeout: 30000
+- takeScreenshot: 01-form
+- tapOn: "Elige un vehículo"
+- takeScreenshot: 02-vehicle-list
+- tapOn: "Tracto 02 · Ate · DEM-102.*"
+- tapOn: "Revisar"
+- extendedWaitUntil:
+    visible: ".*rutas · Tracto 02 · Ate · 6 ejes.*"
+    timeout: 60000
+- takeScreenshot: 03-results
+- assertVisible: "Recomendada"

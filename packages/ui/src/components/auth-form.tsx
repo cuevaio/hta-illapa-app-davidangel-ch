@@ -17,29 +17,11 @@ import { PasswordInput } from "./password-input";
 
 export type AuthMode = "sign-in" | "sign-up";
 
-const signInSchema = z.object({
-	name: z.string(),
-	email: z.email("Ingresa un correo válido."),
-	password: z.string().min(1, "Ingresa tu contraseña."),
-});
-
-const signUpSchema = signInSchema.extend({
-	name: z
-		.string()
-		.trim()
-		.min(
-			MIN_NAME_LENGTH_CHARS,
-			`Tu nombre debe tener al menos ${MIN_NAME_LENGTH_CHARS} caracteres.`,
-		),
-	password: z
-		.string()
-		.min(
-			MIN_PASSWORD_LENGTH_CHARS,
-			`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH_CHARS} caracteres.`,
-		),
-});
-
-export interface AuthFormValues extends z.infer<typeof signInSchema> {}
+export interface AuthFormValues {
+	name: string;
+	email: string;
+	password: string;
+}
 
 interface AuthFieldErrors {
 	name?: string[];
@@ -47,7 +29,7 @@ interface AuthFieldErrors {
 	password?: string[];
 }
 
-interface AuthModeCopy {
+export interface AuthModeLabels {
 	title: string;
 	description: string;
 	submit: string;
@@ -56,46 +38,50 @@ interface AuthModeCopy {
 	switchAction: string;
 }
 
-const AUTH_MODE_COPY: Record<AuthMode, AuthModeCopy> = {
-	"sign-in": {
-		title: "Inicia sesión",
-		description: "Entra al centro de operaciones de tu flota.",
-		submit: "Entrar",
-		pending: "Entrando…",
-		switchPrompt: "¿Aún no tienes cuenta?",
-		switchAction: "Crea una",
-	},
-	"sign-up": {
-		title: "Crea tu cuenta",
-		description: "Monitorea tu flota y las rutas del Perú desde un solo lugar.",
-		submit: "Crear cuenta",
-		pending: "Creando cuenta…",
-		switchPrompt: "¿Ya tienes cuenta?",
-		switchAction: "Inicia sesión",
-	},
-};
+export interface AuthFormLabels {
+	signIn: AuthModeLabels;
+	signUp: AuthModeLabels;
+	name: string;
+	namePlaceholder: string;
+	email: string;
+	emailPlaceholder: string;
+	password: string;
+	passwordHint: (minimumLength: number) => string;
+	invalidEmail: string;
+	passwordRequired: string;
+	nameTooShort: (minimumLength: number) => string;
+	passwordTooShort: (minimumLength: number) => string;
+}
 
 const AUTH_CONTROL_CLASS_NAME =
 	"type-body h-10 text-foreground focus-visible:ring-ring! md:type-body";
 
 export interface AuthFormProps {
 	mode: AuthMode;
+	labels: AuthFormLabels;
 	onModeChange: (mode: AuthMode) => void;
 	onSubmit: (values: AuthFormValues) => Promise<string | undefined>;
 }
 
-export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
+export function AuthForm({
+	mode,
+	labels,
+	onModeChange,
+	onSubmit,
+}: AuthFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
 	const [submitError, setSubmitError] = useState<string>();
-	const copy = AUTH_MODE_COPY[mode];
 	const isSignUp = mode === "sign-up";
+	const modeLabels = isSignUp ? labels.signUp : labels.signIn;
 
 	return (
 		<div className="flex flex-col gap-8">
 			<div className="flex flex-col gap-2">
-				<h2 className="type-title text-foreground">{copy.title}</h2>
-				<p className="type-body text-muted-foreground">{copy.description}</p>
+				<h2 className="type-title text-foreground">{modeLabels.title}</h2>
+				<p className="type-body text-muted-foreground">
+					{modeLabels.description}
+				</p>
 			</div>
 			<form
 				noValidate
@@ -103,8 +89,29 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
 				onSubmit={async (event) => {
 					event.preventDefault();
 					const formData = new FormData(event.currentTarget);
+					const signInSchema = z.object({
+						name: z.string(),
+						email: z.email(labels.invalidEmail),
+						password: z.string().min(1, labels.passwordRequired),
+					});
 					const parsedValues = (
-						isSignUp ? signUpSchema : signInSchema
+						isSignUp
+							? signInSchema.extend({
+									name: z
+										.string()
+										.trim()
+										.min(
+											MIN_NAME_LENGTH_CHARS,
+											labels.nameTooShort(MIN_NAME_LENGTH_CHARS),
+										),
+									password: z
+										.string()
+										.min(
+											MIN_PASSWORD_LENGTH_CHARS,
+											labels.passwordTooShort(MIN_PASSWORD_LENGTH_CHARS),
+										),
+								})
+							: signInSchema
 					).safeParse({
 						name: String(formData.get("name") ?? ""),
 						email: String(formData.get("email") ?? ""),
@@ -132,13 +139,13 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
 									className="font-medium font-sans text-sm normal-case tracking-normal"
 									htmlFor="auth-name"
 								>
-									Nombre
+									{labels.name}
 								</FieldLabel>
 								<Input
 									id="auth-name"
 									name="name"
 									autoComplete="name"
-									placeholder="María Quispe"
+									placeholder={labels.namePlaceholder}
 									aria-invalid={Boolean(fieldErrors.name)}
 									className={AUTH_CONTROL_CLASS_NAME}
 								/>
@@ -152,14 +159,14 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
 								className="font-medium font-sans text-sm normal-case tracking-normal"
 								htmlFor="auth-email"
 							>
-								Correo electrónico
+								{labels.email}
 							</FieldLabel>
 							<Input
 								id="auth-email"
 								name="email"
 								type="email"
 								autoComplete="email"
-								placeholder="tu@empresa.com"
+								placeholder={labels.emailPlaceholder}
 								aria-invalid={Boolean(fieldErrors.email)}
 								className={AUTH_CONTROL_CLASS_NAME}
 							/>
@@ -172,7 +179,7 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
 								className="font-medium font-sans text-sm normal-case tracking-normal"
 								htmlFor="auth-password"
 							>
-								Contraseña
+								{labels.password}
 							</FieldLabel>
 							<PasswordInput
 								id="auth-password"
@@ -188,7 +195,7 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
 							) : (
 								isSignUp && (
 									<FieldDescription className="type-body">
-										Al menos {MIN_PASSWORD_LENGTH_CHARS} caracteres.
+										{labels.passwordHint(MIN_PASSWORD_LENGTH_CHARS)}
 									</FieldDescription>
 								)
 							)}
@@ -208,17 +215,17 @@ export function AuthForm({ mode, onModeChange, onSubmit }: AuthFormProps) {
 					className="w-full"
 					disabled={isSubmitting}
 				>
-					{isSubmitting ? copy.pending : copy.submit}
+					{isSubmitting ? modeLabels.pending : modeLabels.submit}
 				</Button>
 			</form>
 			<p className="type-body text-center text-muted-foreground">
-				{copy.switchPrompt}{" "}
+				{modeLabels.switchPrompt}{" "}
 				<Button
 					variant="link"
 					className="h-auto p-0"
 					onClick={() => onModeChange(isSignUp ? "sign-in" : "sign-up")}
 				>
-					{copy.switchAction}
+					{modeLabels.switchAction}
 				</Button>
 			</p>
 		</div>

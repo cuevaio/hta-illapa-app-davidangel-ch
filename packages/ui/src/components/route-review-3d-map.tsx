@@ -15,6 +15,7 @@ import {
 	CAMERA_NEAR_M,
 	CARRIER_KEYS_ORDER,
 	CARRIER_PROFILES,
+	COMPACT_HUD_MEDIA_QUERY,
 	FILL_LIGHT_COLOR_HEX,
 	FILL_LIGHT_INTENSITY,
 	FILL_LIGHT_X_M,
@@ -237,7 +238,9 @@ export default function RouteReview3dMap({
 	);
 	const [xrSupported, setXrSupported] = useState(false);
 	const [xrPresenting, setXrPresenting] = useState(false);
-	const [hudCompact, setHudCompact] = useState(false);
+	const [hudCompact, setHudCompact] = useState(
+		() => window.matchMedia(COMPACT_HUD_MEDIA_QUERY).matches,
+	);
 	const followsRoute = Boolean(origin && destination);
 
 	const routeFrameKey = useMemo(() => {
@@ -700,8 +703,12 @@ export default function RouteReview3dMap({
 		const threeArButtonElement = ARButton.createButton(renderer, {
 			requiredFeatures: ["local"],
 		});
-		threeArButtonElement.style.display = "none";
-		document.body.appendChild(threeArButtonElement);
+		// ARButton resets its own display once the XR support check resolves,
+		// so hiding the button itself still shows "AR NOT SUPPORTED" on desktops.
+		const arButtonHost = document.createElement("div");
+		arButtonHost.hidden = true;
+		arButtonHost.appendChild(threeArButtonElement);
+		document.body.appendChild(arButtonHost);
 		arButtonRef.current = threeArButtonElement;
 
 		if (navigator.xr) {
@@ -807,9 +814,7 @@ export default function RouteReview3dMap({
 			renderer.xr.removeEventListener("sessionend", handleSessionEnd);
 			controls.dispose();
 			renderer.dispose();
-			if (threeArButtonElement.parentNode) {
-				threeArButtonElement.parentNode.removeChild(threeArButtonElement);
-			}
+			arButtonHost.remove();
 			arButtonRef.current = null;
 			activatePresetRef.current = null;
 		};
