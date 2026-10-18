@@ -90,13 +90,16 @@ describe("simulator backend proxy", () => {
 		"/tiles-api/diagnostico",
 		"/tiles-api/",
 		"/tiles-api/capasX",
-	])("answers 404 to engineers for %s, which the viewer never requests", async (path) => {
-		const response = await proxy("engineer", `https://api.illapa.app${path}`);
+	])(
+		"answers 404 to engineers for %s, which the viewer never requests",
+		async (path) => {
+			const response = await proxy("engineer", `https://api.illapa.app${path}`);
 
-		expect(response.status).toBe(HTTP_STATUS_NOT_FOUND);
-		expect(await response.json()).toEqual({ error: "not_found" });
-		expect(upstreamFetch).not.toHaveBeenCalled();
-	});
+			expect(response.status).toBe(HTTP_STATUS_NOT_FOUND);
+			expect(await response.json()).toEqual({ error: "not_found" });
+			expect(upstreamFetch).not.toHaveBeenCalled();
+		},
+	);
 
 	it("passes backend error statuses through", async () => {
 		upstreamFetch.mockResolvedValue(
