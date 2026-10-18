@@ -756,5 +756,17 @@
 	"engineering_leaveTitle": "¿Salir sin guardar los cambios?",
 	"engineering_leaveDetail": "Los cambios quedan guardados en este dispositivo.",
 	"engineering_leaveAnyway": "Salir de todos modos",
-	"engineering_sceneTerrainError": "No pudimos cargar el terreno. Revisa tu conexión e inténtalo de nuevo."
+	"engineering_sceneTerrainError": "No pudimos cargar el terreno. Revisa tu conexión e inténtalo de nuevo.",
+	"profile_page_title": "Perfil · Illapa",
+	"profile_title": "¿Cómo vas a usar ILLAPA?",
+	"profile_description": "Elige tu perfil. Puedes cambiarlo cuando quieras desde el menú de tu cuenta.",
+	"profile_fleet_title": "Planifico rutas de flota",
+	"profile_fleet_description": "Revisa rutas con riesgo climático, sigue tus camiones y recibe alertas con desvíos.",
+	"profile_engineer_title": "Gestiono infraestructura vial",
+	"profile_engineer_description": "Modela puentes, túneles y variantes sobre el relieve real de la Carretera Central y míralos en XR.",
+	"profile_current": "Actual",
+	"profile_saving": "Guardando…",
+	"profile_error": "No pudimos guardar tu perfil. Inténtalo de nuevo.",
+	"profile_back": "Volver",
+	"account_change_profile": "Cambiar perfil"
 }

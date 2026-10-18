@@ -1,3 +1,4 @@
+import type { UserRole } from "@hack-the-andes-project/api/structure-schemas";
 import {
 	MIN_PASSWORD_LENGTH_CHARS,
 	MS_PER_HOUR,
@@ -257,3 +258,9 @@ export const ENGINEERING_UNDO_TOAST_ID = "structure-editor-undo";
 export const ENGINEERING_SERVER_ERROR_STATUS_MIN = 500;
 
 export const ROUTE_REVIEW_QUERY_KEY: readonly string[] = ["route-review"];
+
+export const PROFILE_PATH = "/perfil";
+export const ROLE_HOME_PATHS = {
+	fleet: "/dashboard",
+	engineer: "/ingenieria",
+} as const satisfies Record<UserRole, string>;
