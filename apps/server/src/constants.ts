@@ -1,4 +1,5 @@
 import { DEMO_RESET_PATH } from "@hack-the-andes-project/business/demo-account";
+import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
 
 export const SERVICE_NAME = "hack-the-andes-server";
 
@@ -13,4 +14,5 @@ export const AUTH_PREFIX = "/api/auth";
 export const PUBLIC_PATHS: ReadonlySet<string> = new Set([
 	"/",
 	DEMO_RESET_PATH,
+	DEMO_REQUESTS_PATH,
 ]);

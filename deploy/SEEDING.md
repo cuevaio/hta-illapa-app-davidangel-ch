@@ -253,6 +253,6 @@ curl -sS -b old-session.txt "$API_URL/api/auth/organization/get-full-organizatio
 
 ## Data outside MySQL
 
-- **Demo request leads:** `illapa.app`'s demo request form writes leads to the Cloudflare KV namespace `hack-the-andes-illapa-demo-requests`. Keys are `<ISO time>:<uuid>`; values are JSON with the name, company, phone and email. The leads stay in Cloudflare, so export them before that namespace is deleted.
+- **Demo request leads:** new submissions go to the API server's `POST /api/demo-requests` and are stored in the MySQL table `hack_the_andes_demo_request`. Old leads stay in the Cloudflare KV namespace `hack-the-andes-illapa-demo-requests` until exported. Keys are `<ISO time>:<uuid>`; values are JSON with the name, company, phone and email. Export them before that namespace is deleted.
 - **SRATMA photos:** they live in the Backblaze B2 bucket `illapa-media`. The scraper lists the bucket and links the stored photos again, so nothing is downloaded twice.
 - **Route review data:** vehicle profiles and planned trips are stored in each browser's `localStorage` (`illapa-route-review-fixtures-v1`) for the dashboard's origin. They survive the move as long as the dashboard keeps its domain.

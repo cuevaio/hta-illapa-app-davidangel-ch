@@ -1,4 +1,6 @@
 export const MAX_LOGGED_ID_CHARS = 64;
+export const HTTP_STATUS_CREATED = 201;
+export const HTTP_STATUS_BAD_REQUEST = 400;
 
 export const MIN_FLEET_TEXT_LENGTH_CHARS = 1;
 export const SINGLE_RESULT_LIMIT_ROWS = 1;

@@ -1,4 +1,5 @@
 ---
+import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
 import { buttonVariants } from "@hack-the-andes-project/ui/components/button";
 import DemoRequestDialog from "@hack-the-andes-project/ui/components/demo-request-dialog";
 import { MapLegend } from "@hack-the-andes-project/ui/components/map-legend";
@@ -9,7 +10,6 @@ import {
 import {
 	CONTACT_PHONE_DISPLAY,
 	CONTACT_PHONE_E164,
-	DEMO_REQUESTS_PATH,
 	HERO_CORRIDOR_COUNT,
 	HERO_MAP_MOBILE_HEIGHT_PX,
 } from "@/constants";
@@ -60,7 +60,7 @@ import HeroMap from "./hero-map";
 			<div class="mt-3">
 				<DemoRequestDialog
 					client:load
-					endpoint={DEMO_REQUESTS_PATH}
+					endpoint={`${ENV.PUBLIC_API_URL}${DEMO_REQUESTS_PATH}`}
 					contactPhone={CONTACT_PHONE_E164}
 					contactPhoneDisplay={CONTACT_PHONE_DISPLAY}
 					triggerVariant="ghost"

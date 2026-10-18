@@ -12,11 +12,6 @@
 			"@hack-the-andes-project/ui/*": ["../../packages/ui/src/*"]
 		}
 	},
-	"include": [
-		".astro/types.d.ts",
-		"cloudflare-env.d.ts",
-		"src/**/*",
-		"astro.config.mjs"
-	],
+	"include": [".astro/types.d.ts", "src/**/*", "astro.config.mjs"],
 	"exclude": ["dist"]
 }
