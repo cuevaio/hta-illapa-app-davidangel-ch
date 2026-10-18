@@ -61,6 +61,8 @@ Set these values on each app in Dokploy for its environment. The images do not r
 | `CREDENTIALS_ENCRYPTION_KEY` | yes | the same key as fleet-sync in this environment |
 | `OSRM_BASE_URL` | yes | `https://router.project-osrm.org` |
 | `CLIENT_IP_HEADER` | yes | `x-real-ip` behind Traefik; use `cf-connecting-ip` behind Cloudflare |
+| `TILES_API_URL` | yes | origin of the tiles backend (`services/tiles`), proxied to engineers under `/tiles-api/*` (only `/tiles/*`, `/capas`, `/salud`) |
+| `WEATHER_API_URL` | yes | origin of the weather backend (`services/weather`), proxied to engineers under `/weather-api/*` (only `/api/*`) |
 | `DEMO_RESET_SECRET` | no | at least 32 characters; leave it unset to keep `POST /api/demo/reset` off |
 | `SERVICE_VERSION` | no | |
 
@@ -95,6 +97,23 @@ SRATMA (`sratma.mtc.gob.pe`) drops connections from AWS but answers Cloudflare, 
 | `SERVICE_VERSION` | no | |
 
 Cron, in UTC: `*/2 * * * *`.
+
+## Simulator backends
+
+`services/tiles` (Peru terrain tiles) and `services/weather` (NOAA GFS, GLM lightning and GOES-19 clouds) are Python services that only the server calls, through its engineer-only `/tiles-api/*` and `/weather-api/*` routes. They have no authentication of their own, so do not give them a public domain. Run each one as a Dokploy app on the same network as the server, and point the server at their internal hostnames.
+
+| | tiles | weather |
+| --- | --- | --- |
+| Dockerfile | `services/tiles/Dockerfile` | `services/weather/Dockerfile` |
+| Build context | repository root | repository root |
+| Port | `8080` | `8787` |
+| Health check | `GET /salud` | `GET /api/health` |
+| Volume | none with S3 storage | `/data/cache` (GFS, GLM and cloud cache) |
+| Server variable | `TILES_API_URL=http://<tiles app name>:8080` | `WEATHER_API_URL=http://<weather app name>:8787` |
+
+- tiles: set `TILES_STORAGE=s3` with `TILES_S3_ENDPOINT`, `TILES_S3_BUCKET`, `TILES_S3_ACCESS_KEY`, `TILES_S3_SECRET_KEY` (R2 or S3), and `TILES_CONTACT`. With `TILES_STORAGE=fs`, mount a volume at `TILES_FS_ROOT` that user `10001` can write to. All variables are listed in `services/tiles/README.md`.
+- weather: the defaults cover Peru. Run exactly one replica, because its pollers write to the cache volume. Variables are listed in `services/weather/README.md`.
+- `services/docker-compose.yml` runs both services with MinIO locally (`docker compose -f services/docker-compose.yml up -d --build`). The server's local defaults already point at them.
 
 ## Operations
 

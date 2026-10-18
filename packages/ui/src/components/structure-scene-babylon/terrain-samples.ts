@@ -1,6 +1,6 @@
 import { bypassWidthM } from "@hack-the-andes-project/business/structures/geometry";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type { SceneStructure } from "../../lib/structure-scene";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import {
 	HALF_RATIO,
 	MIN_GEOMETRY_LENGTH_M,
@@ -15,7 +15,7 @@ export interface TerrainSample {
 
 export function collectTerrainSamples(
 	structure: SceneStructure,
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 ): TerrainSample[] {
 	const anchor = terrain.toLocal(structure.anchor);
 	const samples: TerrainSample[] = [

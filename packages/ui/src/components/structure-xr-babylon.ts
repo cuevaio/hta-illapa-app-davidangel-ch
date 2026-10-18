@@ -9,6 +9,7 @@ import {
 	WebXRAnchorSystem,
 	WebXRControllerPointerSelection,
 	WebXRExperienceHelper,
+	WebXRFeatureName,
 	WebXRHandTracking,
 	WebXRHitTest,
 	WebXRInput,
@@ -60,6 +61,7 @@ export async function createStructureXr(
 	> | null = null;
 	const reportError = () => options.onError(labels.error);
 	const unavailableController: StructureXrController = {
+		member: null,
 		async enter() {
 			reportError();
 		},
@@ -87,7 +89,11 @@ export async function createStructureXr(
 			}
 			options.onSupportChange(supported);
 		}
-		if (!supported || scene.isDisposed) {
+		// The viewer's VR map can hand its session over even where AR is unsupported (S5).
+		const vrSupported =
+			typeof navigator !== "undefined" &&
+			(await WebXRSessionManager.IsSessionSupportedAsync("immersive-vr"));
+		if ((!supported && !vrSupported) || scene.isDisposed) {
 			emulator?.dispose();
 			return unavailableController;
 		}
@@ -107,6 +113,10 @@ export async function createStructureXr(
 			disableOnlineControllerRepository: true,
 			doNotLoadControllerMeshes: true,
 		});
+		const xrInput = input;
+		// A WebGPU engine renders XR through XRGPUBinding, which Babylon exposes via layers.
+		if (options.webgpu)
+			features.enableFeature(WebXRFeatureName.LAYERS, "stable");
 		visuals = createXrVisuals(
 			scene,
 			experience.camera,
@@ -115,6 +125,7 @@ export async function createStructureXr(
 			() => {
 				void controller.exit();
 			},
+			{ label: labels.backToMap, invoke: options.onBackToMap },
 		);
 		const xrVisuals = visuals;
 		const utilityScene = xrVisuals.manager.utilityLayer?.utilityLayerScene;
@@ -174,6 +185,7 @@ export async function createStructureXr(
 		let restoreCamera: (() => void) | null = null;
 		let restoreEnvironment: (() => void) | null = null;
 		let session: XRSession | null = null;
+		let sessionMode: XRSessionMode = "immersive-ar";
 		let reportedActive = false;
 		let placed = false;
 		let hasSurface = false;
@@ -274,9 +286,12 @@ export async function createStructureXr(
 		const frameObserver = scene.onBeforeRenderObservable.add(() => {
 			if (!session || disposed) return;
 			if (!placed) {
+				// VR has no real surface: the table goes straight in front of the viewer.
 				if (
-					hasSurface ||
-					performance.now() - lastSurfaceOrStartMs < PLACEMENT_FALLBACK_DELAY_MS
+					sessionMode !== "immersive-vr" &&
+					(hasSurface ||
+						performance.now() - lastSurfaceOrStartMs <
+							PLACEMENT_FALLBACK_DELAY_MS)
 				)
 					return;
 				experience.camera.getDirectionToRef(
@@ -289,8 +304,10 @@ export async function createStructureXr(
 				);
 				xrVisuals.reticle.position.set(fallback.x, fallback.y, fallback.z);
 				xrVisuals.reticle.setEnabled(true);
+				if (sessionMode === "immersive-vr") placeAtReticle();
 				return;
 			}
+			xrVisuals.backButton.setEnabled(options.mapReachable());
 			const elevationM = terrain.heightAt(focus);
 			const offset = getMaquetaOffset(focus, elevationM ?? 0);
 			content.position.set(offset.x, offset.y, offset.z);
@@ -318,8 +335,10 @@ export async function createStructureXr(
 		});
 
 		const controller: StructureXrController = {
-			enter() {
+			member: { baseExperience: experience, input: xrInput },
+			enter(mode = "immersive-ar", share = true) {
 				if (disposed || session || exiting) return Promise.resolve();
+				sessionMode = mode;
 				if (entering) return entering;
 				entering = (async () => {
 					try {
@@ -332,18 +351,21 @@ export async function createStructureXr(
 							scene.autoClear = autoClear;
 							scene.fogMode = fogMode;
 						};
-						scene.clearColor = new Color4(0, 0, 0, 0);
+						if (mode === "immersive-ar")
+							scene.clearColor = new Color4(0, 0, 0, 0);
 						scene.fogMode = Scene.FOGMODE_NONE;
 						contentWasEnabled = content.isEnabled(false);
 						content.setEnabled(false);
-						await experience.enterXRAsync(
-							"immersive-ar",
-							"local-floor",
-							xrRenderTarget,
-						);
+						await experience.enterXRAsync(mode, "local-floor", xrRenderTarget);
 						if (disposed) await experience.exitXRAsync();
+						else if (share)
+							await options.join({
+								baseExperience: experience,
+								input: xrInput,
+							});
 					} catch {
 						restoreDesktop();
+						if (sessionManager.inXRSession) void experience.exitXRAsync();
 						if (!disposed) reportError();
 					} finally {
 						entering = null;

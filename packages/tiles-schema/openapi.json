@@ -1,0 +1,720 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API de tiles del simulador",
+    "description": "Caché de lectura de tiles (terreno de Perú). Tiles PNG 512x512 Terrarium (h = R*256 + G + B/256 - 32768 m; nodata RGB 0,0,0). Rutas versionadas e inmutables.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/tiles/{layer}/{version}/{z}/{x}/{y}": {
+      "get": {
+        "tags": [
+          "tiles"
+        ],
+        "summary": "Tile XYZ (PNG 512 px Terrarium)",
+        "operationId": "get_tile_tiles__layer___version___z___x___y__get",
+        "parameters": [
+          {
+            "name": "layer",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,39}$",
+              "description": "Identificador de capa, p. ej. terreno",
+              "title": "Layer"
+            },
+            "description": "Identificador de capa, p. ej. terreno"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^v[0-9]{1,4}$",
+              "description": "Versión del tileset, p. ej. v1",
+              "title": "Version"
+            },
+            "description": "Versión del tileset, p. ej. v1"
+          },
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]?)$",
+              "description": "Nivel de zoom (entero)",
+              "title": "Z"
+            },
+            "description": "Nivel de zoom (entero)"
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,6})$",
+              "description": "Columna XYZ (0 <= x < 2^z)",
+              "title": "X"
+            },
+            "description": "Columna XYZ (0 <= x < 2^z)"
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,6})(\\.png)?$",
+              "description": "Fila XYZ (0 <= y < 2^z, y hacia el sur), sufijo .png opcional",
+              "title": "Y"
+            },
+            "description": "Fila XYZ (0 <= y < 2^z, y hacia el sur), sufijo .png opcional"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tile de alturas",
+            "content": {
+              "image/png": {}
+            },
+            "headers": {
+              "X-Tile-Min": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Tile-Max": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Tile-Source": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Tile-Version": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Tile-Date": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Tile-Overzoom": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Cache": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Not Implemented"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capas": {
+      "get": {
+        "tags": [
+          "catálogo"
+        ],
+        "summary": "Catálogo de capas y versiones",
+        "operationId": "get_capas_capas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capas"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/salud": {
+      "get": {
+        "tags": [
+          "operación"
+        ],
+        "summary": "Estado del servicio",
+        "operationId": "get_salud_salud_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Salud"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "operación"
+        ],
+        "summary": "Métricas Prometheus",
+        "operationId": "get_metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Bbox": {
+        "properties": {
+          "oeste": {
+            "type": "number",
+            "title": "Oeste"
+          },
+          "sur": {
+            "type": "number",
+            "title": "Sur"
+          },
+          "este": {
+            "type": "number",
+            "title": "Este"
+          },
+          "norte": {
+            "type": "number",
+            "title": "Norte"
+          }
+        },
+        "type": "object",
+        "required": [
+          "oeste",
+          "sur",
+          "este",
+          "norte"
+        ],
+        "title": "Bbox"
+      },
+      "Capa": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "version_actual": {
+            "type": "string",
+            "title": "Version Actual"
+          },
+          "versiones": {
+            "items": {
+              "$ref": "#/components/schemas/VersionCapa"
+            },
+            "type": "array",
+            "title": "Versiones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nombre",
+          "tipo",
+          "version_actual",
+          "versiones"
+        ],
+        "title": "Capa"
+      },
+      "Capas": {
+        "properties": {
+          "bbox": {
+            "$ref": "#/components/schemas/Bbox"
+          },
+          "cabeceras_tile": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cabeceras Tile",
+            "description": "Cabeceras de metadatos de cada tile (expuestas por CORS)"
+          },
+          "capas": {
+            "items": {
+              "$ref": "#/components/schemas/Capa"
+            },
+            "type": "array",
+            "title": "Capas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bbox",
+          "cabeceras_tile",
+          "capas"
+        ],
+        "title": "Capas"
+      },
+      "CircuitoFuente": {
+        "properties": {
+          "circuito": {
+            "type": "string",
+            "title": "Circuito",
+            "description": "cerrado (normal) | abierto (fuente caída: 503 inmediato sin consultarla) | semiabierto (se permite una petición de prueba)"
+          },
+          "fallos_consecutivos": {
+            "type": "integer",
+            "title": "Fallos Consecutivos"
+          },
+          "aperturas": {
+            "type": "integer",
+            "title": "Aperturas",
+            "description": "Veces que se abrió el circuito desde el arranque"
+          },
+          "reintento_en_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reintento En S",
+            "description": "Segundos hasta la próxima prueba; null si está cerrado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "circuito",
+          "fallos_consecutivos",
+          "aperturas",
+          "reintento_en_s"
+        ],
+        "title": "CircuitoFuente"
+      },
+      "Error": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "description": "Mensaje en español; nunca incluye rutas internas ni credenciales."
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "Error"
+      },
+      "Formato": {
+        "properties": {
+          "codificacion": {
+            "type": "string",
+            "title": "Codificacion",
+            "description": "terrarium"
+          },
+          "formula": {
+            "type": "string",
+            "title": "Formula",
+            "description": "h = R*256 + G + B/256 - 32768 (metros)"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "tamano_px": {
+            "type": "integer",
+            "title": "Tamano Px"
+          },
+          "mime": {
+            "type": "string",
+            "title": "Mime"
+          },
+          "nodata_rgb": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Nodata Rgb",
+            "description": "RGB de 'sin datos' (decodifica a -32768)"
+          },
+          "nodata_umbral_m": {
+            "type": "number",
+            "title": "Nodata Umbral M",
+            "description": "Toda altura decodificada <= este valor es 'sin datos'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codificacion",
+          "formula",
+          "unidad",
+          "tamano_px",
+          "mime",
+          "nodata_rgb",
+          "nodata_umbral_m"
+        ],
+        "title": "Formato"
+      },
+      "Fuente": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "atribucion": {
+            "type": "string",
+            "title": "Atribucion"
+          },
+          "licencia": {
+            "type": "string",
+            "title": "Licencia"
+          },
+          "licencia_url": {
+            "type": "string",
+            "title": "Licencia Url"
+          },
+          "resolucion_nativa_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolucion Nativa M"
+          },
+          "modelo_superficie": {
+            "type": "boolean",
+            "title": "Modelo Superficie",
+            "description": "true si es un modelo digital de superficie (DSM: incluye vegetación y edificios)"
+          },
+          "fecha_datos": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Datos"
+          },
+          "precarga_permitida": {
+            "type": "boolean",
+            "title": "Precarga Permitida"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nombre",
+          "atribucion",
+          "licencia",
+          "licencia_url",
+          "resolucion_nativa_m",
+          "modelo_superficie",
+          "fecha_datos",
+          "precarga_permitida"
+        ],
+        "title": "Fuente"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Salud": {
+        "properties": {
+          "estado": {
+            "type": "string",
+            "title": "Estado",
+            "description": "ok | degradado (almacenamiento caído, conflicto de versión o circuito de una fuente no cerrado)"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "almacenamiento": {
+            "type": "string",
+            "title": "Almacenamiento"
+          },
+          "almacenamiento_ok": {
+            "type": "boolean",
+            "title": "Almacenamiento Ok"
+          },
+          "capas": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Capas"
+          },
+          "fuentes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CircuitoFuente"
+            },
+            "type": "object",
+            "title": "Fuentes",
+            "description": "Estado del circuito por fuente"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estado",
+          "version",
+          "almacenamiento",
+          "almacenamiento_ok",
+          "capas"
+        ],
+        "title": "Salud"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VersionCapa": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Plantilla XYZ relativa a la API"
+          },
+          "zoom_min": {
+            "type": "integer",
+            "title": "Zoom Min"
+          },
+          "zoom_max": {
+            "type": "integer",
+            "title": "Zoom Max"
+          },
+          "zoom_max_real": {
+            "type": "integer",
+            "title": "Zoom Max Real",
+            "description": "Nivel máximo con datos reales; por encima se sirve sobremuestreo marcado"
+          },
+          "transformacion": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transformacion"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "formato": {
+            "$ref": "#/components/schemas/Formato"
+          },
+          "fuente": {
+            "$ref": "#/components/schemas/Fuente"
+          },
+          "limitaciones": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitaciones"
+          },
+          "huella": {
+            "type": "string",
+            "title": "Huella",
+            "description": "Huella de fuente+transformación; cambiarla exige una versión nueva"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "url",
+          "zoom_min",
+          "zoom_max",
+          "zoom_max_real",
+          "transformacion",
+          "descripcion",
+          "formato",
+          "fuente",
+          "limitaciones",
+          "huella"
+        ],
+        "title": "VersionCapa"
+      }
+    }
+  }
+}

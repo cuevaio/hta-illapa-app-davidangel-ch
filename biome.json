@@ -36,6 +36,8 @@
 			"!tools/risk-pipeline/output",
 			"!tools/risk-pipeline/.venv",
 			"!**/risk/model.generated.ts",
+			"!packages/tiles-schema",
+			"!**/.venv",
 			"!.claude",
 			"!**/.astro"
 		]

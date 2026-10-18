@@ -1,0 +1,35 @@
+{
+	"name": "@hack-the-andes-project/xr-simulator",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./viewer": {
+			"types": "./src/viewer/api.public.d.ts",
+			"default": "./src/viewer/api.ts"
+		},
+		"./*": "./src/*.ts"
+	},
+	"scripts": {
+		"dev": "vite",
+		"dev:https": "vite --mode https",
+		"build": "vite build",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run",
+		"schema:types": "node tools/run-ts.mjs tools/gen-tiles-types.ts"
+	},
+	"dependencies": {
+		"@babylonjs/core": "catalog:",
+		"@babylonjs/gui": "catalog:",
+		"@hack-the-andes-project/tiles-schema": "workspace:*",
+		"fast-png": "^8.0.0",
+		"geotiff": "^3.0.5",
+		"lil-gui": "^0.21.0"
+	},
+	"devDependencies": {
+		"@vitejs/plugin-basic-ssl": "^2.3.0",
+		"@webgpu/types": "^0.1.74",
+		"typescript": "^6.0.3",
+		"vite": "^8.3.4",
+		"vitest": "catalog:"
+	}
+}

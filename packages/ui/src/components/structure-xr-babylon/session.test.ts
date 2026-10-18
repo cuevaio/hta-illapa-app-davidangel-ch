@@ -11,8 +11,8 @@ import {
 	WebXRSessionManager,
 	WebXRState,
 } from "@babylonjs/core";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import type { StructureXrController } from "../../lib/structure-xr-babylon";
 import { createStructureXr } from "../structure-xr-babylon";
 import {
@@ -92,7 +92,7 @@ function prepareSession() {
 	const xrCamera = new FreeCamera("xr", new Vector3(0, 1.7, 0), scene);
 	xrCamera.rotationQuaternion = Quaternion.Identity();
 	const content = new TransformNode("content", scene);
-	const terrain: BabylonTerrain = {
+	const terrain: StructureTerrain = {
 		root: new TransformNode("terrain", scene),
 		update: vi.fn(),
 		pick: vi.fn(() => null),
@@ -108,11 +108,13 @@ function prepareSession() {
 		reticle: new TransformNode("reticle", scene),
 		hint: new TransformNode("hint", scene),
 		panel: new TransformNode("panel", scene),
+		backButton: new TransformNode("back", scene),
 		dispose: vi.fn(),
 	};
 	visuals.reticle.setEnabled(false);
 	visuals.hint.setEnabled(false);
 	visuals.panel.setEnabled(false);
+	visuals.backButton.setEnabled(false);
 	const hitTest = {
 		onHitTestResultObservable: new Observable<SurfaceResult[]>(),
 		paused: false,
@@ -168,7 +170,12 @@ function prepareSession() {
 			undo: "Undo",
 			exit: "Exit",
 			error: "XR error",
+			backToMap: "Back to the map",
 		},
+		webgpu: false,
+		join: vi.fn(async () => {}),
+		mapReachable: vi.fn(() => false),
+		onBackToMap: vi.fn(),
 		onUndo: vi.fn(),
 		onSupportChange: vi.fn(),
 		onSessionChange: vi.fn(),
@@ -236,6 +243,81 @@ describe("XR session lifecycle", () => {
 		expect(state.terrain.setClip).toHaveBeenLastCalledWith(null);
 		expect(state.options.onSessionChange.mock.calls).toEqual([[true], [false]]);
 		expect(state.anchor.remove).toHaveBeenCalledOnce();
+	});
+
+	it("hands the running session to the viewer's shared XR session", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		expect(state.options.join).not.toHaveBeenCalled();
+		await controller.enter();
+		expect(state.options.join).toHaveBeenCalledOnce();
+		expect(state.options.join).toHaveBeenCalledWith({
+			baseExperience: state.experience,
+			input: expect.objectContaining({ dispose: expect.any(Function) }),
+		});
+		expect(state.options.onSessionChange.mock.calls).toEqual([[true]]);
+	});
+
+	it("in VR, puts the maquette in front of the viewer on the first frame, over an opaque scene", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		await controller.enter("immersive-vr");
+		expect(state.experience.enterXRAsync).toHaveBeenCalledWith(
+			"immersive-vr",
+			"local-floor",
+			expect.anything(),
+		);
+		expect(state.scene.clearColor.asArray()).toEqual([0.2, 0.3, 0.4, 1]);
+		state.scene.activeCamera?.getViewMatrix(true);
+		state.scene.onBeforeRenderObservable.notifyObservers(state.scene);
+		expect(state.content.parent).not.toBeNull();
+		expect(state.content.scaling.x).toBe(MAQUETA_SCALE_RATIO);
+		expect(state.visuals.panel.isEnabled()).toBe(true);
+		expect(state.visuals.hint.isEnabled()).toBe(false);
+	});
+
+	it("adopts the viewer's running session without starting a new shared one", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		await controller.enter("immersive-vr", false);
+		expect(state.experience.enterXRAsync).toHaveBeenCalledOnce();
+		expect(state.options.join).not.toHaveBeenCalled();
+	});
+
+	it("offers the way back to the Peru map only while the map is reachable", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		const [, , , , , backToMap] = factories.visuals.mock.calls[0] ?? [];
+		expect(backToMap).toEqual({
+			label: "Back to the map",
+			invoke: state.options.onBackToMap,
+		});
+		await controller.enter("immersive-vr");
+		state.scene.activeCamera?.getViewMatrix(true);
+		state.scene.onBeforeRenderObservable.notifyObservers(state.scene);
+		state.scene.onBeforeRenderObservable.notifyObservers(state.scene);
+		expect(state.options.mapReachable).toHaveBeenCalled();
+		expect(state.visuals.backButton.isEnabled()).toBe(false);
+		state.options.mapReachable.mockReturnValue(true);
+		state.scene.onBeforeRenderObservable.notifyObservers(state.scene);
+		expect(state.visuals.backButton.isEnabled()).toBe(true);
+	});
+
+	it("renders through WebXR layers on a WebGPU engine only", async () => {
+		const state = prepareSession();
+		controller = await createStructureXr(state.options);
+		expect(
+			state.experience.featuresManager.enableFeature,
+		).not.toHaveBeenCalledWith("xr-layers", expect.anything());
+		controller.dispose();
+		const webgpuState = prepareSession();
+		controller = await createStructureXr({
+			...webgpuState.options,
+			webgpu: true,
+		});
+		expect(
+			webgpuState.experience.featuresManager.enableFeature,
+		).toHaveBeenCalledWith("xr-layers", "stable");
 	});
 
 	it("offers a floor-relative fallback only after the surface search times out", async () => {

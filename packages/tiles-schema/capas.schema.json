@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Bbox": {
+      "properties": {
+        "oeste": {
+          "title": "Oeste",
+          "type": "number"
+        },
+        "sur": {
+          "title": "Sur",
+          "type": "number"
+        },
+        "este": {
+          "title": "Este",
+          "type": "number"
+        },
+        "norte": {
+          "title": "Norte",
+          "type": "number"
+        }
+      },
+      "required": [
+        "oeste",
+        "sur",
+        "este",
+        "norte"
+      ],
+      "title": "Bbox",
+      "type": "object"
+    },
+    "Capa": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "nombre": {
+          "title": "Nombre",
+          "type": "string"
+        },
+        "tipo": {
+          "title": "Tipo",
+          "type": "string"
+        },
+        "version_actual": {
+          "title": "Version Actual",
+          "type": "string"
+        },
+        "versiones": {
+          "items": {
+            "$ref": "#/$defs/VersionCapa"
+          },
+          "title": "Versiones",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "nombre",
+        "tipo",
+        "version_actual",
+        "versiones"
+      ],
+      "title": "Capa",
+      "type": "object"
+    },
+    "Formato": {
+      "properties": {
+        "codificacion": {
+          "description": "terrarium",
+          "title": "Codificacion",
+          "type": "string"
+        },
+        "formula": {
+          "description": "h = R*256 + G + B/256 - 32768 (metros)",
+          "title": "Formula",
+          "type": "string"
+        },
+        "unidad": {
+          "title": "Unidad",
+          "type": "string"
+        },
+        "tamano_px": {
+          "title": "Tamano Px",
+          "type": "integer"
+        },
+        "mime": {
+          "title": "Mime",
+          "type": "string"
+        },
+        "nodata_rgb": {
+          "description": "RGB de 'sin datos' (decodifica a -32768)",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Nodata Rgb",
+          "type": "array"
+        },
+        "nodata_umbral_m": {
+          "description": "Toda altura decodificada <= este valor es 'sin datos'",
+          "title": "Nodata Umbral M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "codificacion",
+        "formula",
+        "unidad",
+        "tamano_px",
+        "mime",
+        "nodata_rgb",
+        "nodata_umbral_m"
+      ],
+      "title": "Formato",
+      "type": "object"
+    },
+    "Fuente": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "nombre": {
+          "title": "Nombre",
+          "type": "string"
+        },
+        "atribucion": {
+          "title": "Atribucion",
+          "type": "string"
+        },
+        "licencia": {
+          "title": "Licencia",
+          "type": "string"
+        },
+        "licencia_url": {
+          "title": "Licencia Url",
+          "type": "string"
+        },
+        "resolucion_nativa_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Resolucion Nativa M"
+        },
+        "modelo_superficie": {
+          "description": "true si es un modelo digital de superficie (DSM: incluye vegetación y edificios)",
+          "title": "Modelo Superficie",
+          "type": "boolean"
+        },
+        "fecha_datos": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fecha Datos"
+        },
+        "precarga_permitida": {
+          "title": "Precarga Permitida",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "nombre",
+        "atribucion",
+        "licencia",
+        "licencia_url",
+        "resolucion_nativa_m",
+        "modelo_superficie",
+        "fecha_datos",
+        "precarga_permitida"
+      ],
+      "title": "Fuente",
+      "type": "object"
+    },
+    "VersionCapa": {
+      "properties": {
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "url": {
+          "description": "Plantilla XYZ relativa a la API",
+          "title": "Url",
+          "type": "string"
+        },
+        "zoom_min": {
+          "title": "Zoom Min",
+          "type": "integer"
+        },
+        "zoom_max": {
+          "title": "Zoom Max",
+          "type": "integer"
+        },
+        "zoom_max_real": {
+          "description": "Nivel máximo con datos reales; por encima se sirve sobremuestreo marcado",
+          "title": "Zoom Max Real",
+          "type": "integer"
+        },
+        "transformacion": {
+          "additionalProperties": true,
+          "title": "Transformacion",
+          "type": "object"
+        },
+        "descripcion": {
+          "title": "Descripcion",
+          "type": "string"
+        },
+        "formato": {
+          "$ref": "#/$defs/Formato"
+        },
+        "fuente": {
+          "$ref": "#/$defs/Fuente"
+        },
+        "limitaciones": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitaciones",
+          "type": "array"
+        },
+        "huella": {
+          "description": "Huella de fuente+transformación; cambiarla exige una versión nueva",
+          "title": "Huella",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "url",
+        "zoom_min",
+        "zoom_max",
+        "zoom_max_real",
+        "transformacion",
+        "descripcion",
+        "formato",
+        "fuente",
+        "limitaciones",
+        "huella"
+      ],
+      "title": "VersionCapa",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "bbox": {
+      "$ref": "#/$defs/Bbox"
+    },
+    "cabeceras_tile": {
+      "description": "Cabeceras de metadatos de cada tile (expuestas por CORS)",
+      "items": {
+        "type": "string"
+      },
+      "title": "Cabeceras Tile",
+      "type": "array"
+    },
+    "capas": {
+      "items": {
+        "$ref": "#/$defs/Capa"
+      },
+      "title": "Capas",
+      "type": "array"
+    }
+  },
+  "required": [
+    "bbox",
+    "cabeceras_tile",
+    "capas"
+  ],
+  "title": "Capas",
+  "type": "object"
+}

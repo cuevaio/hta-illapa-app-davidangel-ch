@@ -1,4 +1,4 @@
-import type { LocalPoint } from "@hack-the-andes-project/terrain/types";
+import type { LocalPoint } from "../../lib/structure-terrain";
 import {
 	MAQUETA_SCALE_RATIO,
 	PLACEMENT_FALLBACK_DISTANCE_M,

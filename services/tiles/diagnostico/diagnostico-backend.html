@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico de tiles</title>
+<style>
+  :root { --bg:#f6f7f9; --panel:#ffffff; --ink:#1d2430; --muted:#5d6878; --line:#d9dee6; --hit:#1f9d55; --miss:#d97706; --stale:#2563eb; --err:#dc2626; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#12161c; --panel:#1b2129; --ink:#e7ebf0; --muted:#9aa5b4; --line:#2c3440; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; border-bottom:1px solid var(--line); background:var(--panel); }
+  header h1 { font-size:16px; margin:0 12px 0 0; }
+  button { font:inherit; padding:4px 10px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); cursor:pointer; }
+  button:hover { border-color:var(--muted); }
+  label { display:inline-flex; gap:4px; align-items:center; color:var(--muted); }
+  main { display:grid; grid-template-columns: 1fr 1fr; gap:8px; padding:8px 16px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .pane { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+  .pane h2 { font-size:13px; margin:0; padding:6px 10px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; }
+  .pane canvas { width:100%; height:min(62vh, 560px); display:block; cursor:grab; touch-action:none; background:#7a8796; }
+  .stats { padding:6px 10px; color:var(--muted); font-size:12px; font-variant-numeric: tabular-nums; }
+  .attr { padding:0 10px 8px; color:var(--muted); font-size:11px; }
+  #readout { padding:4px 16px 12px; font-variant-numeric: tabular-nums; }
+  .legend span { display:inline-block; width:10px; height:10px; border-radius:2px; margin:0 3px 0 10px; vertical-align:-1px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Diagnóstico del backend de tiles</h1>
+  <span id="jumps"></span>
+  <button type="button" id="zin" title="Acercar">+</button><button type="button" id="zout" title="Alejar">−</button>
+  <label><input type="checkbox" id="grid" checked> estado por tile</label>
+  <span class="legend"><span style="background:var(--hit)"></span>HIT<span style="background:var(--miss)"></span>MISS<span style="background:var(--stale)"></span>STALE<span style="background:var(--err)"></span>error</span>
+</header>
+<main>
+  <section class="pane"><h2><span id="t0">terreno</span><span id="z0"></span></h2><canvas id="c0"></canvas><div class="stats" id="s0"></div><div class="attr" id="a0"></div></section>
+  <section class="pane"><h2><span id="t1">terreno-copernicus</span><span id="z1"></span></h2><canvas id="c1"></canvas><div class="stats" id="s1"></div><div class="attr" id="a1"></div></section>
+</main>
+<div id="readout">Mueve el cursor sobre el mapa para ver la altura en ambas fuentes.</div>
+<script src="diagnostico-backend.js"></script>
+</body>
+</html>

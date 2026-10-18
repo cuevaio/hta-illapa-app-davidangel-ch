@@ -1,0 +1,10 @@
+# Context is the repository root: send only what the image needs.
+*
+!services/tiles/pyproject.toml
+!services/tiles/uv.lock
+!services/tiles/.python-version
+!services/tiles/README.md
+!services/tiles/tilesets.yaml
+!services/tiles/src/**
+!services/tiles/diagnostico/**
+**/__pycache__

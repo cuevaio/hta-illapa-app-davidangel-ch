@@ -6,8 +6,8 @@ import type {
 	TunnelSectionShape,
 } from "@hack-the-andes-project/business/structures/catalog";
 import type { CorridorLandmark } from "@hack-the-andes-project/business/structures/landmarks";
-import type { GeoPoint } from "@hack-the-andes-project/terrain/types";
 import type { Incident } from "./incident";
+import type { GeoPoint } from "./structure-terrain";
 
 export interface StructurePoint {
 	x: number;
@@ -142,6 +142,7 @@ export interface StructureSceneLabels {
 	placeTable: string;
 	undo: string;
 	exitXr: string;
+	backToMap: string;
 }
 
 export interface StructureSceneProps {

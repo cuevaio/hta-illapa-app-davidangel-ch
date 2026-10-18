@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Metadatos guardados junto a cada tile (`.json`) y devueltos como cabeceras X-Tile-*.",
+  "properties": {
+    "capa": {
+      "title": "Capa",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "z": {
+      "maximum": 22,
+      "minimum": 0,
+      "title": "Z",
+      "type": "integer"
+    },
+    "x": {
+      "minimum": 0,
+      "title": "X",
+      "type": "integer"
+    },
+    "y": {
+      "minimum": 0,
+      "title": "Y",
+      "type": "integer"
+    },
+    "min": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Altura mínima (m), sin contar 'sin datos'; null si todo es 'sin datos'",
+      "title": "Min"
+    },
+    "max": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Altura máxima (m), sin contar 'sin datos'",
+      "title": "Max"
+    },
+    "fuente": {
+      "title": "Fuente",
+      "type": "string"
+    },
+    "fecha": {
+      "description": "Fecha de generación ISO 8601 UTC",
+      "title": "Fecha",
+      "type": "string"
+    },
+    "fecha_datos": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Fecha de los datos de la fuente, si se conoce",
+      "title": "Fecha Datos"
+    },
+    "sobremuestreo": {
+      "description": "true si z > zoom_max_real (no es dato real)",
+      "title": "Sobremuestreo",
+      "type": "boolean"
+    },
+    "modelo_superficie": {
+      "title": "Modelo Superficie",
+      "type": "boolean"
+    },
+    "formato": {
+      "title": "Formato",
+      "type": "string"
+    },
+    "huella": {
+      "title": "Huella",
+      "type": "string"
+    },
+    "sha256": {
+      "title": "Sha256",
+      "type": "string"
+    },
+    "bytes": {
+      "title": "Bytes",
+      "type": "integer"
+    },
+    "origen": {
+      "additionalProperties": true,
+      "title": "Origen",
+      "type": "object"
+    },
+    "revisado": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revisado"
+    }
+  },
+  "required": [
+    "capa",
+    "version",
+    "z",
+    "x",
+    "y",
+    "min",
+    "max",
+    "fuente",
+    "fecha",
+    "fecha_datos",
+    "sobremuestreo",
+    "modelo_superficie",
+    "formato",
+    "huella",
+    "sha256",
+    "bytes"
+  ],
+  "title": "TileMetadata",
+  "type": "object"
+}

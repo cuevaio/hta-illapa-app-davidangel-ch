@@ -1,12 +1,12 @@
 import { Mesh, PickingInfo, Ray, type Scene, Vector3 } from "@babylonjs/core";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 
 export class TerrainPointerSurface extends Mesh {
 	private readonly worldRay = new Ray(Vector3.Zero(), Vector3.Zero());
 
 	constructor(
 		scene: Scene,
-		private readonly terrain: BabylonTerrain,
+		private readonly terrain: StructureTerrain,
 	) {
 		super("terrain-pointer-surface", scene);
 		this.parent = terrain.root;

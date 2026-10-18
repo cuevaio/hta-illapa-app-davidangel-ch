@@ -16,13 +16,13 @@ import {
 	PRIMITIVE_SIZE_RANGE_M,
 } from "@hack-the-andes-project/business/structures/catalog";
 import { MAX_BYPASS_POINTS } from "@hack-the-andes-project/business/structures/constants";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
 	SceneStructure,
 	StructureElement,
 	StructurePoint,
 	StructureSceneProps,
 } from "../../lib/structure-scene";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import type { SceneCamera } from "./camera";
 import {
 	DEGREES_PER_RADIAN,
@@ -75,7 +75,7 @@ interface HandleView {
 
 export interface EditingOptions {
 	scene: Scene;
-	terrain: BabylonTerrain;
+	terrain: StructureTerrain;
 	parent: TransformNode;
 	camera: SceneCamera;
 	linkLabel(control: Control, mesh: Mesh): void;

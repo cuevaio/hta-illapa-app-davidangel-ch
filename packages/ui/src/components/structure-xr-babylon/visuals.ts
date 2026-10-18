@@ -50,6 +50,8 @@ export interface XrVisuals {
 	reticle: TransformNode;
 	hint: Mesh;
 	panel: TransformNode;
+	/** "Volver al mapa del Perú", shown by the session while the map is reachable. */
+	backButton: TransformNode;
 	dispose(): void;
 }
 
@@ -59,6 +61,7 @@ export function createXrVisuals(
 	labels: StructureXrLabels,
 	onUndo: () => void,
 	onExit: () => void,
+	backToMap: { label: string; invoke: () => void },
 ): XrVisuals {
 	const styles = getComputedStyle(document.documentElement);
 	const cardColor =
@@ -134,10 +137,12 @@ export function createXrVisuals(
 	hint.setEnabled(false);
 
 	const panel = new TransformNode("xr-actions", utilityScene);
+	const buttonMeshes: Mesh[] = [];
 	panel.billboardMode = TransformNode.BILLBOARDMODE_ALL;
 	for (const [buttonIndex, action] of [
 		{ label: labels.undo, invoke: onUndo },
 		{ label: labels.exit, invoke: onExit },
+		backToMap,
 	].entries()) {
 		const buttonMesh = MeshBuilder.CreateBox(
 			`xr-action-${buttonIndex}`,
@@ -226,7 +231,10 @@ export function createXrVisuals(
 			updateFeedback();
 		};
 		button.onPointerClickObservable.add(action.invoke);
+		buttonMeshes.push(buttonMesh);
 	}
+	const backButton = buttonMeshes.at(-1) ?? panel;
+	backButton.setEnabled(false);
 	panel.setEnabled(false);
 	return {
 		manager,
@@ -234,6 +242,7 @@ export function createXrVisuals(
 		reticle,
 		hint,
 		panel,
+		backButton,
 		dispose() {
 			manager.dispose();
 			panel.dispose();

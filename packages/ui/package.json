@@ -23,7 +23,7 @@
 		"@fontsource-variable/archivo": "^5.3.0",
 		"@fontsource-variable/jetbrains-mono": "^5.3.0",
 		"@hack-the-andes-project/business": "workspace:*",
-		"@hack-the-andes-project/terrain": "workspace:*",
+		"@hack-the-andes-project/xr-simulator": "workspace:*",
 		"@iwer/devui": "catalog:",
 		"@iwer/sem": "catalog:",
 		"@shadcn/react": "^0.3.1",

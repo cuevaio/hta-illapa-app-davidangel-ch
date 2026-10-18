@@ -1,4 +1,8 @@
 import { METERS_PER_KM } from "@hack-the-andes-project/business/constants";
+import {
+	TILES_API_PATH,
+	WEATHER_API_PATH,
+} from "@hack-the-andes-project/business/simulators";
 import { STRUCTURE_EXPOSURE_RADIUS_M } from "@hack-the-andes-project/business/structures/constants";
 import {
 	structureExposure,
@@ -12,6 +16,7 @@ import {
 	nextStructureName,
 	structureElementName,
 } from "@hack-the-andes-project/business/structures/naming";
+import { Button } from "@hack-the-andes-project/ui/components/button";
 import { SidebarTrigger } from "@hack-the-andes-project/ui/components/sidebar";
 import {
 	StructureEditorAttribution,
@@ -32,7 +37,10 @@ import {
 	type StructurePaletteItem,
 } from "@hack-the-andes-project/ui/components/structure-editor-palette";
 import { StructureEditorParameters } from "@hack-the-andes-project/ui/components/structure-editor-parameters";
-import { BabylonStructureScene } from "@hack-the-andes-project/ui/components/structure-scene-babylon";
+import {
+	STRUCTURES_MODE_ID,
+	XrViewer,
+} from "@hack-the-andes-project/ui/components/xr-viewer";
 import { INCIDENT_SOURCE_LABELS } from "@hack-the-andes-project/ui/lib/incident-constants";
 import type {
 	PlacementTool,
@@ -46,6 +54,7 @@ import type {
 } from "@hack-the-andes-project/ui/lib/structure-scene";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { MapIcon } from "lucide-react";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -65,6 +74,7 @@ import {
 	ENGINEERING_WIDE_BREAKPOINT_PX,
 	INCIDENT_REFETCH_INTERVAL_MS,
 } from "@/constants";
+import { ENV } from "@/env.public";
 import { structureEditorFields } from "@/lib/structure-editor-fields";
 import { structureEditorLabels } from "@/lib/structure-editor-labels";
 import { STRUCTURE_PALETTE_TOOLS } from "@/lib/structure-editor-tools";
@@ -72,6 +82,8 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { orpc } from "@/utils/orpc";
 import { useStructureEditor } from "./structure-editor-provider";
+
+const SERVER_URL = ENV.VITE_SERVER_URL.replace(/\/$/, "");
 
 export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 	const { session, snapshot, query } = useStructureEditor();
@@ -137,6 +149,11 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 	const [terrainStatus, setTerrainStatus] = useState<TerrainStatus>("loading");
 	const [terrainWasReady, setTerrainWasReady] = useState(false);
 	const [terrainAttempt, setTerrainAttempt] = useState(0);
+	const [viewerScreen, setViewerScreen] = useState("overview");
+	const [overviewRequest, setOverviewRequest] = useState(0);
+	const [structuresRequest, setStructuresRequest] = useState(0);
+	const [openStructures] = useState(() => Boolean(selectedId));
+	const structuresActive = viewerScreen === STRUCTURES_MODE_ID;
 	const [cursor, setCursor] = useState<SceneCursor | null>(null);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -288,6 +305,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 			event.repeat ||
 			event.isComposing ||
 			event.altKey ||
+			!structuresActive ||
 			isXrPresenting ||
 			deleteOpen ||
 			shortcutsOpen ||
@@ -386,6 +404,10 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (selectedId) setStructuresRequest((request) => request + 1);
+	}, [selectedId]);
+
 	const selectedName = selectedStructure?.name;
 	useEffect(() => {
 		if (selectedId && selectedName)
@@ -434,7 +456,9 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 					session.commit(structure, m.engineering_change({ name: field })),
 			)
 		: [];
-	const xrAvailable = Boolean(selectedStructure && isArSupported);
+	const xrAvailable = Boolean(
+		structuresActive && selectedStructure && isArSupported,
+	);
 	const xrReason = !isArSupported
 		? labels.xrUnsupported
 		: selectedStructure
@@ -463,52 +487,48 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 			>
 				<SidebarTrigger className="md:hidden" aria-label={m.sidebar_toggle()} />
 			</StructureEditorHeader>
-			{!isDesktopViewport ? (
-				<StructureEditorPhoneNotice
-					labels={labels}
-					onCopy={async () => {
-						try {
-							await navigator.clipboard.writeText(window.location.href);
-							toast.success(labels.copied);
-						} catch {
-							toast.error(labels.copyError);
-						}
-					}}
-				/>
-			) : (
-				<div className="relative min-h-0 flex-1 overflow-hidden">
-					<div
-						ref={sceneContainer}
-						tabIndex={-1}
-						className="absolute inset-0 outline-none"
-					>
-						<BabylonStructureScene
-							key={terrainAttempt}
-							origin={PE22_TERRAIN_ORIGIN}
-							landmarks={PE22_LANDMARKS}
-							structures={snapshot.structures}
-							selectedStructureId={selectedStructure?.id ?? null}
-							selectedElementId={selectedElement?.id ?? null}
-							hoveredStructureId={hoveredStructureId}
-							placementTool={paletteDisabledReason ? null : placementTool}
-							primitiveTarget={primitiveTarget}
-							transformMode={transformMode}
-							cameraRequest={cameraRequest}
-							exposureRing={
+			<div className="relative min-h-0 flex-1 overflow-hidden">
+				<div
+					ref={sceneContainer}
+					tabIndex={-1}
+					className="absolute inset-0 outline-none"
+				>
+					<XrViewer
+						tilesBaseUrl={`${SERVER_URL}${TILES_API_PATH}`}
+						weatherBaseUrl={`${SERVER_URL}${WEATHER_API_PATH}`}
+						credentials="include"
+						structuresLabel={m.engineering_openStructures()}
+						openStructures={openStructures}
+						terrainRetryRequest={terrainAttempt}
+						overviewRequest={overviewRequest}
+						structuresRequest={structuresRequest}
+						failureLabel={m.engineering_viewerError()}
+						onScreenChange={setViewerScreen}
+						structures={{
+							origin: PE22_TERRAIN_ORIGIN,
+							landmarks: PE22_LANDMARKS,
+							structures: snapshot.structures,
+							selectedStructureId: selectedStructure?.id ?? null,
+							selectedElementId: selectedElement?.id ?? null,
+							hoveredStructureId,
+							placementTool: paletteDisabledReason ? null : placementTool,
+							primitiveTarget,
+							transformMode,
+							cameraRequest,
+							exposureRing:
 								selectedStructure && activePanelTab === "exposure"
 									? {
 											structureId: selectedStructure.id,
 											radiusM: STRUCTURE_EXPOSURE_RADIUS_M,
 										}
-									: null
-							}
-							incidentMarkers={exposure.map(({ incident, point }) => ({
+									: null,
+							incidentMarkers: exposure.map(({ incident, point }) => ({
 								id: incident.id,
 								point,
 								severity: incident.severity,
 								label: incident.title,
-							}))}
-							insets={{
+							})),
+							insets: {
 								topPx: ENGINEERING_OVERLAY_GAP_PX,
 								leftPx:
 									leftWidthPx +
@@ -522,12 +542,12 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 								bottomPx:
 									ENGINEERING_BOTTOM_STRIP_HEIGHT_PX +
 									ENGINEERING_OVERLAY_GAP_PX,
-							}}
-							locale={locale}
-							xrRequest={xrRequest}
-							onXrSupportChange={setIsArSupported}
-							onXrSessionChange={setIsXrPresenting}
-							labels={{
+							},
+							locale,
+							xrRequest,
+							onXrSupportChange: setIsArSupported,
+							onXrSessionChange: setIsXrPresenting,
+							labels: {
 								canvas: labels.canvas,
 								terrainError: m.engineering_sceneTerrainError(),
 								outsideTerrain: labels.outsideTerrain,
@@ -541,8 +561,9 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 								placeTable: labels.xrPlace,
 								undo: labels.undo,
 								exitXr: labels.xrExit,
-							}}
-							onCreateStructure={(placed) => {
+								backToMap: m.engineering_backToMap(),
+							},
+							onCreateStructure: (placed) => {
 								const kind = placed.template.kind;
 								const nameKind =
 									kind === "entity" ? placed.elements[0]?.kind : undefined;
@@ -563,8 +584,8 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 								setPlacementTool(null);
 								setAnnouncement(m.engineering_placed({ name }));
 								sceneContainer.current?.focus({ preventScroll: true });
-							}}
-							onStructureChange={(structure) => {
+							},
+							onStructureChange: (structure) => {
 								session.commit(
 									structure,
 									m.engineering_change({ name: structure.name }),
@@ -581,247 +602,289 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 										}),
 									);
 								}
-							}}
-							onSelectStructure={selectStructure}
-							onSelectElement={(id) => {
+							},
+							onSelectStructure: selectStructure,
+							onSelectElement: (id) => {
 								setSelectedElementId(id);
 								setActivePanelTab("parameters");
-							}}
-							onCursorChange={setCursor}
-							onUndo={() => replay("undo")}
-							onTerrainStatusChange={(status) => {
+							},
+							onCursorChange: setCursor,
+							onUndo: () => replay("undo"),
+							onTerrainStatusChange: (status) => {
 								setTerrainStatus(status);
 								if (status === "ready") setTerrainWasReady(true);
-							}}
-							className="size-full"
-						/>
-					</div>
-					<div
-						className="pointer-events-none absolute flex"
-						style={{
-							top: ENGINEERING_OVERLAY_GAP_PX,
-							left: ENGINEERING_OVERLAY_GAP_PX,
-							right: ENGINEERING_OVERLAY_GAP_PX,
-							bottom:
-								ENGINEERING_BOTTOM_STRIP_HEIGHT_PX + ENGINEERING_OVERLAY_GAP_PX,
-							gap: ENGINEERING_OVERLAY_GAP_PX,
+							},
 						}}
-					>
-						<aside
-							style={{ width: leftWidthPx }}
-							className="pointer-events-auto flex min-h-0 shrink-0 flex-col overflow-hidden rounded-lg border bg-card"
-						>
-							<StructureEditorPalette
-								items={paletteItems}
-								labels={labels}
-								disabledReason={paletteDisabledReason}
-								onArm={armTool}
-							/>
-							<StructureEditorList
-								structures={snapshot.structures}
-								selectedId={selectedStructure?.id ?? null}
-								loading={query.isPending}
-								failed={query.isLoadingError}
-								labels={labels}
-								onSelect={(id) => {
-									selectStructure(id);
-									setCameraRequest({
-										kind: "focus_structure",
-										structureId: id,
-										requestId: ++cameraRequestId.current,
-									});
-								}}
-								onHover={setHoveredStructureId}
-								onRetry={() => {
-									void query.refetch();
-								}}
-							/>
-						</aside>
-						<div
-							className="flex min-w-0 flex-1 flex-col items-center"
-							style={{ gap: ENGINEERING_OVERLAY_GAP_PX }}
-						>
-							<StructureEditorCameraControls
-								labels={labels}
-								onNorth={() =>
-									setCameraRequest({
-										kind: "north_up",
-										requestId: ++cameraRequestId.current,
-									})
-								}
-								onOverview={() =>
-									setCameraRequest({
-										kind: "overview",
-										requestId: ++cameraRequestId.current,
-									})
-								}
-								onShortcuts={() => setShortcutsOpen(true)}
-							/>
-							{snapshot.save.failed && (
-								<StructureEditorNotice
-									title={
-										rejectedStructureId
-											? m.engineering_rejectedEdit()
-											: labels.saveError
-									}
-									detail={labels.saveErrorDetail}
-									action={
-										rejectedStructureId ? m.engineering_discard() : labels.retry
-									}
-									onAction={() => {
-										if (rejectedStructureId)
-											session.discard(rejectedStructureId);
-										else session.queue.retry();
-									}}
-									destructive
-								/>
-							)}
-							{activeTool && (
-								<StructureEditorBanner
-									title={
-										primitiveArmed
-											? m.engineering_adding({ piece: activeTool.label })
-											: m.engineering_placing({ piece: activeTool.label })
-									}
-									description={
-										primitiveArmed && selectedStructure
-											? labels.primitiveHelp
-											: labels.placementHelp
-									}
-									labels={labels}
-									selectedName={
-										primitiveArmed ? (selectedStructure?.name ?? null) : null
-									}
-									primitiveTarget={primitiveTarget}
-									onPrimitiveTarget={setPrimitiveTarget}
-									onCancel={() => {
-										setPlacementTool(null);
-										setAnnouncement(labels.cancel);
-									}}
-								/>
-							)}
-							{terrainStatus === "loading" && (
-								<StructureEditorNotice
-									title={
-										terrainWasReady
-											? labels.terrainStreaming
-											: labels.terrainLoading
-									}
-									detail={terrainWasReady ? "" : labels.terrainLoadingDetail}
-								/>
-							)}
-							{terrainStatus === "error" && (
-								<StructureEditorNotice
-									title={labels.terrainError}
-									detail={labels.terrainErrorDetail}
-									action={labels.retry}
-									onAction={() => {
-										setTerrainStatus("loading");
-										setXrRequest(null);
-										setIsArSupported(false);
-										setIsXrPresenting(false);
-										setTerrainAttempt((attempt) => attempt + 1);
-									}}
-									destructive
-								/>
-							)}
-							{selectedId && !selectedStructure && query.isSuccess && (
-								<StructureEditorNotice
-									title={labels.notFound}
-									detail={labels.notFoundDetail}
-									action={labels.allStructures}
-									onAction={() => selectStructure(null)}
-								/>
-							)}
-							{!placementTool && terrainStatus === "ready" && (
-								<p className="type-data mt-auto rounded-md border bg-card/95 px-3 py-2 text-center text-muted-foreground">
-									{labels.idle}
-								</p>
-							)}
-						</div>
-						{selectedStructure && (
-							<StructureEditorParameters
-								key={selectedStructure.id}
-								widthPx={ENGINEERING_RIGHT_PANEL_WIDTH_PX}
-								locale={locale}
-								kind={selectedStructure.template.kind}
-								primitiveKind={selectedStructure.elements[0]?.kind}
-								name={selectedStructure.name}
-								subtitle={`${labels[selectedStructure.template.kind]} · ${m.engineering_elementCount({ n: countFormatter.format(selectedStructure.elements.length) })}`}
-								labels={labels}
-								fields={fields}
-								elements={elementRows}
-								elementName={elementName}
-								transformMode={transformMode}
-								exposureCount={exposure.length}
-								activePanelTab={activePanelTab}
-								deleteLabel={deleteLabel}
-								onTabChange={(nextTab) => {
-									setActivePanelTab(nextTab);
-									if (nextTab === "exposure")
-										setCameraRequest({
-											kind: "frame_exposure",
-											structureId: selectedStructure.id,
-											radiusM: STRUCTURE_EXPOSURE_RADIUS_M,
-											requestId: ++cameraRequestId.current,
-										});
-								}}
-								onClose={() => selectStructure(null)}
-								onReleaseElement={() => setSelectedElementId(null)}
-								onSelectElement={setSelectedElementId}
-								onDeleteElement={deleteElement}
-								onTransformMode={setTransformMode}
-								onDelete={() => setDeleteOpen(true)}
-								exposure={
-									<StructureEditorExposure
-										rows={exposure.map(({ incident, distanceM }) => ({
-											id: incident.id,
-											title: incident.title,
-											severity: incident.severity,
-											severityLabel: labels[incident.severity],
-											distance: `${distanceFormatter.format(distanceM / METERS_PER_KM)} km`,
-											source: `${INCIDENT_SOURCE_LABELS[incident.source] ?? incident.source} · ${timeFormatter.format(incident.occurredAt ?? incident.lastChangedAt)}`,
-										}))}
-										lead={
-											exposure.length
-												? m.engineering_exposureLead({
-														n: countFormatter.format(exposure.length),
-													})
-												: labels.exposureEmpty
-										}
-										source={m.engineering_exposureSource({
-											time: incidentsQuery.dataUpdatedAt
-												? timeFormatter.format(incidentsQuery.dataUpdatedAt)
-												: "—",
-										})}
-										loading={incidentsQuery.isPending}
-										failed={incidentsQuery.isError}
-										labels={labels}
-										onRetry={() => {
-											void incidentsQuery.refetch();
-										}}
-										onFocus={(id) => {
-											const incident = exposure.find(
-												(candidate) => candidate.incident.id === id,
-											);
-											if (incident)
-												setCameraRequest({
-													kind: "focus_point",
-													point: incident.point,
-													requestId: ++cameraRequestId.current,
-												});
-										}}
-									/>
-								}
-							/>
-						)}
-					</div>
-					<StructureEditorAttribution
-						heightPx={ENGINEERING_BOTTOM_STRIP_HEIGHT_PX}
-						cursor={cursorReadout}
+						className="size-full"
 					/>
 				</div>
-			)}
+				{structuresActive && !isDesktopViewport && (
+					<div className="absolute inset-0 flex flex-col bg-background">
+						<Button
+							variant="outline"
+							size="sm"
+							className="m-3 self-start"
+							onClick={() => setOverviewRequest((request) => request + 1)}
+						>
+							<MapIcon data-icon="inline-start" />
+							{m.engineering_backToMap()}
+						</Button>
+						<StructureEditorPhoneNotice
+							labels={labels}
+							onCopy={async () => {
+								try {
+									await navigator.clipboard.writeText(window.location.href);
+									toast.success(labels.copied);
+								} catch {
+									toast.error(labels.copyError);
+								}
+							}}
+						/>
+					</div>
+				)}
+				{structuresActive && isDesktopViewport && (
+					<>
+						<div
+							className="pointer-events-none absolute flex"
+							style={{
+								top: ENGINEERING_OVERLAY_GAP_PX,
+								left: ENGINEERING_OVERLAY_GAP_PX,
+								right: ENGINEERING_OVERLAY_GAP_PX,
+								bottom:
+									ENGINEERING_BOTTOM_STRIP_HEIGHT_PX +
+									ENGINEERING_OVERLAY_GAP_PX,
+								gap: ENGINEERING_OVERLAY_GAP_PX,
+							}}
+						>
+							<aside
+								style={{ width: leftWidthPx }}
+								className="pointer-events-auto flex min-h-0 shrink-0 flex-col overflow-hidden rounded-lg border bg-card"
+							>
+								<StructureEditorPalette
+									items={paletteItems}
+									labels={labels}
+									disabledReason={paletteDisabledReason}
+									onArm={armTool}
+								/>
+								<StructureEditorList
+									structures={snapshot.structures}
+									selectedId={selectedStructure?.id ?? null}
+									loading={query.isPending}
+									failed={query.isLoadingError}
+									labels={labels}
+									onSelect={(id) => {
+										selectStructure(id);
+										setCameraRequest({
+											kind: "focus_structure",
+											structureId: id,
+											requestId: ++cameraRequestId.current,
+										});
+									}}
+									onHover={setHoveredStructureId}
+									onRetry={() => {
+										void query.refetch();
+									}}
+								/>
+							</aside>
+							<div
+								className="flex min-w-0 flex-1 flex-col items-center"
+								style={{ gap: ENGINEERING_OVERLAY_GAP_PX }}
+							>
+								<div className="flex w-full items-start justify-between gap-3">
+									<Button
+										variant="outline"
+										size="sm"
+										className="pointer-events-auto"
+										onClick={() => setOverviewRequest((request) => request + 1)}
+									>
+										<MapIcon data-icon="inline-start" />
+										{m.engineering_backToMap()}
+									</Button>
+									<StructureEditorCameraControls
+										labels={labels}
+										onNorth={() =>
+											setCameraRequest({
+												kind: "north_up",
+												requestId: ++cameraRequestId.current,
+											})
+										}
+										onOverview={() =>
+											setCameraRequest({
+												kind: "overview",
+												requestId: ++cameraRequestId.current,
+											})
+										}
+										onShortcuts={() => setShortcutsOpen(true)}
+									/>
+								</div>
+								{snapshot.save.failed && (
+									<StructureEditorNotice
+										title={
+											rejectedStructureId
+												? m.engineering_rejectedEdit()
+												: labels.saveError
+										}
+										detail={labels.saveErrorDetail}
+										action={
+											rejectedStructureId
+												? m.engineering_discard()
+												: labels.retry
+										}
+										onAction={() => {
+											if (rejectedStructureId)
+												session.discard(rejectedStructureId);
+											else session.queue.retry();
+										}}
+										destructive
+									/>
+								)}
+								{activeTool && (
+									<StructureEditorBanner
+										title={
+											primitiveArmed
+												? m.engineering_adding({ piece: activeTool.label })
+												: m.engineering_placing({ piece: activeTool.label })
+										}
+										description={
+											primitiveArmed && selectedStructure
+												? labels.primitiveHelp
+												: labels.placementHelp
+										}
+										labels={labels}
+										selectedName={
+											primitiveArmed ? (selectedStructure?.name ?? null) : null
+										}
+										primitiveTarget={primitiveTarget}
+										onPrimitiveTarget={setPrimitiveTarget}
+										onCancel={() => {
+											setPlacementTool(null);
+											setAnnouncement(labels.cancel);
+										}}
+									/>
+								)}
+								{terrainStatus === "loading" && (
+									<StructureEditorNotice
+										title={
+											terrainWasReady
+												? labels.terrainStreaming
+												: labels.terrainLoading
+										}
+										detail={terrainWasReady ? "" : labels.terrainLoadingDetail}
+									/>
+								)}
+								{terrainStatus === "error" && (
+									<StructureEditorNotice
+										title={labels.terrainError}
+										detail={labels.terrainErrorDetail}
+										action={labels.retry}
+										onAction={() => {
+											setTerrainStatus("loading");
+											setXrRequest(null);
+											setIsArSupported(false);
+											setIsXrPresenting(false);
+											setTerrainAttempt((attempt) => attempt + 1);
+										}}
+										destructive
+									/>
+								)}
+								{selectedId && !selectedStructure && query.isSuccess && (
+									<StructureEditorNotice
+										title={labels.notFound}
+										detail={labels.notFoundDetail}
+										action={labels.allStructures}
+										onAction={() => selectStructure(null)}
+									/>
+								)}
+								{!placementTool && terrainStatus === "ready" && (
+									<p className="type-data mt-auto rounded-md border bg-card/95 px-3 py-2 text-center text-muted-foreground">
+										{labels.idle}
+									</p>
+								)}
+							</div>
+							{selectedStructure && (
+								<StructureEditorParameters
+									key={selectedStructure.id}
+									widthPx={ENGINEERING_RIGHT_PANEL_WIDTH_PX}
+									locale={locale}
+									kind={selectedStructure.template.kind}
+									primitiveKind={selectedStructure.elements[0]?.kind}
+									name={selectedStructure.name}
+									subtitle={`${labels[selectedStructure.template.kind]} · ${m.engineering_elementCount({ n: countFormatter.format(selectedStructure.elements.length) })}`}
+									labels={labels}
+									fields={fields}
+									elements={elementRows}
+									elementName={elementName}
+									transformMode={transformMode}
+									exposureCount={exposure.length}
+									activePanelTab={activePanelTab}
+									deleteLabel={deleteLabel}
+									onTabChange={(nextTab) => {
+										setActivePanelTab(nextTab);
+										if (nextTab === "exposure")
+											setCameraRequest({
+												kind: "frame_exposure",
+												structureId: selectedStructure.id,
+												radiusM: STRUCTURE_EXPOSURE_RADIUS_M,
+												requestId: ++cameraRequestId.current,
+											});
+									}}
+									onClose={() => selectStructure(null)}
+									onReleaseElement={() => setSelectedElementId(null)}
+									onSelectElement={setSelectedElementId}
+									onDeleteElement={deleteElement}
+									onTransformMode={setTransformMode}
+									onDelete={() => setDeleteOpen(true)}
+									exposure={
+										<StructureEditorExposure
+											rows={exposure.map(({ incident, distanceM }) => ({
+												id: incident.id,
+												title: incident.title,
+												severity: incident.severity,
+												severityLabel: labels[incident.severity],
+												distance: `${distanceFormatter.format(distanceM / METERS_PER_KM)} km`,
+												source: `${INCIDENT_SOURCE_LABELS[incident.source] ?? incident.source} · ${timeFormatter.format(incident.occurredAt ?? incident.lastChangedAt)}`,
+											}))}
+											lead={
+												exposure.length
+													? m.engineering_exposureLead({
+															n: countFormatter.format(exposure.length),
+														})
+													: labels.exposureEmpty
+											}
+											source={m.engineering_exposureSource({
+												time: incidentsQuery.dataUpdatedAt
+													? timeFormatter.format(incidentsQuery.dataUpdatedAt)
+													: "—",
+											})}
+											loading={incidentsQuery.isPending}
+											failed={incidentsQuery.isError}
+											labels={labels}
+											onRetry={() => {
+												void incidentsQuery.refetch();
+											}}
+											onFocus={(id) => {
+												const incident = exposure.find(
+													(candidate) => candidate.incident.id === id,
+												);
+												if (incident)
+													setCameraRequest({
+														kind: "focus_point",
+														point: incident.point,
+														requestId: ++cameraRequestId.current,
+													});
+											}}
+										/>
+									}
+								/>
+							)}
+						</div>
+						<StructureEditorAttribution
+							heightPx={ENGINEERING_BOTTOM_STRIP_HEIGHT_PX}
+							cursor={cursorReadout}
+						/>
+					</>
+				)}
+			</div>
 			{selectedStructure && (
 				<StructureEditorConfirmDialog
 					open={deleteOpen}

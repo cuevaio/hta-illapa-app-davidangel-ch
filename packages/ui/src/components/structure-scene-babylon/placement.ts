@@ -1,17 +1,17 @@
 import { PRIMITIVE_DEFAULTS } from "@hack-the-andes-project/business/structures/catalog";
 import { MAX_STRUCTURE_EXTENT_M } from "@hack-the-andes-project/business/structures/constants";
 import { createDefaultStructureTemplate } from "@hack-the-andes-project/business/structures/placement";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import type {
 	PlacedStructure,
 	PlacementTool,
 	SceneStructure,
 	StructurePoint,
 } from "../../lib/structure-scene";
+import type { StructureTerrain } from "../../lib/structure-terrain";
 import { GRID_CELL_M } from "./constants";
 
 export function createPlacement(
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 	point: StructurePoint,
 	tool: PlacementTool,
 	primitiveId: string = crypto.randomUUID(),
@@ -57,7 +57,7 @@ export function clampPoint(point: StructurePoint): StructurePoint {
 }
 
 export function relativePoint(
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 	structure: SceneStructure,
 	point: StructurePoint,
 ): StructurePoint {
@@ -70,7 +70,7 @@ export function relativePoint(
 }
 
 export function snapHandlePoint(
-	terrain: BabylonTerrain,
+	terrain: StructureTerrain,
 	structure: SceneStructure,
 	point: StructurePoint,
 ): StructurePoint | null {

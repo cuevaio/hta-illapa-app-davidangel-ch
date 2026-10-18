@@ -1,22 +1,27 @@
 import { type Scene, TransformNode } from "@babylonjs/core";
-import type { BabylonTerrain } from "@hack-the-andes-project/terrain/babylon/types";
 import {
-	createLocalFrame,
-	localToLonLat,
-	lonLatToLocal,
-} from "@hack-the-andes-project/terrain/domain/local-frame";
-import type { LocalPoint } from "@hack-the-andes-project/terrain/types";
-import { TEST_GROUND_M, TEST_STRUCTURE } from "./constants";
+	TEST_EARTH_RADIUS_M,
+	TEST_GROUND_M,
+	TEST_STRUCTURE,
+} from "./constants";
+
+const RADIANS_PER_DEGREE = Math.PI / 180;
+const mercatorY = (lat: number) =>
+	Math.log(Math.tan(Math.PI / 4 + (lat * RADIANS_PER_DEGREE) / 2));
+
+import type {
+	LocalPoint,
+	StructureTerrain,
+} from "../../../lib/structure-terrain";
 
 export function createTestTerrain(
 	scene: Scene,
 	sample: (point: LocalPoint) => number | null = () => TEST_GROUND_M,
-): BabylonTerrain {
+): StructureTerrain {
 	const root = new TransformNode("test-terrain", scene);
-	const frame = createLocalFrame(
-		TEST_STRUCTURE.anchor.lng,
-		TEST_STRUCTURE.anchor.lat,
-	);
+	const { lat: originLat, lng: originLng } = TEST_STRUCTURE.anchor;
+	const metresPerRadian =
+		TEST_EARTH_RADIUS_M * Math.cos(originLat * RADIANS_PER_DEGREE);
 	return {
 		root,
 		update() {},
@@ -25,11 +30,22 @@ export function createTestTerrain(
 		},
 		heightAt: sample,
 		toLocal(point) {
-			return lonLatToLocal(frame, point.lng, point.lat);
+			return {
+				x: (point.lng - originLng) * RADIANS_PER_DEGREE * metresPerRadian,
+				z: -(mercatorY(point.lat) - mercatorY(originLat)) * metresPerRadian,
+			};
 		},
 		toGeo(point) {
-			const geographic = localToLonLat(frame, point.x, point.z);
-			return { lng: geographic.lon, lat: geographic.lat };
+			const latitudeRadians =
+				2 *
+					Math.atan(
+						Math.exp(mercatorY(originLat) - point.z / metresPerRadian),
+					) -
+				Math.PI / 2;
+			return {
+				lat: latitudeRadians / RADIANS_PER_DEGREE,
+				lng: originLng + point.x / metresPerRadian / RADIANS_PER_DEGREE,
+			};
 		},
 		setClip() {},
 		setOpacity() {},
