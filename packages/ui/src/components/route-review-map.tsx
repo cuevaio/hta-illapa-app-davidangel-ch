@@ -140,6 +140,8 @@ function RouteReviewMapCanvas({
 			const latitudes = positions.flatMap((position) =>
 				position[1] === undefined ? [] : [position[1]],
 			);
+			// MapLibre syncs its canvas to the container through a throttled ResizeObserver, so fitting before it runs uses stale dimensions and leaves the route off-screen.
+			mapRef.current?.resize();
 			mapRef.current?.fitBounds(
 				[
 					[Math.min(...longitudes), Math.min(...latitudes)],
