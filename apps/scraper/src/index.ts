@@ -11,7 +11,13 @@ import {
 import { createLogger } from "evlog";
 import { initWorkersLogger } from "evlog/workers";
 
-import { RUN_SECRET_HEADER, SELF_RUN_ORIGIN, SERVICE_NAME } from "./constants";
+import {
+	RUN_SECRET_HEADER,
+	SELF_RUN_ORIGIN,
+	SERVICE_NAME,
+	SRATMA_API_PATH,
+	SRATMA_ORIGIN,
+} from "./constants";
 import { ENV } from "./env.server";
 import { createMediaBucket } from "./lib/media-bucket";
 import { findSource, sourcesForSchedule } from "./sources";
@@ -47,6 +53,10 @@ async function runSingleSource(
 			keyId: ENV.B2_MEDIA_KEY_ID,
 			applicationKey: ENV.B2_MEDIA_APPLICATION_KEY,
 		}),
+		sratmaApiBase: new URL(
+			SRATMA_API_PATH,
+			ENV.SRATMA_RELAY_URL || SRATMA_ORIGIN,
+		).href,
 	});
 	log.set({ run: result });
 	if (!result.ok) {

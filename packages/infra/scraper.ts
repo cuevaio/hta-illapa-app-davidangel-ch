@@ -30,6 +30,10 @@ export const scraper = Cloudflare.Worker("scraper", {
 		JEV_API_KEY: Config.Redacted("JEV_API_KEY"),
 		B2_MEDIA_KEY_ID: Config.Redacted("B2_MEDIA_KEY_ID"),
 		B2_MEDIA_APPLICATION_KEY: Config.Redacted("B2_MEDIA_APPLICATION_KEY"),
+		// Unset means the Worker calls SRATMA directly, which Cloudflare's egress can.
+		...(process.env.SRATMA_RELAY_URL
+			? { SRATMA_RELAY_URL: Config.String("SRATMA_RELAY_URL") }
+			: {}),
 		SERVICE_VERSION: serviceVersion,
 	},
 	dev: {

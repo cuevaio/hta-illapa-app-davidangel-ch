@@ -6,7 +6,6 @@ import { z } from "zod";
 
 import {
 	MS_PER_HOUR,
-	SRATMA_API_BASE,
 	SRATMA_FETCH_CONCURRENCY,
 	SRATMA_PHOTO_PREFIX,
 	SRATMA_ROUTE_IMPACT_WINDOW_MS,
@@ -232,7 +231,9 @@ async function storePhoto(
 	let encodedPhoto: unknown;
 	try {
 		encodedPhoto = await fetchJson(
-			withQuery(`${SRATMA_API_BASE}/DescargaArchivo`, { ipInput: accidentId }),
+			withQuery(`${context.sratmaApiBase}/DescargaArchivo`, {
+				ipInput: accidentId,
+			}),
 		);
 	} catch (error) {
 		if (error instanceof UpstreamError && error.status === 404) {
@@ -263,7 +264,7 @@ export const sratmaAccidentsSource: IncidentSource = {
 	async fetch(context) {
 		const listing = listingSchema.parse(
 			await fetchJson(
-				withQuery(`${SRATMA_API_BASE}/listarAccidenteMapa`, {
+				withQuery(`${context.sratmaApiBase}/listarAccidenteMapa`, {
 					ipInput: JSON.stringify(RECENT_ACCIDENTS_FILTERS),
 				}),
 			),
@@ -315,9 +316,12 @@ export const sratmaAccidentsSource: IncidentSource = {
 				const accidentId = feature.properties.id_accidente;
 				const detail = detailSchema.parse(
 					await fetchJson(
-						withQuery(`${SRATMA_API_BASE}/listarAccidenteMapaInformacion`, {
-							ipInput: JSON.stringify({ id_accidente_transito: accidentId }),
-						}),
+						withQuery(
+							`${context.sratmaApiBase}/listarAccidenteMapaInformacion`,
+							{
+								ipInput: JSON.stringify({ id_accidente_transito: accidentId }),
+							},
+						),
 					),
 				);
 				const occurredAt = parseLimaDateTime(

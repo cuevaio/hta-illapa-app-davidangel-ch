@@ -56,9 +56,14 @@ Use the same values as the Workers (`apps/<app>/.env`, `apps/server/.env.product
 | `JEV_API_KEY` | yes | TypeSafe (Jev) key that classifies the news |
 | `B2_MEDIA_KEY_ID` | yes | Backblaze B2 key for the `illapa-media` bucket |
 | `B2_MEDIA_APPLICATION_KEY` | yes | Backblaze B2 key for the `illapa-media` bucket |
+| `SRATMA_RELAY_URL` | on AWS | origin of the SRATMA relay below; empty means calling SRATMA directly |
 | `SERVICE_VERSION` | no | |
 
 Crons, in UTC: `*/5 * * * *`, `0 * * * *` and `0 9 * * *` (from `packages/infra/constants.ts`).
+
+#### SRATMA relay
+
+SRATMA (`sratma.mtc.gob.pe`) drops connections from AWS but answers Cloudflare, so on Dokploy the scraper reaches it through `deploy/sratma-relay/worker.js`, a Cloudflare Worker with no dependencies. It relays only GETs under `/wssratma/api/Mapa/`, and only for the client IPs in its `ALLOWED_CLIENT_IPS` plain-text variable (the Dokploy box's Elastic IP). Set the scraper's `SRATMA_RELAY_URL` to the Worker's origin, e.g. `https://illapa-sratma-relay.<subdomain>.workers.dev`.
 
 ### fleet-sync
 

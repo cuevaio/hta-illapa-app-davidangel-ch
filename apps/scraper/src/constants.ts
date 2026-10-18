@@ -52,7 +52,8 @@ export const NEWS_SEVERITY_WARNING_SCORE = 1.5;
 
 export const JEV_MODEL = "jev-latest";
 
-export const SRATMA_API_BASE = "https://sratma.mtc.gob.pe/wssratma/api/Mapa";
+export const SRATMA_ORIGIN = "https://sratma.mtc.gob.pe";
+export const SRATMA_API_PATH = "/wssratma/api/Mapa";
 export const SRATMA_FETCH_CONCURRENCY = 5;
 // SRATMA reports arrive days late, so only accidents this recent are worth
 // asking Jev whether the road is still affected; older ones stay as context.

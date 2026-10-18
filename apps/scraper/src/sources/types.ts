@@ -34,6 +34,9 @@ export type NewsRecord = Omit<
 export interface ScrapeServices {
 	jevApiKey: string;
 	mediaBucket: MediaBucket;
+	// SRATMA drops connections from cloud providers such as AWS, so deploys
+	// there reach it through deploy/sratma-relay instead of directly.
+	sratmaApiBase: string;
 }
 
 export interface ScrapeContext extends ScrapeServices {
