@@ -25,6 +25,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 
 - **S13** (L20) "cuando marco un sitio con A para hacer una simulación se pone un menu flotante justo defrente y ni siquiera puedo ponerla a un costado, me gustaria q se pusiera a un costado (no inmediatamente cerca) del punto q acabo de seleccionar": in VR, after marking a point with A, the point card appears beside the marked point (laterally offset, not right next to it and not blocking the view of it), facing the user. Assumption: the user can also move it with the controller (grab/drag) since "ni siquiera puedo ponerla a un costado".
 
+- **S14** (L22) "necesito que corrijas este diseño (los cards y elementos de "Perú en relieve") ya que no siguen el estilo de diseño de @docs/DESIGN.md": the viewer's web (DOM) UI follows DESIGN.md — the Peru overview panel ("Perú en relieve": cámara Órbita/Vuelo libre, Relieve/Satélite, exageración vertical, hint, Simular aquí / Ir al simulador / Simulador de estructuras, attribution and notices, LOD diagnostics), the weather panel ("Capas meteorológicas": toggles, observado/pronóstico badges, groups), and the scene background behind the map. Assumption: the huayco web UI (toolbar, timeline, control panel, HUD, imagery toggle) is aligned in the same pass so the viewer is consistent.
+
 ## Tasks
 
 | ID | Specs | Route | Status | Commit |
@@ -46,6 +48,7 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T15 | S11 | delegated (same writer) | done | 4ee8642 |
 | T16 | S12 | delegated (same writer) | done | cf551b3, c52fa81 |
 | T17 | S13 | delegated (same writer) | done | 9e5c59c |
+| T18 | S14 | delegated (same writer) | pending | |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -82,4 +85,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L19** (2026-10-18, user): "quiero que los cards virtuales (menus VR) sean como describe @docs/DESIGN.md , actualiza fu forma de vicualizarlos". T13 gaps vs DESIGN.md: 35px corners, no Archivo Expanded (canvas `fontStretch` is available in Chromium), panels don't follow the web Card anatomy, never rendered/compared.
 - **L20** (2026-10-18, user): "tmabién necesito q arregles esto: cuando marco un sitio con A para hacer una simulación se pone un menu flotante justo defrente y ni siquiera puedo ponerla a un costado, me gustaria q se pusiera a un costado (no inmediatamente cerca) del punto q acabo de seleccionar".
 - **L21** T16: one scale (1 CSS px = 3 texture px = 1.25 mm), Mayu card anatomy/radii/type roles (expanded heading via canvas fontStretch), web button variants; dev page `packages/xr-simulator/vr-cards.html` (light/dark screenshots compared with `/design-system`). T17: `placePointCard` puts the card beside the marked point (clears the line of sight by 12 cm), leader line, trigger-drag on the title band. Checks at 9e5c59c: check-types 0, xr-simulator 378/378, ui 53/53, web build ok, biome clean (tracked). Not tried on a Quest.
+- **L22** (2026-10-18, user, with a screenshot of /ingenieria): "okey, ahora necesito que corrijas este diseño (los cards y elementos de "Perú en relieve") ya que no siguen el estilo de diseño de @docs/DESIGN.md". Screenshot shows the original xr-simulator CSS: dark fixed panels, orange buttons, native checkboxes, custom badge colours, debug LOD text, lavender scene background.
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
