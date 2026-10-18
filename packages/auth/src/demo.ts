@@ -1,6 +1,7 @@
 import {
 	DEMO_ACCOUNT_EMAIL,
 	DEMO_ACCOUNT_NAME,
+	DEMO_ACCOUNT_ROLE,
 	DEMO_SIGN_IN_AUTH_PATH,
 	isDemoAccountEmail,
 } from "@hack-the-andes-project/business/demo-account";
@@ -60,6 +61,7 @@ export const demoAccess = {
 								email: DEMO_ACCOUNT_EMAIL,
 								name: DEMO_ACCOUNT_NAME,
 								emailVerified: true,
+								role: DEMO_ACCOUNT_ROLE,
 							},
 							{ method: "demo" },
 						);
