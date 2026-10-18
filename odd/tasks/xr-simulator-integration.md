@@ -23,6 +23,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 
 - **S12** (L19) "quiero que los cards virtuales (menus VR) sean como describe @docs/DESIGN.md , actualiza fu forma de vicualizarlos": VR cards reproduce the web `Card` (packages/ui `card.tsx`) per DESIGN.md: anatomy (header with heading + description, content, footer), radius by role (card 14px, controls 10px, inner items 6px), 16px padding, 1px `border` hairline and no shadow, type roles (heading Archivo Expanded 800 uppercase, body Archivo 400, label JetBrains Mono 600 uppercase 0.1em, data JetBrains Mono 500 tabular, button Archivo 600 12px uppercase 0.06em), one primary button per group, light/dark tokens; all scaled by one CSS-px → VR factor so proportions match the web. Verified visually against `/design-system`.
 
+- **S13** (L20) "cuando marco un sitio con A para hacer una simulación se pone un menu flotante justo defrente y ni siquiera puedo ponerla a un costado, me gustaria q se pusiera a un costado (no inmediatamente cerca) del punto q acabo de seleccionar": in VR, after marking a point with A, the point card appears beside the marked point (laterally offset, not right next to it and not blocking the view of it), facing the user. Assumption: the user can also move it with the controller (grab/drag) since "ni siquiera puedo ponerla a un costado".
+
 ## Tasks
 
 | ID | Specs | Route | Status | Commit |
@@ -43,6 +45,7 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T14 | S10 | delegated (same writer) | done | 9c563d5 |
 | T15 | S11 | delegated (same writer) | done | 4ee8642 |
 | T16 | S12 | delegated (same writer) | pending | |
+| T17 | S13 | delegated (same writer) | pending | |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -77,4 +80,5 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L17** (2026-10-18, user): "si, quitalo, y tmb ajusta la niebla" — answering "¿quito también la inclinación de 25° del vuelo en VR?" and "¿Ajusto la niebla cuando la cámara está muy lejos?". Local dev up (localhost:3001); infra schema fix 5e84050 (TILES_API_URL/WEATHER_API_URL were missing from the infra @import pick list, breaking `pnpm dev`).
 - **L18** T14: VR flight tilt removed (maqueta never tilted). T15: `fogDensityAt(viewKm) = min(FOG_DENSITY_PER_KM, FOG_MAX_OPTICAL_DEPTH / viewKm)`, applied to scene and relief shader fog. Checks at 4ee8642: check-types 0, xr-simulator 357/357, web build ok, biome clean (tracked).
 - **L19** (2026-10-18, user): "quiero que los cards virtuales (menus VR) sean como describe @docs/DESIGN.md , actualiza fu forma de vicualizarlos". T13 gaps vs DESIGN.md: 35px corners, no Archivo Expanded (canvas `fontStretch` is available in Chromium), panels don't follow the web Card anatomy, never rendered/compared.
+- **L20** (2026-10-18, user): "tmabién necesito q arregles esto: cuando marco un sitio con A para hacer una simulación se pone un menu flotante justo defrente y ni siquiera puedo ponerla a un costado, me gustaria q se pusiera a un costado (no inmediatamente cerca) del punto q acabo de seleccionar".
 - Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
