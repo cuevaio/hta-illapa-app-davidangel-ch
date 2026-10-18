@@ -58,7 +58,7 @@ function RootComponent() {
 			<ThemeProvider
 				attribute="class"
 				defaultTheme="light"
-				enableSystem={false}
+				enableSystem
 				disableTransitionOnChange
 				storageKey="illapa-theme"
 			>
