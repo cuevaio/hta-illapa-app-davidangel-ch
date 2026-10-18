@@ -57,6 +57,8 @@ export const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
 export const MS_PER_HOUR = MINUTES_PER_HOUR * MS_PER_MINUTE;
 export const KG_PER_TONNE = 1_000;
 export const ROUTE_REVIEW_DEPARTURE_WINDOW_MS = HOURS_PER_DAY * MS_PER_HOUR;
+// Browser and server clocks can differ by minutes.
+export const ROUTE_REVIEW_DEPARTURE_CLOCK_SKEW_MS = 15 * MS_PER_MINUTE;
 export const ROUTE_REVIEW_RETENTION_MS = HOURS_PER_DAY * MS_PER_HOUR;
 export { VEHICLE_PLATE_LENGTH_CHARS } from "@hack-the-andes-project/db/schema/constants";
 // PRD step 3: each path is split into segments of about 5 km.

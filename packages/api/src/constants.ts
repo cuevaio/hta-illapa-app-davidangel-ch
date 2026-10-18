@@ -31,6 +31,8 @@ export const TRIP_NOT_ACTIVE_MESSAGE =
 	"Solo se pueden cancelar o completar viajes activos.";
 export const SAME_ORIGIN_AND_DESTINATION_MESSAGE =
 	"Elige un destino distinto del origen.";
+export const ROUTE_REVIEW_DEPARTURE_INVALID_MESSAGE =
+	"Elige una salida desde ahora y dentro de las próximas 24 horas.";
 export {
 	ROUTE_CANDIDATE_NOT_FOUND_MESSAGE,
 	ROUTE_REVIEW_NOT_FOUND_MESSAGE,
