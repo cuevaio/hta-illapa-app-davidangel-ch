@@ -6,7 +6,7 @@ import {
 import { z } from "zod";
 import { MAX_ROUTE_RISK_SCORE, MIN_ROUTE_RISK_SCORE } from "../constants";
 import { geometrySchema, lineStringSchema } from "../geojson-schemas";
-import { ROUTE_REVIEW_PLACE_IDS } from "./places";
+import { KNOWN_ROUTE_REVIEW_PLACE_IDS } from "./places";
 import {
 	ROUTE_CANDIDATE_SOURCES,
 	ROUTE_RECOMMENDATION_RULES,
@@ -16,7 +16,7 @@ import {
 	ROUTE_SIGNAL_KINDS,
 } from "./risk";
 
-const placeIdSchema = z.enum(ROUTE_REVIEW_PLACE_IDS);
+export const placeIdSchema = z.enum(KNOWN_ROUTE_REVIEW_PLACE_IDS);
 export const routeRiskAssessmentSchema = z.object({
 	horizon: z.enum(ROUTE_RISK_HORIZONS),
 	level: z.enum(ROUTE_RISK_LEVELS),
