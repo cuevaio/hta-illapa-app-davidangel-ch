@@ -25,8 +25,8 @@ Branch: `develop` (user request). Delivery: work-unit commits on `develop`; push
 | T6 | S3 | delegated (context backstop) | done | 377289c, a8a00c2 |
 | T7 | S1, S3, S4 | delegated (context backstop) | done | a8a00c2, 92e360c |
 | T8 | S1, S2 | inline | partial (deploy docs) | 540d335 |
-| T9 | S5 | delegated (same writer) | pending | |
-| T10 | S6 | delegated (same writer) | pending | |
+| T9 | S5 | delegated (same writer) | done | ff5e3e3, 6b5bedf |
+| T10 | S6 | delegated (same writer) | done | b416331, 5d4cf68 |
 
 - T1: import the xr-simulator client as workspace package `packages/xr-simulator` (+ `packages/tiles-schema`), on the pnpm catalog Babylon version; drop the three.js feasibility page; its vitest suite passes.
 - T2: import the Python services under `services/tiles` and `services/weather` with Dockerfiles, compose and pytest; no `.venv`, caches or validation DEMs.
@@ -53,4 +53,6 @@ Routes are inline: no Writer trigger (units depend on each other sequentially). 
 - **L10** Parent fixes: biome was not clean after T1 (condensed output hid 331 errors; my T1 claim was wrong) → fb4b730, 83381a0, 9e35fdf; LOD test timeout (O(n²) expects under parallel load) → 5858cc6, 337/337 x3; CORS exposes `X-Tile-*` → 01aa380. Suites: xr-simulator 337/337, ui 50/50, web 27/27, api 70/70, tiles pytest 71 passed, check-types ok.
 - Open questions (writer): structures entry from the VR map card; header label still "Estructuras" (`m.engineering_title`).
 - **L11** (2026-10-18, user): "si, si" — answering "¿Lo agregamos?" (structures from the VR map card) and "¿Le cambiamos el nombre?" (header/sidebar still "Estructuras").
-- Next: independent verifier running; T9, T10.
+- **L12** Independent verifier (c23ca58..0ad9d40): S1-S4 met, no blockers; 144-case proxy probe (fleet/no-role never reach upstream). Advisories acted on: proxy allowlist (3229300, 554e289); structures route after mount (6b5bedf).
+- **L13** T9: VR map card lists other simulators; structures uses its table maquette in immersive-vr (placed in front, opaque background) with "Volver al mapa del Perú" inside the headset. T10: area label "Simuladores"/"Simulators"; structures list keeps "Estructuras". Spot check at 554e289: check-types 0 errors, xr-simulator 340/340, ui 53/53, web 27/27, api 74/74; biome clean for tracked files.
+- Pending: manual browser + Quest check (map, huayco, structures editing, tiles/weather through the proxy, VR map ↔ structures handover). Push/PR: user decision.
