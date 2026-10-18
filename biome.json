@@ -36,6 +36,8 @@
 			"!tools/risk-pipeline/output",
 			"!tools/risk-pipeline/.venv",
 			"!**/risk/model.generated.ts",
+			"!packages/tiles-schema",
+			"!**/.venv",
 			"!.claude",
 			"!**/.astro"
 		]
@@ -44,7 +46,13 @@
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -96,8 +104,12 @@
 			"includes": ["packages/ui/src/components/map.tsx"],
 			"linter": {
 				"rules": {
-					"suspicious": { "noShadowRestrictedNames": "off" },
-					"a11y": { "noSvgWithoutTitle": "off" }
+					"suspicious": {
+						"noShadowRestrictedNames": "off"
+					},
+					"a11y": {
+						"noSvgWithoutTitle": "off"
+					}
 				}
 			}
 		},
@@ -131,7 +143,9 @@
 						"noArrayIndexKey": "off",
 						"noDoubleEquals": "off"
 					},
-					"security": { "noDangerouslySetInnerHtml": "off" }
+					"security": {
+						"noDangerouslySetInnerHtml": "off"
+					}
 				}
 			}
 		}

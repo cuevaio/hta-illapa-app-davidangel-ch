@@ -555,6 +555,10 @@ function RouteReviewPage() {
 					labels={labels}
 					className="h-full"
 					isBusy={evaluateMutation.isPending}
+					vehicleAxleCount={
+						review?.vehicleAxleCount ?? vehicle?.profile?.axleCount
+					}
+					vehicleName={vehicle?.name}
 					lineWidthPx={ROUTE_REVIEW_MAP_LINE_WIDTH_PX}
 					selectedLineWidthPx={ROUTE_REVIEW_MAP_SELECTED_WIDTH_PX}
 					casingWidthPx={ROUTE_REVIEW_MAP_CASING_WIDTH_PX}

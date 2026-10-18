@@ -52,6 +52,7 @@ describe("organization database hooks", () => {
 		email: "owner@example.com",
 		emailVerified: false,
 		image: null,
+		role: null,
 		createdAt,
 		updatedAt: createdAt,
 	};

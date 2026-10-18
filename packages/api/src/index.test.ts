@@ -84,6 +84,7 @@ const session = {
 		name: "Fleet Owner",
 		email: "owner@example.com",
 		emailVerified: true,
+		role: null,
 		createdAt,
 		updatedAt: createdAt,
 	},

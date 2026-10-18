@@ -1,3 +1,4 @@
+import type { UserRole } from "@hack-the-andes-project/api/structure-schemas";
 import {
 	MIN_PASSWORD_LENGTH_CHARS,
 	MS_PER_HOUR,
@@ -262,4 +263,34 @@ export const ROUTE_REVIEW_MAP_LEGEND_PADDING_PX = 144;
 export const ROUTE_REVIEW_MAP_COMPACT_LEGEND_PADDING_PX = 72;
 export const ROUTE_REVIEW_MAP_COMPACT_HEIGHT_PX = 240;
 
+export const AUTOSAVE_DEBOUNCE_MS = 1_000;
+export const AUTOSAVE_RETRY_BASE_MS = 2_000;
+export const AUTOSAVE_RETRY_MAX_MS = 30_000;
+export const AUTOSAVE_RETRY_MULTIPLIER_RATIO = 2;
+export const STRUCTURE_REFETCH_INTERVAL_MS = 5_000;
+export const ENGINEERING_DESKTOP_BREAKPOINT_PX = 1_024;
+export const ENGINEERING_WIDE_BREAKPOINT_PX = 1_280;
+export const ENGINEERING_LEFT_PANEL_WIDTH_PX = 304;
+export const ENGINEERING_COMPACT_PANEL_WIDTH_PX = 264;
+export const ENGINEERING_RIGHT_PANEL_WIDTH_PX = 360;
+export const ENGINEERING_OVERLAY_GAP_PX = 12;
+export const ENGINEERING_BOTTOM_STRIP_HEIGHT_PX = 28;
+export const ENGINEERING_COORDINATE_DIGITS = 4;
+export const ENGINEERING_DISTANCE_DIGITS = 1;
+export const ENGINEERING_PENDING_STORAGE_PREFIX =
+	"illapa-engineering-pending-v1:";
+export const ENGINEERING_ELEVATION_FRACTION_DIGITS = 0;
+
+export const ENGINEERING_SLOPE_FRACTION_DIGITS = 1;
+export const ENGINEERING_COUNT_FRACTION_DIGITS = 0;
+export const ENGINEERING_MAX_UNDO_STEPS_COUNT = 100;
+export const ENGINEERING_UNDO_TOAST_ID = "structure-editor-undo";
+export const ENGINEERING_SERVER_ERROR_STATUS_MIN = 500;
+
 export const ROUTE_REVIEW_QUERY_KEY: readonly string[] = ["route-review"];
+
+export const PROFILE_PATH = "/perfil";
+export const ROLE_HOME_PATHS = {
+	fleet: "/dashboard",
+	engineer: "/ingenieria",
+} as const satisfies Record<UserRole, string>;

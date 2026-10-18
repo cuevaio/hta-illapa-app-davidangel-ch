@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import {
 	DEMO_ACCOUNT_EMAIL,
+	DEMO_ACCOUNT_ROLE,
 	DEMO_SIGN_IN_AUTH_PATH,
 } from "@hack-the-andes-project/business/demo-account";
 import { betterAuth } from "better-auth";
@@ -52,6 +53,7 @@ const user = {
 	email: DEMO_ACCOUNT_EMAIL,
 	emailVerified: true,
 	image: null,
+	role: DEMO_ACCOUNT_ROLE,
 	createdAt,
 	updatedAt: createdAt,
 };
@@ -285,7 +287,12 @@ describe("demo access", () => {
 		const linkAccount = vi.spyOn(context.internalAdapter, "linkAccount");
 		await auth.api.signInDemo({ headers: new Headers() });
 		expect(createUser).toHaveBeenCalledWith(
-			{ email: DEMO_ACCOUNT_EMAIL, name: user.name, emailVerified: true },
+			{
+				email: DEMO_ACCOUNT_EMAIL,
+				name: user.name,
+				emailVerified: true,
+				role: DEMO_ACCOUNT_ROLE,
+			},
 			{ method: "demo" },
 		);
 		expect(linkAccount).not.toHaveBeenCalled();

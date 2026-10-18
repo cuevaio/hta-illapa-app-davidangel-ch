@@ -41,6 +41,7 @@ export interface DashboardSidebarProps {
 	account: (collapsed: boolean) => ReactNode;
 	expandLabel: string;
 	collapseLabel: string;
+	navigationLabel?: string;
 }
 
 export function DashboardSidebar({
@@ -48,6 +49,7 @@ export function DashboardSidebar({
 	account,
 	expandLabel,
 	collapseLabel,
+	navigationLabel = "Navegación principal",
 }: DashboardSidebarProps) {
 	const { state, isMobile, setOpenMobile, toggleSidebar } = useSidebar();
 	const collapsed = state === "collapsed" && !isMobile;
@@ -111,7 +113,7 @@ export function DashboardSidebar({
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarGroupContent>
-						<nav aria-label="Navegación principal">
+						<nav aria-label={navigationLabel}>
 							<SidebarMenu>
 								{items.map((item) => (
 									<SidebarMenuItem key={item.id}>

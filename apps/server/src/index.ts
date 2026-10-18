@@ -3,6 +3,7 @@ import type { Context as ApiContext } from "@hack-the-andes-project/api/context"
 import { handleDemoRequest } from "@hack-the-andes-project/api/demo-request";
 import { resetDemo } from "@hack-the-andes-project/api/demo-reset";
 import { appRouter } from "@hack-the-andes-project/api/routers/index";
+import { proxySimulatorRequest } from "@hack-the-andes-project/api/simulator-proxy";
 import {
 	type Auth,
 	createAuth,
@@ -16,6 +17,13 @@ import {
 	DEMO_RESET_SECRET_HEADER,
 } from "@hack-the-andes-project/business/demo-account";
 import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
+import {
+	TILE_METADATA_HEADERS,
+	TILES_API_PATH,
+	TILES_API_UPSTREAM_PATHS,
+	WEATHER_API_PATH,
+	WEATHER_API_UPSTREAM_PATHS,
+} from "@hack-the-andes-project/business/simulators";
 import { createDb, type Database } from "@hack-the-andes-project/db";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
@@ -109,6 +117,7 @@ app.use(
 		origin: (origin) => (isAllowedOrigin(origin) ? origin : null),
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization", "x-orpc-batch"],
+		exposeHeaders: TILE_METADATA_HEADERS,
 		credentials: true,
 		maxAge: CORS_PREFLIGHT_MAX_AGE_S,
 	}),
@@ -296,6 +305,30 @@ app.post(DEMO_RESET_PATH, async (context) => {
 	context.get("log").set({ demo: { reset: true, ...result } });
 	return context.json(result);
 });
+
+app.get(`${TILES_API_PATH}/*`, (c) =>
+	proxySimulatorRequest({
+		request: c.req.raw,
+		role: c.get("session")?.user.role,
+		pathPrefix: TILES_API_PATH,
+		upstreamBaseUrl: ENV.TILES_API_URL,
+		upstreamPaths: TILES_API_UPSTREAM_PATHS,
+		service: "tiles",
+		log: c.get("log"),
+	}),
+);
+
+app.get(`${WEATHER_API_PATH}/*`, (c) =>
+	proxySimulatorRequest({
+		request: c.req.raw,
+		role: c.get("session")?.user.role,
+		pathPrefix: WEATHER_API_PATH,
+		upstreamBaseUrl: ENV.WEATHER_API_URL,
+		upstreamPaths: WEATHER_API_UPSTREAM_PATHS,
+		service: "weather",
+		log: c.get("log"),
+	}),
+);
 
 app.get("/", (c) => c.text("OK"));
 

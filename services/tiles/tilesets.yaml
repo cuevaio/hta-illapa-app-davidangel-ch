@@ -1,0 +1,91 @@
+# Declarative tilesets. A layer has immutable versions; each version names its source and transformation.
+# Changing the source or the transformation of a version REQUIRES a new version (v2, v3...): the service
+# stores a fingerprint per version (`<capa>/<version>/_tileset.json`) and refuses to serve a version whose
+# configuration no longer matches it. `${VAR:-default}` is expanded from the environment (never put secrets here).
+
+fuentes:
+  terrain-tiles:
+    tipo: terrain_tiles
+    nombre: Terrain Tiles on AWS (Terrarium)
+    atribucion: >-
+      United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological
+      Survey. Global ETOPO1 terrain data U.S. National Oceanic and Atmospheric Administration.
+    licencia: Dominio público (USGS SRTM/GMTED, NOAA ETOPO1) con crédito; ver joerd attribution
+    licencia_url: https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+    resolucion_nativa_m: 30
+    modelo_superficie: false
+    fecha_datos: "2017-11-12"
+    precarga_permitida: true
+    motivo_precarga: Bucket público de AWS Open Data sin política contra descarga masiva; se mantiene la tasa máxima
+    tasa_por_s: ${TILES_TT_RATE:-20}
+    rafaga: 40
+    concurrencia: 16
+    reintentos: 3
+    espera_inicial_s: 0.5
+    timeout_s: 20
+    timeout_conexion_s: ${TILES_CONNECT_TIMEOUT_S:-3}   # connect timeout (black-holed host fails fast); timeout_s is the read timeout
+    http2: true          # S3 answers HTTP/1.1; httpx negotiates h2 when the endpoint offers it
+    presupuesto:
+      peticiones_dia: ${TILES_TT_BUDGET_REQUESTS:-100000}
+      bytes_dia: ${TILES_TT_BUDGET_BYTES:-3000000000}
+      bloquear_al_exceder: false
+    parametros:
+      url_base: ${TILES_TERRAIN_TILES_URL:-https://elevation-tiles-prod.s3.amazonaws.com}
+      zoom_max_fuente: 15
+      zoom_real_fuente: 12
+
+  copernicus-glo30:
+    tipo: copernicus_glo30
+    nombre: Copernicus DEM GLO-30 (COG en AWS)
+    atribucion: >-
+      Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018
+      provided under COPERNICUS by the European Union and ESA; all rights reserved.
+    licencia: Licencia Copernicus DEM (GLO-30 gratuita)
+    licencia_url: https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM
+    resolucion_nativa_m: 30
+    modelo_superficie: true
+    fecha_datos: "2021"
+    precarga_permitida: false
+    motivo_precarga: Lectura COG costosa (1-2 s por celda); solo bajo demanda para comparar con la primaria
+    tasa_por_s: ${TILES_COP_RATE:-5}
+    rafaga: 10
+    concurrencia: 4
+    reintentos: 2
+    espera_inicial_s: 0.5
+    timeout_s: 30
+    timeout_conexion_s: ${TILES_CONNECT_TIMEOUT_S:-3}
+    plazo_generacion_s: ${TILES_COP_DEADLINE_S:-20}   # COG reads are slower; still below the client's 30 s
+    http2: true
+    presupuesto:
+      peticiones_dia: ${TILES_COP_BUDGET_REQUESTS:-20000}
+      bloquear_al_exceder: false
+    parametros:
+      url_base: ${TILES_COPERNICUS_URL:-https://copernicus-dem-30m.s3.amazonaws.com}
+      overviews: [2, 4, 8]
+
+capas:
+  terreno:
+    nombre: Terreno (Terrain Tiles, primaria)
+    tipo: altura
+    version_actual: v1
+    versiones:
+      v1:
+        fuente: terrain-tiles
+        zoom_min: 0
+        zoom_max: 14
+        zoom_max_real: 11
+        descripcion: Mosaico de los 4 tiles Terrarium de 256 px de z+1 (bytes RGB conservados); z12-z14 sobremuestreo bilineal desde z12 (256 px).
+        transformacion: {tamano: 512, mosaico: "4x256 z+1", sobremuestreo: bilinear, nivel_fuente_real: 12}
+
+  terreno-copernicus:
+    nombre: Terreno (Copernicus GLO-30, respaldo, DSM)
+    tipo: altura
+    version_actual: v1
+    versiones:
+      v1:
+        fuente: copernicus-glo30
+        zoom_min: 8
+        zoom_max: 14
+        zoom_max_real: 11
+        descripcion: Lectura por ventanas del COG, reproyección EPSG:4326 -> EPSG:3857 bilineal, celdas ausentes (océano) = 0 m.
+        transformacion: {tamano: 512, remuestreo: bilinear, reproyeccion: "EPSG:4326->EPSG:3857", oceano: 0}

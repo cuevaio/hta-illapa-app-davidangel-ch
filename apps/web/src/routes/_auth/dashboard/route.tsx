@@ -1,4 +1,5 @@
 import { isDemoAccountEmail } from "@hack-the-andes-project/business/demo-account";
+import { canUseSimulators } from "@hack-the-andes-project/business/simulators";
 import { DashboardSidebar } from "@hack-the-andes-project/ui/components/dashboard-sidebar";
 import { DemoBanner } from "@hack-the-andes-project/ui/components/demo-banner";
 import { Separator } from "@hack-the-andes-project/ui/components/separator";
@@ -8,11 +9,12 @@ import {
 	SidebarTrigger,
 } from "@hack-the-andes-project/ui/components/sidebar";
 import { useSidebarPreference } from "@hack-the-andes-project/ui/hooks/use-sidebar-preference";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	Outlet,
+	redirect,
 	useNavigate,
 	useRouterState,
 } from "@tanstack/react-router";
@@ -23,12 +25,16 @@ import {
 	ALERT_REFETCH_INTERVAL_MS,
 	SEEN_ALERTS_STORAGE_PREFIX,
 } from "@/constants";
-import { authClient } from "@/lib/auth-client";
+import { useLeaveDemo } from "@/hooks/use-leave-demo";
 import { DASHBOARD_NAVIGATION } from "@/lib/dashboard-navigation";
 import { useFleetQueries } from "@/lib/fleet-queries";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_auth/dashboard")({
+	beforeLoad: ({ context }) => {
+		if (canUseSimulators(context.session.data?.user.role))
+			throw redirect({ to: "/ingenieria" });
+	},
 	component: DashboardLayout,
 });
 
@@ -36,17 +42,8 @@ function DashboardLayout() {
 	const { open, setOpen } = useSidebarPreference("illapa-sidebar");
 	const fleetQueries = useFleetQueries();
 	const navigate = useNavigate();
-	const { session, queryClient } = Route.useRouteContext();
-	const leaveDemo = useMutation({
-		retry: false,
-		mutationFn: async () => {
-			const { error } = await authClient.signOut();
-			if (error) throw error;
-			await queryClient.cancelQueries();
-			queryClient.removeQueries();
-			await navigate({ to: "/login", search: { mode: "sign-up" } });
-		},
-	});
+	const { session } = Route.useRouteContext();
+	const leaveDemo = useLeaveDemo();
 	const alertsQuery = useQuery({
 		...fleetQueries.openAlerts,
 		refetchInterval: ALERT_REFETCH_INTERVAL_MS,
