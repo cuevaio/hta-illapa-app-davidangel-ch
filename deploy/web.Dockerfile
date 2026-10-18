@@ -8,11 +8,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 	pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 ARG VITE_SERVER_URL
-# Vite bakes any VITE_* variable present in the environment over the .env
-# files, even an empty one, so an empty build arg would ship an empty API URL.
-# Unset, apps/web/.env.production supplies the production URL instead.
-RUN if [ -z "$VITE_SERVER_URL" ]; then unset VITE_SERVER_URL; fi \
-	&& pnpm --filter web build
+RUN test -n "$VITE_SERVER_URL" \
+	|| { echo "VITE_SERVER_URL is required; set --build-arg VITE_SERVER_URL for this environment" >&2; exit 1; }
+RUN pnpm --filter web build
 
 FROM nginx:stable-alpine
 COPY deploy/web.nginx.conf /etc/nginx/conf.d/default.conf

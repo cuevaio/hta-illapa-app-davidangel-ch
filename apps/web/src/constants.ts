@@ -1,3 +1,4 @@
+import type { UserRole } from "@hack-the-andes-project/api/structure-schemas";
 import {
 	MIN_PASSWORD_LENGTH_CHARS,
 	MS_PER_HOUR,
@@ -190,6 +191,7 @@ export const STALE_TRIP_EVALUATION_MS = MS_PER_HOUR;
 export const SEEN_ALERTS_STORAGE_PREFIX = "illapa-seen-alerts-v1";
 
 export const TOO_MANY_REQUESTS_STATUS = 429;
+export const CONFLICT_STATUS = 409;
 export const DEMO_START_ROUTE = "/dashboard/revisar-ruta";
 export const DEFAULT_AUTH_ERROR_MESSAGE =
 	"No pudimos completar la solicitud. Inténtalo de nuevo.";
@@ -256,3 +258,9 @@ export const ENGINEERING_UNDO_TOAST_ID = "structure-editor-undo";
 export const ENGINEERING_SERVER_ERROR_STATUS_MIN = 500;
 
 export const ROUTE_REVIEW_QUERY_KEY: readonly string[] = ["route-review"];
+
+export const PROFILE_PATH = "/perfil";
+export const ROLE_HOME_PATHS = {
+	fleet: "/dashboard",
+	engineer: "/ingenieria",
+} as const satisfies Record<UserRole, string>;

@@ -1,9 +1,9 @@
 import { createRequire } from "node:module";
 import {
 	DEMO_ACCOUNT_EMAIL,
+	DEMO_ACCOUNT_ROLE,
 	DEMO_SIGN_IN_AUTH_PATH,
 } from "@hack-the-andes-project/business/demo-account";
-import { DEFAULT_USER_ROLE } from "@hack-the-andes-project/db/schema/auth";
 import { betterAuth } from "better-auth";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +12,7 @@ import {
 	DEMO_CHANGE_FORBIDDEN_MESSAGE,
 	DEMO_RATE_LIMIT_MAX_REQUESTS,
 	DEMO_RATE_LIMIT_WINDOW_S,
+	DEMO_SESSION_CONFLICT_MESSAGE,
 } from "./constants";
 import { demoAccess } from "./demo";
 
@@ -52,7 +53,7 @@ const user = {
 	email: DEMO_ACCOUNT_EMAIL,
 	emailVerified: true,
 	image: null,
-	role: DEFAULT_USER_ROLE,
+	role: DEMO_ACCOUNT_ROLE,
 	createdAt,
 	updatedAt: createdAt,
 };
@@ -65,13 +66,43 @@ const session = {
 	updatedAt: createdAt,
 	activeOrganizationId: user.id,
 };
+const unthrottledAuth = betterAuth({
+	...auth.options,
+	rateLimit: { ...auth.options.rateLimit, enabled: false },
+});
+const unthrottledContext = await unthrottledAuth.$context;
+vi.spyOn(
+	unthrottledContext.internalAdapter,
+	"findUserByEmail",
+).mockResolvedValue({ user, accounts: [] });
+vi.spyOn(unthrottledContext.internalAdapter, "createSession").mockResolvedValue(
+	session,
+);
+const signedIn = await unthrottledAuth.api.signInDemo({
+	headers: new Headers(),
+	returnHeaders: true,
+});
+vi.restoreAllMocks();
+const sessionCookie = signedIn.headers
+	.getSetCookie()
+	.map((value) => value.split(";")[0])
+	.join("; ");
+
+function demoSignInWithSessionCookie() {
+	return unthrottledAuth.handler(
+		new Request(`https://api.example.com/api/auth${DEMO_SIGN_IN_AUTH_PATH}`, {
+			method: "POST",
+			headers: { cookie: sessionCookie, origin: "https://app.example.com" },
+		}),
+	);
+}
 
 afterEach(() => vi.restoreAllMocks());
 afterAll(async () => database.$client.end());
 
 describe("demo access", () => {
 	it.each([...DEMO_BLOCKED_AUTH_PATHS])(
-		"blocks demo mutations at %s",
+		"blocks demo access at %s",
 		async (path) => {
 			const hook = demoAccess.hooks.before[0];
 			if (!hook) throw new Error("Demo guard missing");
@@ -88,6 +119,71 @@ describe("demo access", () => {
 		},
 	);
 
+	it.each([
+		"/list-sessions",
+		"/list-accounts",
+		"/account-info",
+		"/organization/get-full-organization",
+		"/organization/list-members",
+		"/organization/get-invitation",
+		"/organization/list-invitations",
+		"/organization/list-user-invitations",
+	])(
+		"returns HTTP 403 before disclosing shared account data at %s",
+		async (path) => {
+			vi.spyOn(
+				unthrottledContext.internalAdapter,
+				"findSession",
+			).mockResolvedValue({ user, session });
+			const listSessions = vi.spyOn(
+				unthrottledContext.internalAdapter,
+				"listSessions",
+			);
+			const response = await unthrottledAuth.handler(
+				new Request(`https://api.example.com/api/auth${path}`, {
+					headers: { cookie: sessionCookie, origin: "https://app.example.com" },
+				}),
+			);
+			expect(response.status).toBe(403);
+			expect(await response.json()).toMatchObject({
+				message: DEMO_CHANGE_FORBIDDEN_MESSAGE,
+			});
+			expect(listSessions).not.toHaveBeenCalled();
+		},
+	);
+
+	it("still lists sessions for ordinary users", async () => {
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findSession",
+		).mockResolvedValue({
+			user: { ...user, email: "owner@example.com" },
+			session: { ...session, createdAt: new Date() },
+		});
+		const listSessions = vi
+			.spyOn(unthrottledContext.internalAdapter, "listSessions")
+			.mockResolvedValue([]);
+		const response = await unthrottledAuth.handler(
+			new Request("https://api.example.com/api/auth/list-sessions", {
+				headers: {
+					cookie: sessionCookie
+						.split("; ")
+						.filter((cookie) =>
+							cookie.startsWith(
+								`${unthrottledContext.authCookies.sessionToken.name}=`,
+							),
+						)
+						.join("; "),
+				},
+			}),
+		);
+		expect(await response.json()).toEqual([]);
+		expect(response.status).toBe(200);
+		expect(listSessions).toHaveBeenCalledWith(user.id, {
+			onlyActiveSessions: true,
+		});
+	});
+
 	it("allows ordinary users through the mutation hook and leaves sign-out available", async () => {
 		const hook = demoAccess.hooks.before[0];
 		if (!hook) throw new Error("Demo guard missing");
@@ -103,17 +199,17 @@ describe("demo access", () => {
 		await expect(hook.handler(hookContext)).resolves.toBeUndefined();
 	});
 
-	it("has an independent 30 per minute rule for the demo endpoint", () => {
+	it("has an independent 120 per minute rule for the demo endpoint", () => {
 		const rule = demoAccess.rateLimit[0];
 		if (!rule) throw new Error("Demo rate limit missing");
 		expect(rule.pathMatcher(DEMO_SIGN_IN_AUTH_PATH)).toBe(true);
 		expect(rule.pathMatcher("/sign-in/email")).toBe(false);
 		expect(rule.max).toBe(DEMO_RATE_LIMIT_MAX_REQUESTS);
 		expect(rule.window).toBe(DEMO_RATE_LIMIT_WINDOW_S);
-		expect(rule).toMatchObject({ max: 30, window: 60 });
+		expect(rule).toMatchObject({ max: 120, window: 60 });
 	});
 
-	it("allows thirty venue requests and rate-limits the thirty-first", async () => {
+	it("allows 120 venue requests and rate-limits the 121st", async () => {
 		const limitedAuth = betterAuth({
 			...auth.options,
 			rateLimit: { ...auth.options.rateLimit, storage: "memory" },
@@ -191,7 +287,12 @@ describe("demo access", () => {
 		const linkAccount = vi.spyOn(context.internalAdapter, "linkAccount");
 		await auth.api.signInDemo({ headers: new Headers() });
 		expect(createUser).toHaveBeenCalledWith(
-			{ email: DEMO_ACCOUNT_EMAIL, name: user.name, emailVerified: true },
+			{
+				email: DEMO_ACCOUNT_EMAIL,
+				name: user.name,
+				emailVerified: true,
+				role: DEMO_ACCOUNT_ROLE,
+			},
 			{ method: "demo" },
 		);
 		expect(linkAccount).not.toHaveBeenCalled();
@@ -214,35 +315,15 @@ describe("demo access", () => {
 	});
 
 	it("returns HTTP 403 before a demo profile can be changed", async () => {
-		const guardedAuth = betterAuth({
-			...auth.options,
-			rateLimit: { ...auth.options.rateLimit, enabled: false },
-		});
-		const context = await guardedAuth.$context;
-		vi.spyOn(context.internalAdapter, "findUserByEmail").mockResolvedValue({
-			user,
-			accounts: [],
-		});
-		vi.spyOn(context.internalAdapter, "createSession").mockResolvedValue(
-			session,
-		);
-		vi.spyOn(context.internalAdapter, "findSession").mockResolvedValue({
-			user,
-			session,
-		});
-		const signedIn = await guardedAuth.api.signInDemo({
-			headers: new Headers(),
-			returnHeaders: true,
-		});
-		const cookie = signedIn.headers
-			.getSetCookie()
-			.map((value) => value.split(";")[0])
-			.join("; ");
-		const response = await guardedAuth.handler(
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findSession",
+		).mockResolvedValue({ user, session });
+		const response = await unthrottledAuth.handler(
 			new Request("https://api.example.com/api/auth/update-user", {
 				method: "POST",
 				headers: {
-					cookie,
+					cookie: sessionCookie,
 					origin: "https://app.example.com",
 					"content-type": "application/json",
 				},
@@ -254,6 +335,97 @@ describe("demo access", () => {
 			message: DEMO_CHANGE_FORBIDDEN_MESSAGE,
 		});
 	});
+
+	it("returns HTTP 409 and writes no cookie while another account is signed in", async () => {
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findSession",
+		).mockResolvedValue({
+			user: { ...user, email: "owner@example.com" },
+			session,
+		});
+		const createSession = vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"createSession",
+		);
+		const response = await demoSignInWithSessionCookie();
+		expect(response.status).toBe(409);
+		await expect(response.json()).resolves.toMatchObject({
+			message: DEMO_SESSION_CONFLICT_MESSAGE,
+		});
+		expect(response.headers.get("set-cookie")).toBeNull();
+		expect(createSession).not.toHaveBeenCalled();
+	});
+
+	it("reuses an open demo session instead of creating another", async () => {
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findSession",
+		).mockResolvedValue({ user, session });
+		const createSession = vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"createSession",
+		);
+		const response = await demoSignInWithSessionCookie();
+		expect(response.status).toBe(200);
+		await expect(response.json()).resolves.toEqual({ success: true });
+		expect(createSession).not.toHaveBeenCalled();
+		expect(response.headers.get("set-cookie")).toContain(
+			`session_token=${session.token}.`,
+		);
+	});
+
+	it("fails with HTTP 500 instead of replacing a session it cannot read", async () => {
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findSession",
+		).mockRejectedValue(new Error("Connection lost"));
+		vi.spyOn(
+			unthrottledContext.internalAdapter,
+			"findUserByEmail",
+		).mockResolvedValue({ user, accounts: [] });
+		const createSession = vi
+			.spyOn(unthrottledContext.internalAdapter, "createSession")
+			.mockResolvedValue(session);
+		const response = await demoSignInWithSessionCookie();
+		expect(response.status).toBe(500);
+		expect(createSession).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["is gone", null],
+		[
+			"has expired",
+			{
+				user: { ...user, email: "owner@example.com" },
+				session: { ...session, expiresAt: new Date("2020-01-01") },
+			},
+		],
+	])(
+		"issues a new demo session when the cookie's session %s",
+		async (_, storedSession) => {
+			vi.spyOn(
+				unthrottledContext.internalAdapter,
+				"findSession",
+			).mockResolvedValue(storedSession);
+			vi.spyOn(
+				unthrottledContext.internalAdapter,
+				"findUserByEmail",
+			).mockResolvedValue({ user, accounts: [] });
+			const createSession = vi
+				.spyOn(unthrottledContext.internalAdapter, "createSession")
+				.mockResolvedValue(session);
+			const response = await demoSignInWithSessionCookie();
+			expect(response.status).toBe(200);
+			expect(createSession).toHaveBeenCalledWith(user.id);
+			const sessionTokenCookies = response.headers
+				.getSetCookie()
+				.filter((value) => value.includes("session_token="));
+			expect(sessionTokenCookies.at(-1)).toContain(
+				`session_token=${session.token}.`,
+			);
+		},
+	);
 
 	it("runs the organization hooks for the actual plugin sign-in path", async () => {
 		const context = await auth.$context;

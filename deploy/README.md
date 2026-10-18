@@ -1,5 +1,9 @@
 # Dokploy deployment
 
+One AWS EC2 box runs Dokploy and MySQL 8.4. Every app has a production deployment from `main` and a staging deployment from `develop`. Production uses the `illapa` database; staging uses `illapa_staging`. Both keep the `hack_the_andes_` table prefix.
+
+The intended production domains are `dash.illapa.app` and `api.illapa.app`; their DNS cutover to EC2 is still pending (issue #7). Use each environment's URLs from Dokploy until then.
+
 ## Static sites
 
 Build with the repository root as the context. Both images serve static files through nginx on port `80`. Dokploy runs one app per environment for each site; build a separate image with that environment's public URLs.
@@ -9,11 +13,11 @@ Build with the repository root as the context. Both images serve static files th
 | Dashboard (`web`) | `deploy/web.Dockerfile` | `VITE_SERVER_URL` |
 | Marketing (`illapa`) | `deploy/illapa.Dockerfile` | `PUBLIC_APP_URL` (dashboard origin), `PUBLIC_API_URL` (API origin) |
 
-The URLs are baked in at build time. Empty or omitted build args use the site's `.env.production` values. The marketing form posts to `${PUBLIC_API_URL}/api/demo-requests` on the API server; include the marketing origin in that server's `ALLOWED_ORIGINS`.
+The URLs are baked in at build time. Every listed build arg is required and must be nonempty; the Docker build stops with the missing variable name instead of falling back to `.env.production`. Direct `pnpm --filter web build` still loads Vite's `.env.production` fallback; `env.public.ts` rejects an empty URL when the browser loads the module, not while Vite bundles it. Use the Dockerfiles for deployment builds with required args. The marketing form posts to `${PUBLIC_API_URL}/api/demo-requests` on the API server; include the marketing origin in that server's `ALLOWED_ORIGINS`.
 
 ## Node services
 
-`server`, `scraper` and `fleet-sync` are Cloudflare Workers that Alchemy deploys from `packages/infra`. The same code also runs as a plain Node 24 process. Each app gets its own Docker image, built from `deploy/node-service.Dockerfile`, and Dokploy serves it behind Traefik. The Workers build and deploy are unchanged.
+`server`, `scraper` and `fleet-sync` run as plain Node 24 processes. Each app gets its own Docker image, built from `deploy/node-service.Dockerfile` with `APP=<app>`, and Dokploy serves it behind Traefik. Alchemy remains only for the local Workers dev runtime, which still needs the `cloudflare-franz` profile.
 
 ## How the Node build works
 
@@ -43,7 +47,7 @@ To run without Docker, use `pnpm --filter <app> build:node`, then `pnpm --filter
 
 ## Environment
 
-Use the same values as the Workers (`apps/<app>/.env`, `apps/server/.env.production`). `DATABASE_URL` replaces the Hyperdrive binding: `mysql://user:password@host:3306/fierros`, with any special characters in the user or password percent-encoded. `SERVICE_VERSION` is optional. When set (to the commit, for example), it is the build identity on every log event.
+Set these values on each app in Dokploy for its environment. The images do not read the checkout's `.env` or `.env.production` files. `DATABASE_URL` selects `illapa` in production or `illapa_staging` in staging, with any special characters in the user or password percent-encoded. `SERVICE_VERSION` is optional. When set (to the commit, for example), it is the build identity on every log event.
 
 ### server
 
@@ -51,12 +55,12 @@ Use the same values as the Workers (`apps/<app>/.env`, `apps/server/.env.product
 | --- | --- | --- |
 | `DATABASE_URL` | yes | see above |
 | `APP_ENV` | yes | `production` |
-| `BETTER_AUTH_URL` | yes | public URL of this service, e.g. `https://api.illapa.app` |
+| `BETTER_AUTH_URL` | yes | public API origin configured for this environment |
 | `BETTER_AUTH_SECRET` | yes | at least 32 characters |
 | `ALLOWED_ORIGINS` | yes | comma-separated browser origins; `*` matches inside one host label |
-| `CREDENTIALS_ENCRYPTION_KEY` | yes | the same key as fleet-sync and the Workers |
+| `CREDENTIALS_ENCRYPTION_KEY` | yes | the same key as fleet-sync in this environment |
 | `OSRM_BASE_URL` | yes | `https://router.project-osrm.org` |
-| `CLIENT_IP_HEADER` | yes | `x-real-ip` behind Traefik (the Workers keep the default `cf-connecting-ip`) |
+| `CLIENT_IP_HEADER` | yes | `x-real-ip` behind Traefik; use `cf-connecting-ip` behind Cloudflare |
 | `TILES_API_URL` | yes | origin of the tiles backend (`services/tiles`), proxied to engineers under `/tiles-api/*` (only `/tiles/*`, `/capas`, `/salud`) |
 | `WEATHER_API_URL` | yes | origin of the weather backend (`services/weather`), proxied to engineers under `/weather-api/*` (only `/api/*`) |
 | `DEMO_RESET_SECRET` | no | at least 32 characters; leave it unset to keep `POST /api/demo/reset` off |
@@ -79,7 +83,7 @@ Crons, in UTC: `*/5 * * * *`, `0 * * * *` and `0 9 * * *` (from `packages/infra/
 
 #### SRATMA relay
 
-SRATMA (`sratma.mtc.gob.pe`) drops connections from AWS but answers Cloudflare, so on Dokploy the scraper reaches it through `deploy/sratma-relay/worker.js`, a Cloudflare Worker with no dependencies. It relays only GETs under `/wssratma/api/Mapa/`, and only for the client IPs in its `ALLOWED_CLIENT_IPS` plain-text variable (the Dokploy box's Elastic IP). Set the scraper's `SRATMA_RELAY_URL` to the Worker's origin, e.g. `https://illapa-sratma-relay.<subdomain>.workers.dev`.
+SRATMA (`sratma.mtc.gob.pe`) drops connections from AWS but answers Cloudflare, so on Dokploy the scraper reaches it through `deploy/sratma-relay/worker.js`, a Cloudflare Worker with no dependencies. It relays only GETs under `/wssratma/api/Mapa/`, and only for the client IPs in its `ALLOWED_CLIENT_IPS` plain-text variable (the Dokploy box's Elastic IP). Set the scraper's `SRATMA_RELAY_URL` in Dokploy to the relay Worker's origin.
 
 ### fleet-sync
 
@@ -113,8 +117,8 @@ Cron, in UTC: `*/2 * * * *`.
 
 ## Operations
 
-- Every instance runs the crons. Run exactly one replica of scraper and of fleet-sync. Keep their Cloudflare cron Workers off while the Node services use the same database.
-- If a cron tick arrives while the previous run of that cron is still busy, it is skipped and logged as a `cron_skipped` warning. Runs never overlap and missed ticks are not caught up.
+- Every instance runs the crons. Run exactly one replica of scraper and of fleet-sync per environment. Legacy Cloudflare application crons must stay disabled so they cannot write alongside the Node services.
+- If a cron tick arrives while the previous run of that cron is still busy, it is skipped and logged as a `cron_skipped` warning. Runs of the same cron never overlap and missed ticks are not caught up.
 - On SIGTERM a service stops its crons and stops accepting requests. It then waits up to 8 s for in-flight requests, cron runs and `waitUntil` work before it exits. Docker's default 10 s stop grace period covers that.
 - `x-real-ip` holds the TCP peer that Traefik sees. If Cloudflare proxies in front of Traefik, set `CLIENT_IP_HEADER=cf-connecting-ip` and only accept origin traffic from Cloudflare. Otherwise a client that reaches Traefik directly could spoof that header.
 - Node keeps idle keep-alive connections open for 95 s, longer than Traefik's 90 s idle timeout. Traefik therefore never reuses a connection that Node has already closed.

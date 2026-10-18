@@ -1,7 +1,7 @@
 import { KG_PER_TONNE } from "@hack-the-andes-project/business/constants";
 import { GPS_PROVIDER_LABELS } from "@hack-the-andes-project/business/providers/index";
 import { ROUTE_REVIEW_PLACES } from "@hack-the-andes-project/business/route-review/places";
-import { peakRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
+import { tripWindowRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
 import { isUpcomingTrip } from "@hack-the-andes-project/business/route-review/trips";
 import { type ReactElement, useId } from "react";
 import type {
@@ -396,7 +396,12 @@ function FleetTripRow({
 	formatEvaluatedAgo,
 	labels,
 }: FleetTripRowProps) {
-	const risk = peakRiskAssessment(trip.chosenCandidate.risk);
+	const risk = tripWindowRiskAssessment(
+		trip.chosenCandidate.risk,
+		trip.departureAt,
+		trip.chosenCandidate.durationS,
+		trip.lastEvaluatedAt,
+	);
 	const recommendation = trip.chosenCandidate.recommendation;
 	const routeName = `${ROUTE_REVIEW_PLACES[trip.originPlaceId].name} → ${ROUTE_REVIEW_PLACES[trip.destinationPlaceId].name}`;
 	return (

@@ -379,7 +379,7 @@ describe("evaluateTrip with real Drizzle queries", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it("persists hazard alerts when OSRM is unavailable and leaves existing alert status alone", async () => {
+	it("persists hazard alerts when OSRM is unavailable", async () => {
 		vi.stubGlobal(
 			"fetch",
 			vi.fn<typeof fetch>(async () => {
@@ -410,7 +410,7 @@ describe("evaluateTrip with real Drizzle queries", () => {
 		expect(alertWrite?.[1]).toContain("open");
 		expect(alertWrite?.[1]).toContain(null);
 		expect(alertWrite?.[0].sql.split("on duplicate key update")[1]).not.toMatch(
-			/status|alternative_route|acknowledged_at|resolved_at/,
+			/alternative_route|acknowledged_at/,
 		);
 		expect(query.mock.calls.at(-1)?.[0].sql).toContain("not in");
 		expect(query.mock.calls.at(-1)?.[1]).toContain(hazard.id);
@@ -471,6 +471,34 @@ describe("evaluateTrip with real Drizzle queries", () => {
 			alertsUpdated: 1,
 		});
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("reopens resolved alerts while preserving open and acknowledged status", async () => {
+		const hazard = pointIncident("returning-huaico", MATUCANA);
+		query.mockImplementation(async (options) => [
+			options.rowsAsArray ? [[hazard.id]] : { affectedRows: 1 },
+			[],
+		]);
+		const result = await evaluateTrip({
+			db: await testDatabase(),
+			osrmBaseUrl: "https://osrm.test",
+			trip: activeTrip,
+			vehicle: storedVehicle,
+			incidents: [hazard],
+			now,
+			log: createLogger(),
+		});
+		expect(result).toMatchObject({ ok: true, alertsUpdated: 1 });
+		const alertWrite = query.mock.calls.find(([options]) =>
+			options.sql.startsWith("insert into `hack_the_andes_alert`"),
+		);
+		const updateSql = alertWrite?.[0].sql.split("on duplicate key update")[1];
+		expect(updateSql).toContain(
+			"`status` = if(`hack_the_andes_alert`.`status` = 'resolved', 'open', `hack_the_andes_alert`.`status`)",
+		);
+		expect(updateSql).toContain("`resolved_at` = ?");
+		expect(alertWrite?.[1].at(-1)).toBeNull();
+		expect(updateSql).not.toMatch(/alternative_route|acknowledged_at/);
 	});
 
 	it("stores a replacement route from the current GPS position", async () => {
@@ -652,7 +680,7 @@ it("prunes expired position history in a bounded batch without deleting vehicle 
 	]);
 });
 
-it("batches hazard upserts without changing acknowledged or resolved states", async () => {
+it("batches hazard upserts while preserving acknowledgement timestamps", async () => {
 	const hazards = Array.from({ length: 251 }, (_, index) =>
 		pointIncident(`hazard-${index}`, MATUCANA),
 	);
@@ -681,6 +709,6 @@ it("batches hazard upserts without changing acknowledged or resolved states", as
 		alertsCreated: 0,
 	});
 	expect(writes[0]?.[0].sql.split("on duplicate key update")[1]).not.toMatch(
-		/status|acknowledged_at|resolved_at/,
+		/acknowledged_at/,
 	);
 });

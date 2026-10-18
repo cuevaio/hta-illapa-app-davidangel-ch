@@ -1,13 +1,13 @@
 # Business logic
 
-`@hack-the-andes-project/business` contains the shared fleet and road-risk rules used by the API, the fleet-sync Worker and the scraper Worker. Import from the package root or a module path such as `@hack-the-andes-project/business/fleet/evaluate-trip`.
+`@hack-the-andes-project/business` contains the shared fleet and road-risk rules used by the API, the fleet-sync and scraper Node services. Import from the package root or a module path such as `@hack-the-andes-project/business/fleet/evaluate-trip`.
 
 ## Modules and entry points
 
 - `fleet/sync-connection.ts`: `syncConnection` decrypts a connection's credentials, imports vehicles and stores newer positions in batches. History IDs are deterministic across retries; older readings cannot overwrite a newer checkpoint. Provider errors become fixed, credential-free messages.
 - `fleet/evaluate-trip.ts`: `evaluateTrip` updates ETAs, recalculates an off-route trip, completes arrivals within 300 m of the requested destination, and upserts hazard alerts. Existing acknowledgements and resolutions survive repeated evaluation.
 - `fleet/resolve-obsolete-alerts.ts`: `resolveObsoleteAlerts` closes open and acknowledged alerts for ended trips, inactive/deleted incidents, or incidents whose category and severity no longer pass `ALERTABLE_INCIDENTS` (an accident that aged out of its alert window). API callers pass an organization ID; the trusted cron can reconcile all organizations.
-- `fleet/plan-demo-trip.ts`: `planDemoTrip` picks a destination for a demo truck. The `hazard` scenario aims 10 km past the nearest active alertable incident 20 to 200 km away; the `clear` scenario tries 60 km destinations in the directions farthest from any incident. Each candidate costs one OSRM request and is accepted only if the route passes the incident, or no incident at all. It gives up after four routes.
+- `fleet/plan-demo-trip.ts`: `planDemoTrip` picks a destination for a demo truck. The `hazard` scenario aims 10 km past the nearest active alertable incident 20 to 150 km away; the `clear` scenario tries 60 km destinations in the directions farthest from any incident. Each candidate costs one OSRM request and is accepted only if the route passes the incident, or no incident at all. It gives up after eight route attempts.
 - `fleet/load-alertable-incidents.ts`: `loadAlertableIncidents` reads active incidents that pass `ALERTABLE_INCIDENTS`, for fleet-sync and demo trip planning.
 - `fleet/prune-positions.ts`: `pruneVehiclePositions` removes up to 10,000 history rows older than 30 days. Vehicle checkpoints remain available.
 - `hazards/`: `projectOntoRoute`, `findHazardsAhead`, `chooseAlternativeRoute`, `estimateEta`, and `isAlertableIncident`. A buffered route bounding box rejects distant geometry before buffering individual hazards. Polygon alerts remain active while the vehicle is inside the hazard.

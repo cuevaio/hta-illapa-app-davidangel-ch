@@ -1,4 +1,4 @@
-import { peakRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
+import { tripWindowRiskAssessment } from "@hack-the-andes-project/business/route-review/ranking";
 import { BanIcon, PlayIcon, RefreshCwIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { RouteReviewLabels, RouteReviewTrip } from "../lib/route-review";
@@ -55,7 +55,12 @@ export function RouteReviewTripHeader({
 	startingLabel,
 	gpsNote,
 }: RouteReviewTripHeaderProps) {
-	const risk = peakRiskAssessment(trip.chosenCandidate.risk);
+	const risk = tripWindowRiskAssessment(
+		trip.chosenCandidate.risk,
+		trip.departureAt,
+		trip.chosenCandidate.durationS,
+		trip.lastEvaluatedAt,
+	);
 	return (
 		<header className="flex flex-col gap-4 border-b p-4">
 			<Breadcrumb>

@@ -1,3 +1,4 @@
+import { isDemoAccountEmail } from "@hack-the-andes-project/business/demo-account";
 import { AccountMenu } from "@hack-the-andes-project/ui/components/account-menu";
 import {
 	Avatar,
@@ -9,7 +10,7 @@ import { useFontSize } from "@hack-the-andes-project/ui/hooks/use-font-size";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTheme } from "next-themes";
 import { useState } from "react";
-import { USER_INITIALS_CHARACTER_COUNT } from "@/constants";
+import { PROFILE_PATH, USER_INITIALS_CHARACTER_COUNT } from "@/constants";
 import { authClient } from "@/lib/auth-client";
 import { m } from "@/paraglide/messages";
 import { getLocale, locales, setLocale } from "@/paraglide/runtime";
@@ -92,10 +93,16 @@ export default function UserMenu({ collapsed = false }: UserMenuProps) {
 					md: m.account_font_size_medium(),
 					lg: m.account_font_size_large(),
 				},
+				changeProfile: m.account_change_profile(),
 				signOut: m.account_sign_out(),
 				signingOut: m.account_signing_out(),
 				signOutError: m.account_sign_out_error(),
 			}}
+			onChangeProfile={
+				isDemoAccountEmail(session.user.email)
+					? undefined
+					: () => navigate({ to: PROFILE_PATH })
+			}
 			isSigningOut={isSigningOut}
 			hasSignOutError={hasSignOutError}
 			onSignOut={async () => {

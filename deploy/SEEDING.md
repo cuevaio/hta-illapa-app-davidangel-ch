@@ -1,6 +1,6 @@
 # Seeding a fresh database
 
-The server's migrations create the 23 `hack_the_andes_*` tables, all empty. Nothing in the repo copies rows from one database to another. Every row comes from one of three places: the running services, the offline risk pipeline, or people using the app. This file covers where each table's rows come from, the order that makes a new environment demo-ready, and what only the old database holds.
+The server's migrations create the 24 `hack_the_andes_*` tables, all empty. Nothing in the repo copies rows from one database to another. Every row comes from one of three places: the running services, the offline risk pipeline, or people using the app. This file covers where each table's rows come from, the order that makes a new environment demo-ready, and what only the old database holds.
 
 ## Where each table's rows come from
 
@@ -19,6 +19,8 @@ The server's migrations create the 23 `hack_the_andes_*` tables, all empty. Noth
 | `vehicle` | Imported when its connection is created. Fleet-sync (`*/2 * * * *`) upserts it with the latest position. | Yes, once its connection exists. Real vehicles get new random ids; demo trucks get deterministic ones. |
 | `vehicle_position` | Fleet-sync appends rows on every run. The API runs a demo connection's first sync. Rows older than 30 days are pruned. | The history is lost. It restarts at the first sync. |
 | `trip` | `trips.create`; `prepareDemo` (the two demo trips). Fleet-sync updates the ETA, reroutes, and completes the trip on arrival. | Demo: yes. Real: no, plan them again. |
+| `route_review` | `routeReview.evaluate` stores the evaluated review, its vehicle, places and departure time, scoped to an organization. | No. Saved reviews belong to the source database. |
+| `demo_request` | Marketing form submissions to `POST /api/demo-requests`. | No. Leads belong to the source database. |
 | `alert` | Fleet-sync `evaluateTrip` (also once inside `trips.create`) and `alerts.acknowledge`. Alerts resolve on their own when the trip ends or the hazard is passed or no longer active. | Yes for active trips. Acknowledgement history is lost. |
 | `incident` | Scraper. Every 5 min: `sutran_alerts`, `indeci_coen_emergencies`, `bomberos_emergencies_24h`, `senamhi_warnings`, `igp_last_earthquake`, `serfor_wildfire_alerts`. Hourly: `sratma_accidents` (last 30 days) and relevant `rpp_latest_news` articles, mirrored as incidents. | Current state: yes, one run of each schedule. Rows deactivated before the cutover: no. |
 | `poi` | Scraper, daily at 09:00 UTC: `sutran_alt_routes`, `sutran_fire_stations`, `sutran_police_stations`, `sutran_health_facilities`, `sutran_bus_terminals`, `sutran_weighing_stations`, `indeci_relief_warehouses`. | Yes, with one daily run. |
@@ -45,18 +47,18 @@ Order matters in three places:
 
 ### 0. Before you start
 
-- **MySQL 8:** create one database and a user with all privileges on it. Keep the server time zone on UTC, which is the official image's default: don't set `TZ`, or pass `--default-time-zone=+00:00`. Drizzle reads and writes `timestamp` columns as UTC.
+- **MySQL 8.4:** Dokploy uses `illapa` for production and `illapa_staging` for staging on the same box. Select the target database with `DATABASE_URL` and a user with the required privileges. Keep the server time zone on UTC, which is the official image's default: don't set `TZ`, or pass `--default-time-zone=+00:00`. Drizzle reads and writes `timestamp` columns as UTC.
 - **Secrets:** generate them per environment (each app's `.env.schema` lists them). `openssl rand -base64 32` gives a valid `BETTER_AUTH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY` (exactly 32 bytes), `SCRAPER_RUN_SECRET`, `FLEET_SYNC_RUN_SECRET` and `DEMO_RESET_SECRET`.
 - **`CREDENTIALS_ENCRYPTION_KEY`:** server and fleet-sync must share the same value, and it must never change afterwards. If it changes, fleet-sync can no longer decrypt any connection, the demo connection included.
 - **Third-party keys:** `JEV_API_KEY` and the B2 media keys belong to external services, so reuse the existing ones. The `illapa-media` bucket keeps its photos.
 - **Server settings:**
   - Set `DEMO_RESET_SECRET`. Without it, `POST /api/demo/reset` answers 404 as if it did not exist.
-  - `BETTER_AUTH_URL` is `API_URL`, and `ALLOWED_ORIGINS` contains `WEB_URL`.
+  - `BETTER_AUTH_URL` is `API_URL`, and `ALLOWED_ORIGINS` contains `WEB_URL` and the environment's marketing origin.
   - Build the web image with `--build-arg VITE_SERVER_URL=$API_URL`.
 
 ### 1. Create the schema
 
-Nothing to run: the server applies every migration in `packages/db/src/migrations` to its `DATABASE_URL` when it boots in step 2, leaving 23 `hack_the_andes_*` tables. To create them from a checkout instead, run `pnpm db:migrate` with `DATABASE_URL` set in the shell (varlock gives it priority over `packages/db/.env`). If MySQL is only reachable from the box, open a tunnel first, for example `ssh -N -L 3307:<mysql-host>:3306 <user>@<box>`. `<mysql-host>` is `127.0.0.1` if the port is published on the box; otherwise use the container's IP from `docker inspect`.
+Nothing to run: the server applies every migration in `packages/db/src/migrations` to its `DATABASE_URL` when it boots in step 2, leaving 24 `hack_the_andes_*` tables. To create them from a checkout instead, run `pnpm db:migrate` with `DATABASE_URL` set in the shell (varlock gives it priority over `packages/db/.env`). If MySQL is only reachable from the box, open a tunnel first, for example `ssh -N -L 3307:<mysql-host>:3306 <user>@<box>`. `<mysql-host>` is `127.0.0.1` if the port is published on the box; otherwise use the container's IP from `docker inspect`.
 
 ### 2. Start the services
 
@@ -175,7 +177,7 @@ Demo trucks drive at 10× the planned OSRM pace (`DEMO_TIME_ACCELERATION_FACTOR`
 
 ## What only the old database holds
 
-The project's git history starts on 2026-10-17, so the old database holds less than a day of data. A fresh environment cannot rebuild:
+A fresh environment cannot rebuild these records from feeds or the pipeline:
 
 - **Real accounts:** `user`, `account` (password hashes), extra organizations, `member` and `invitation`. People sign up again and owners re-invite their teams.
 - **Real GPS connections:** no procedure returns their credentials, which are encrypted with the old `CREDENTIALS_ENCRYPTION_KEY`. Re-enter them in the new environment (`connections.create`), which imports the vehicles again.
@@ -199,7 +201,7 @@ The procedures are called as `POST $API_URL/rpc/<path>`, with the dots of the pr
 | `news.list` | `{ limit?, relevantOnly? }`. `limit` is at most 200 (default 50); `relevantOnly` defaults to `true`. | Articles, newest first. | `news_article` |
 | `risk.segments` | `{ horizonHours?, bbox?, roadCode?, minScore?, limit? }`. Horizon is 24, 48 or 72; `limit` is at most 10 000. | Segments with their static features and latest assessment. | `road_segment`, `segment_risk_assessment` |
 | `risk.compareRoutes` | `{ origin, destination, horizonHours? }` | Computed fastest and risk-aware routes, closures and SUTRAN detours. | Reads `road_edge`, `road_node`, `segment_risk_assessment`, `incident`, `poi`. |
-| `routeReview.evaluate` | `{ originPlaceId, destinationPlaceId, departureAt, vehicleAxleCount }` | A computed review. Nothing is stored. | Reads the graph, assessments, `incident`, `poi`. |
+| `routeReview.evaluate` | `{ vehicleId, originPlaceId, destinationPlaceId, departureAt }` | A computed review, saved in `route_review`. | Reads `vehicle`, the graph, assessments, `incident`, `poi`; writes `route_review`. |
 | `demo.prepare` | none | `{ vehicleCount, tripCount }`. Demo account only. | Writes the demo fleet. |
 | `healthCheck`, `privateData` | none | `"OK"`; the session user. | None. |
 
@@ -228,9 +230,9 @@ These recreate data in the new environment:
 ### Export commands
 
 ```sh
-API_URL=https://api.illapa.app
+# Export API_URL and WEB_URL for the source environment before running.
 curl -sS -c old-session.txt -X POST "$API_URL/api/auth/sign-in/email" \
-  -H 'Content-Type: application/json' -H 'Origin: https://dash.illapa.app' \
+  -H 'Content-Type: application/json' -H "Origin: $WEB_URL" \
   -d '{"email":"<email>","password":"<password>"}'
 for procedure in connections/list vehicles/list trips/list; do
   curl -sS -b old-session.txt -X POST "$API_URL/rpc/$procedure" \
@@ -245,8 +247,8 @@ curl -sS -b old-session.txt -X POST "$API_URL/rpc/news/list" \
 curl -sS -b old-session.txt "$API_URL/api/auth/organization/get-full-organization" > export-organization.json
 ```
 
-## Data outside MySQL
+## Other data
 
 - **Demo request leads:** new submissions go to the API server's `POST /api/demo-requests` and are stored in the MySQL table `hack_the_andes_demo_request`. Old leads stay in the Cloudflare KV namespace `hack-the-andes-illapa-demo-requests` until exported. Keys are `<ISO time>:<uuid>`; values are JSON with the name, company, phone and email. Export them before that namespace is deleted.
 - **SRATMA photos:** they live in the Backblaze B2 bucket `illapa-media`. The scraper lists the bucket and links the stored photos again, so nothing is downloaded twice.
-- **Route review data:** vehicle profiles and planned trips are stored in each browser's `localStorage` (`illapa-route-review-fixtures-v1`) for the dashboard's origin. They survive the move as long as the dashboard keeps its domain.
+- **Route review data:** saved reviews live in `hack_the_andes_route_review`, linked to `hack_the_andes_vehicle`; planned trips live in `hack_the_andes_trip`. Keep these rows with the environment's database. They are no longer dashboard localStorage fixtures.

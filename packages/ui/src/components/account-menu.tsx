@@ -1,6 +1,13 @@
 import PE from "country-flag-icons/react/3x2/PE";
 import US from "country-flag-icons/react/3x2/US";
-import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import {
+	ArrowLeftRight,
+	ChevronsUpDown,
+	LogOut,
+	Monitor,
+	Moon,
+	Sun,
+} from "lucide-react";
 
 import { FONT_SIZE_OPTIONS } from "../constants";
 import type { FontSizePreference } from "../hooks/use-font-size";
@@ -39,6 +46,7 @@ interface AccountMenuLabels {
 	language: string;
 	fontSize: string;
 	fontSizes: Record<FontSizePreference["fontSize"], string>;
+	changeProfile: string;
 	signOut: string;
 	signingOut: string;
 	signOutError: string;
@@ -55,6 +63,7 @@ interface AccountMenuProps extends FontSizePreference {
 	language: AccountMenuLanguage["value"];
 	languages: AccountMenuLanguage[];
 	onLanguageChange: (language: AccountMenuLanguage["value"]) => void;
+	onChangeProfile?: () => void;
 	onSignOut: () => void;
 	isSigningOut: boolean;
 	hasSignOutError: boolean;
@@ -73,6 +82,7 @@ export function AccountMenu({
 	onLanguageChange,
 	fontSize,
 	setFontSize,
+	onChangeProfile,
 	onSignOut,
 	isSigningOut,
 	hasSignOutError,
@@ -232,6 +242,16 @@ export function AccountMenu({
 						</div>
 						<Separator />
 						<div className="flex flex-col gap-2 p-1">
+							{onChangeProfile && (
+								<Button
+									variant="ghost"
+									className="w-full justify-start"
+									onClick={onChangeProfile}
+								>
+									<ArrowLeftRight aria-hidden="true" data-icon="inline-start" />
+									{labels.changeProfile}
+								</Button>
+							)}
 							<Button
 								variant="ghost"
 								className="w-full justify-start text-destructive hover:text-destructive"

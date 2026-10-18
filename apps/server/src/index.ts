@@ -1,10 +1,7 @@
 import { PUBLIC_PROCEDURE_PATHS } from "@hack-the-andes-project/api/constants";
 import type { Context as ApiContext } from "@hack-the-andes-project/api/context";
 import { handleDemoRequest } from "@hack-the-andes-project/api/demo-request";
-import {
-	resetDemo,
-	verifyDemoResetSecret,
-} from "@hack-the-andes-project/api/demo-reset";
+import { resetDemo } from "@hack-the-andes-project/api/demo-reset";
 import { appRouter } from "@hack-the-andes-project/api/routers/index";
 import { proxySimulatorRequest } from "@hack-the-andes-project/api/simulator-proxy";
 import {
@@ -14,6 +11,7 @@ import {
 	parseAllowedOrigins,
 	type Session,
 } from "@hack-the-andes-project/auth";
+import { verifySecret } from "@hack-the-andes-project/business/crypto/index";
 import {
 	DEMO_RESET_PATH,
 	DEMO_RESET_SECRET_HEADER,
@@ -27,22 +25,25 @@ import {
 	WEATHER_API_UPSTREAM_PATHS,
 } from "@hack-the-andes-project/business/simulators";
 import { createDb, type Database } from "@hack-the-andes-project/db";
-import { OpenAPIHandler } from "@orpc/openapi/fetch";
-import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { BatchHandlerPlugin } from "@orpc/server/plugins";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { identifyUser } from "evlog/better-auth";
 import { type EvlogVariables, evlog } from "evlog/hono";
 import { initWorkersLogger } from "evlog/workers";
 import { Hono, type Context as HonoContext } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 
 import {
 	AUTH_PREFIX,
 	CORS_PREFLIGHT_MAX_AGE_S,
-	OPENAPI_PREFIX,
+	DEMO_REQUEST_RATE_LIMIT_MAX_REQUESTS,
+	DEMO_REQUEST_RATE_LIMIT_WINDOW_MS,
+	HTTP_STATUS_FORBIDDEN,
+	HTTP_STATUS_PAYLOAD_TOO_LARGE,
+	HTTP_STATUS_TOO_MANY_REQUESTS,
+	MAX_REQUEST_BODY_BYTES,
 	PUBLIC_PATHS,
 	RPC_PREFIX,
 	SERVICE_NAME,
@@ -86,6 +87,13 @@ interface Variables {
 
 const app = new Hono<{ Variables: Variables }>();
 
+interface DemoRequestWindow {
+	count: number;
+	expiresAt: number;
+}
+
+const demoRequestWindows = new Map<string | undefined, DemoRequestWindow>();
+
 // Hono's executionCtx getter throws when there is no ExecutionContext
 // (Node test runs); degrade to letting the promise float.
 function waitUntilFor(
@@ -114,6 +122,60 @@ app.use(
 		maxAge: CORS_PREFLIGHT_MAX_AGE_S,
 	}),
 );
+
+app.use("*", async (context, next) => {
+	const origin = context.req.header("Origin");
+	if (
+		(context.req.path === RPC_PREFIX ||
+			context.req.path.startsWith(`${RPC_PREFIX}/`)) &&
+		!["GET", "HEAD", "OPTIONS"].includes(context.req.method) &&
+		origin !== undefined &&
+		!isAllowedOrigin(origin)
+	) {
+		context.get("log").set({ auth: { gate: "forbidden_origin", origin } });
+		return context.json(
+			{
+				error: "forbidden_origin",
+				message: "This origin is not allowed to call the API.",
+			},
+			HTTP_STATUS_FORBIDDEN,
+		);
+	}
+	return next();
+});
+
+app.use(
+	bodyLimit({
+		maxSize: MAX_REQUEST_BODY_BYTES,
+		onError: (context) =>
+			context.json(
+				{ error: "payload_too_large" },
+				HTTP_STATUS_PAYLOAD_TOO_LARGE,
+			),
+	}),
+);
+
+app.post(DEMO_REQUESTS_PATH, async (context, next) => {
+	const now = Date.now();
+	for (const [clientIp, window] of demoRequestWindows) {
+		if (window.expiresAt <= now) demoRequestWindows.delete(clientIp);
+	}
+	const clientIp = context.req.header(ENV.CLIENT_IP_HEADER);
+	let window = demoRequestWindows.get(clientIp);
+	if (!window) {
+		window = { count: 0, expiresAt: now + DEMO_REQUEST_RATE_LIMIT_WINDOW_MS };
+		demoRequestWindows.set(clientIp, window);
+	}
+	if (window.count >= DEMO_REQUEST_RATE_LIMIT_MAX_REQUESTS) {
+		context.get("log").set({ demoRequest: { throttled: true } });
+		return context.json(
+			{ error: "too_many_demo_requests" },
+			HTTP_STATUS_TOO_MANY_REQUESTS,
+		);
+	}
+	window.count += 1;
+	return next();
+});
 
 // Global auth guard: every route requires a session unless it is listed in
 // PUBLIC_PATHS, lives under /api/auth/*, or is a PUBLIC_PROCEDURE_PATHS
@@ -158,6 +220,7 @@ app.use("*", async (c, next) => {
 	const procedurePath = path.slice(RPC_PREFIX.length + 1).replaceAll("/", ".");
 	if (
 		path.startsWith(`${RPC_PREFIX}/`) &&
+		!c.req.raw.headers.has("x-orpc-batch") &&
 		PUBLIC_PROCEDURE_PATHS.has(procedurePath)
 	) {
 		return next();
@@ -183,17 +246,9 @@ const rpcHandler = new RPCHandler(appRouter, {
 	],
 });
 
-const apiHandler = new OpenAPIHandler(appRouter, {
-	plugins: [
-		new OpenAPIReferencePlugin({
-			schemaConverters: [new ZodToJsonSchemaConverter()],
-		}),
-	],
-});
-
 app.use("/*", async (c, next) => {
 	const path = c.req.path;
-	if (!path.startsWith(RPC_PREFIX) && !path.startsWith(OPENAPI_PREFIX)) {
+	if (path !== RPC_PREFIX && !path.startsWith(`${RPC_PREFIX}/`)) {
 		return next();
 	}
 
@@ -215,14 +270,6 @@ app.use("/*", async (c, next) => {
 		return c.newResponse(rpcResult.response.body, rpcResult.response);
 	}
 
-	const apiResult = await apiHandler.handle(c.req.raw, {
-		prefix: OPENAPI_PREFIX,
-		context,
-	});
-	if (apiResult.matched) {
-		return c.newResponse(apiResult.response.body, apiResult.response);
-	}
-
 	return next();
 });
 
@@ -239,7 +286,7 @@ app.post(DEMO_RESET_PATH, async (context) => {
 		return context.notFound();
 	}
 	if (
-		!verifyDemoResetSecret(
+		!verifySecret(
 			context.req.header(DEMO_RESET_SECRET_HEADER),
 			ENV.DEMO_RESET_SECRET,
 		)
@@ -293,7 +340,32 @@ app.notFound((c) =>
 );
 
 app.onError((error, c) => {
-	c.get("log").error(error instanceof Error ? error : new Error(String(error)));
+	let queryError = error;
+	while (
+		queryError.name !== "DrizzleQueryError" &&
+		queryError.cause instanceof Error
+	) {
+		queryError = queryError.cause;
+	}
+	if (
+		queryError.name === "DrizzleQueryError" &&
+		"query" in queryError &&
+		typeof queryError.query === "string"
+	) {
+		const driverError = queryError.cause;
+		const driverCode =
+			driverError instanceof Error &&
+			"code" in driverError &&
+			typeof driverError.code === "string"
+				? driverError.code
+				: undefined;
+		c.get("log").set({ database: { query: queryError.query, driverCode } });
+		// evlog reads c.error after onError returns, so it must be sanitized too.
+		c.error = new Error("Database query failed");
+		c.get("log").error(c.error);
+	} else {
+		c.get("log").error(error);
+	}
 	// An exception can bypass the cors() middleware, so re-apply CORS headers or
 	// the browser reports an opaque CORS failure instead of the 500.
 	const origin = c.req.header("Origin");
@@ -302,8 +374,8 @@ app.onError((error, c) => {
 		c.header("Access-Control-Allow-Credentials", "true");
 		c.header("Vary", "Origin");
 	}
-	// The parsed error (driver and SQL text included) stays on the wide event;
-	// the client only gets an id to quote back.
+	// The SQL text and driver code stay on the wide event, never the bound
+	// params; the client only gets an id to quote back.
 	const errorId = c.req.header("cf-ray") ?? crypto.randomUUID();
 	c.get("log").set({ errorId });
 	return c.json(

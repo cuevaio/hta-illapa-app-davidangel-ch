@@ -1,3 +1,4 @@
+import { verifySecret } from "@hack-the-andes-project/business/crypto/index";
 import {
 	type AssessRoadRiskResult,
 	assessRoadRisk,
@@ -181,7 +182,12 @@ export default {
 		) {
 			return Response.json({ error: "not_found" }, { status: 404 });
 		}
-		if (request.headers.get(RUN_SECRET_HEADER) !== ENV.SCRAPER_RUN_SECRET) {
+		if (
+			!verifySecret(
+				request.headers.get(RUN_SECRET_HEADER),
+				ENV.SCRAPER_RUN_SECRET,
+			)
+		) {
 			return Response.json({ error: "unauthorized" }, { status: 401 });
 		}
 		if (url.pathname === "/risk") {

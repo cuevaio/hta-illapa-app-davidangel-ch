@@ -224,6 +224,8 @@ export const trip = mysqlTable(
 			table.status,
 		),
 		index("trip_vehicleId_idx").on(table.vehicleId),
+		index("trip_status_vehicleId_idx").on(table.status, table.vehicleId),
+		index("trip_reviewId_idx").on(table.reviewId),
 	],
 );
 
@@ -273,6 +275,7 @@ export const alert = mysqlTable(
 			table.status,
 		),
 		index("alert_vehicleId_idx").on(table.vehicleId),
+		index("alert_status_idx").on(table.status),
 		index("alert_incidentId_idx").on(table.incidentId),
 	],
 );
