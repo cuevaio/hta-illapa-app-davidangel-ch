@@ -1,4 +1,4 @@
-url: https://app-staging.52-21-151-223.sslip.io/login
+url: https://dash-staging.getillapa.com/login
 name: Clicking an incident on the Mapa opens its details
 tags:
   - fleet-pages

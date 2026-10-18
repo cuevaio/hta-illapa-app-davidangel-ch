@@ -1,4 +1,4 @@
-url: https://app-staging.52-21-151-223.sslip.io/login
+url: https://dash-staging.getillapa.com/login
 name: Dashboard navigation works on narrow screens (run with SCREEN=390x844 or 1024x768)
 tags:
   - fleet-pages

@@ -1,6 +1,6 @@
 # web E2E (Maestro)
 
-Maestro flows that drive the web app in Chromium against a deployed stack. They default to staging (`https://app-staging.52-21-151-223.sslip.io`, deployed from `develop`). Every run starts a fresh browser.
+Maestro flows that drive the web app in Chromium against a deployed stack. They default to staging (`https://dash-staging.getillapa.com`, deployed from `develop`). Every run starts a fresh browser.
 
 ## Run
 
@@ -8,7 +8,7 @@ Maestro needs Java 17+ (`JAVA_HOME`). From `apps/web/e2e`:
 
 ```bash
 maestro test --headless --screen-size 1440x3000 \
-  -e APP_URL=https://app-staging.52-21-151-223.sslip.io \
+  -e APP_URL=https://dash-staging.getillapa.com \
   -e EMAIL=<fleet user> -e PASSWORD=<password> \
   flows/fleet/revisar-ruta-golden-path.yaml
 ```
