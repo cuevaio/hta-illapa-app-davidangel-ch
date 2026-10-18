@@ -94,6 +94,23 @@ SRATMA (`sratma.mtc.gob.pe`) drops connections from AWS but answers Cloudflare, 
 
 Cron, in UTC: `*/2 * * * *`.
 
+## Simulator backends
+
+`services/tiles` (Peru terrain tiles) and `services/weather` (NOAA GFS, GLM lightning and GOES-19 clouds) are Python services that only the server calls, through its engineer-only `/tiles-api/*` and `/weather-api/*` routes. They have no authentication of their own, so do not give them a public domain. Run each one as a Dokploy app on the same network as the server, and point the server at their internal hostnames.
+
+| | tiles | weather |
+| --- | --- | --- |
+| Dockerfile | `services/tiles/Dockerfile` | `services/weather/Dockerfile` |
+| Build context | repository root | repository root |
+| Port | `8080` | `8787` |
+| Health check | `GET /salud` | `GET /api/health` |
+| Volume | none with S3 storage | `/data/cache` (GFS, GLM and cloud cache) |
+| Server variable | `TILES_API_URL=http://<tiles app name>:8080` | `WEATHER_API_URL=http://<weather app name>:8787` |
+
+- tiles: set `TILES_STORAGE=s3` with `TILES_S3_ENDPOINT`, `TILES_S3_BUCKET`, `TILES_S3_ACCESS_KEY`, `TILES_S3_SECRET_KEY` (R2 or S3), and `TILES_CONTACT`. With `TILES_STORAGE=fs`, mount a volume at `TILES_FS_ROOT` that user `10001` can write to. All variables are listed in `services/tiles/README.md`.
+- weather: the defaults cover Peru. Run exactly one replica, because its pollers write to the cache volume. Variables are listed in `services/weather/README.md`.
+- `services/docker-compose.yml` runs both services with MinIO locally (`docker compose -f services/docker-compose.yml up -d --build`). The server's local defaults already point at them.
+
 ## Operations
 
 - Every instance runs the crons. Run exactly one replica of scraper and of fleet-sync. Keep their Cloudflare cron Workers off while the Node services use the same database.
