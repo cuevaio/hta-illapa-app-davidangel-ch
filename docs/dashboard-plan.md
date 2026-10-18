@@ -42,7 +42,7 @@ Routes under `/_auth/dashboard`: map (incidents + fleet overlay), fleet (vehicle
 ## Infra
 
 - One EC2 box runs Dokploy: production deploys from `main`, staging from `develop`.
-- Server, scraper and fleet-sync are Node 24 services. Dashboard and marketing are nginx static sites. URLs come from Dokploy env and build args; the intended dashboard/API domain DNS cutover is pending (issue #7).
+- Server, scraper and fleet-sync are Node 24 services. Dashboard and marketing are nginx static sites. URLs come from Dokploy env and build args; production runs on `dash.getillapa.com` and `api.getillapa.com` (issue #7).
 - MySQL 8.4 holds `illapa` and `illapa_staging`, with `hack_the_andes_` table prefixes. Fleet-sync reads `DATABASE_URL`, the shared encryption key, `OSRM_BASE_URL` and its run secret from Dokploy.
 
 ## Work breakdown and model assignment
