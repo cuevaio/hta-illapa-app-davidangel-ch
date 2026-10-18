@@ -29,6 +29,8 @@ export interface XrViewerProps {
 	openStructures: boolean;
 	/** Bumped to download the structures terrain again after an error. */
 	terrainRetryRequest: number;
+	/** Bumped to switch to the structures simulator (e.g. a structure route opened later). */
+	structuresRequest: number;
 	/** Bumped to go back to the Peru map. */
 	overviewRequest: number;
 	failureLabel: string;
@@ -133,6 +135,17 @@ export function XrViewer(props: XrViewerProps) {
 	useEffect(() => {
 		if (props.overviewRequest) handleRef.current?.showOverview();
 	}, [props.overviewRequest]);
+
+	useEffect(() => {
+		const handle = handleRef.current;
+		if (!props.structuresRequest || !handle) return;
+		void handle.ready
+			.then(() => {
+				if (handleRef.current === handle)
+					return handle.openMode(STRUCTURES_MODE_ID);
+			})
+			.catch(() => undefined);
+	}, [props.structuresRequest]);
 
 	return (
 		<div className={cn("relative size-full overflow-hidden", props.className)}>

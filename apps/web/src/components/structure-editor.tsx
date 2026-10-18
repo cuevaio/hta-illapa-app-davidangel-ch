@@ -151,6 +151,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 	const [terrainAttempt, setTerrainAttempt] = useState(0);
 	const [viewerScreen, setViewerScreen] = useState("overview");
 	const [overviewRequest, setOverviewRequest] = useState(0);
+	const [structuresRequest, setStructuresRequest] = useState(0);
 	const [openStructures] = useState(() => Boolean(selectedId));
 	const structuresActive = viewerScreen === STRUCTURES_MODE_ID;
 	const [cursor, setCursor] = useState<SceneCursor | null>(null);
@@ -403,6 +404,10 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (selectedId) setStructuresRequest((request) => request + 1);
+	}, [selectedId]);
+
 	const selectedName = selectedStructure?.name;
 	useEffect(() => {
 		if (selectedId && selectedName)
@@ -496,6 +501,7 @@ export function StructureEditor({ selectedId }: { selectedId: string | null }) {
 						openStructures={openStructures}
 						terrainRetryRequest={terrainAttempt}
 						overviewRequest={overviewRequest}
+						structuresRequest={structuresRequest}
 						failureLabel={m.engineering_viewerError()}
 						onScreenChange={setViewerScreen}
 						structures={{
