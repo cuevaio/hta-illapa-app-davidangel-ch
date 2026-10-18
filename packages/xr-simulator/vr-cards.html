@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tarjetas VR</title>
+    <!-- The web app loads these through Fontsource; this dev page takes them from Google Fonts. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@100..800&display=block"
+    />
+    <style>
+      html, body { margin: 0; background: var(--background); }
+      canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <canvas id="cards"></canvas>
+    <script type="module" src="/src/pages/vrCards.ts"></script>
+  </body>
+</html>

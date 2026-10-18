@@ -1,13 +1,8 @@
 import { type Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
 import {
 	AdvancedDynamicTexture,
-	type Button,
-	Control,
-	Grid,
-	Image,
-	Slider,
+	type Control,
 	StackPanel,
-	type TextBlock,
 } from "@babylonjs/gui";
 import { redo as redoHistory, undo as undoHistory } from "../../edit/commands";
 import type { ResultActions } from "../../playback/ResultActions";
@@ -25,12 +20,21 @@ import {
 	panelSections,
 	type WeatherMenuContent,
 } from "../sections";
-import { readVrTheme } from "./theme";
 import {
-	paintButton,
-	themedButton,
-	themedSurface,
-	themedText,
+	CARD_HEADER_GAP_CSS_PX,
+	CONTROL_GAP_CSS_PX,
+	metresOf,
+	readVrTheme,
+	texturePx,
+} from "./theme";
+import {
+	type MayuControlKind,
+	MayuText,
+	mayuCard,
+	mayuControl,
+	mayuLabel,
+	mayuRow,
+	mayuSlider,
 } from "./themeGui";
 import { VrWeatherSection, weatherScroller } from "./VrWeatherMenu";
 
@@ -49,14 +53,11 @@ export interface VrPanelActions {
 	};
 }
 
-const PANEL_W = 0.5;
-const PANEL_H = 0.9;
-const TEX_W = 1000;
-const TEX_H = 1800;
-/** The panel title, a size up from the web heading (it names the whole panel). */
-const TITLE_PX = 44;
-/** Weather page height (texture px): the panel minus its title, stats and footer rows. */
-const WEATHER_PAGE_H_PX = 1450;
+/** Panel size in web CSS px (a phone-wide card); the card hugs its content from the top. */
+const PANEL_CSS_W = 400;
+const PANEL_CSS_H = 880;
+/** Weather page: the panel minus the card header, footer and spacing. */
+const WEATHER_PAGE_CSS_H = 660;
 
 interface ButtonSpec {
 	icon: IconName | ((s: AppState) => IconName);
@@ -64,6 +65,10 @@ interface ButtonSpec {
 	onClick: () => void;
 	active?: (s: AppState) => boolean;
 	disabled?: (s: AppState) => boolean;
+	/** Share of the row (default 1). */
+	weight?: number;
+	/** Default: a toggle when it has an on state (`active`), else a secondary button. */
+	kind?: MayuControlKind;
 }
 
 /**
@@ -74,7 +79,7 @@ interface ButtonSpec {
 export class VrPanel {
 	readonly mesh: Mesh;
 	private readonly ui: AdvancedDynamicTexture;
-	private readonly stats: TextBlock;
+	private readonly stats: MayuText;
 	private readonly unsubscribe: () => void;
 	private readonly syncers: ((s: AppState) => void)[] = [];
 	private weatherShown = false;
@@ -89,31 +94,27 @@ export class VrPanel {
 	) {
 		this.mesh = MeshBuilder.CreatePlane(
 			"vr-panel",
-			{ width: PANEL_W, height: PANEL_H, sideOrientation: 2 },
+			{
+				width: metresOf(PANEL_CSS_W),
+				height: metresOf(PANEL_CSS_H),
+				sideOrientation: 2,
+			},
 			scene,
 		);
 		this.mesh.isPickable = true;
 		this.ui = AdvancedDynamicTexture.CreateForMesh(
 			this.mesh,
-			TEX_W,
-			TEX_H,
+			texturePx(PANEL_CSS_W),
+			texturePx(PANEL_CSS_H),
 			false,
 		);
-		themedSurface(this.ui, this.theme);
-
-		const root = new StackPanel("root");
-		root.width = "94%";
-		root.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-		root.paddingTop = "20px";
-		this.ui.addControl(root);
-
-		root.addControl(
-			themedText(this.theme, "heading", "Simulador de huaicos", TITLE_PX),
-		);
-		this.stats = themedText(this.theme, "data");
-		this.stats.color = this.theme.inkMuted;
-		this.stats.height = "90px";
-		root.addControl(this.stats);
+		const card = mayuCard(this.ui, this.theme, {
+			title: "Simulador de huaicos",
+			description: true,
+			footer: true,
+		});
+		const root = card.content;
+		this.stats = card.description ?? new MayuText(this.theme, "body");
 
 		// Simulator controls, or the weather menu page (S8) instead of them.
 		const simulatorPage = this.section(root);
@@ -134,14 +135,11 @@ export class VrPanel {
 		);
 
 		// Options of the active tool.
-		const hint = themedText(this.theme, "body");
-		hint.color = this.theme.inkMuted;
-		hint.height = "96px";
+		const hint = new MayuText(this.theme, "body");
+		hint.color = this.theme.colors.mutedForeground;
 		simulatorPage.addControl(hint);
 		const sourceBox = this.section(simulatorPage);
-		const sourceTitle = themedText(this.theme, "label", "Orígenes nuevos");
-		sourceTitle.color = this.theme.action;
-		sourceBox.addControl(sourceTitle);
+		sourceBox.addControl(mayuLabel(this.theme, "Orígenes nuevos"));
 		sourceBox.addControl(
 			this.slider(
 				"Volumen (m³)",
@@ -220,7 +218,13 @@ export class VrPanel {
 							playback: { ...s.playback, playing: !s.playback.playing },
 						})),
 				},
-				{ icon: "reset", text: "Reiniciar", onClick: actions.resetSimulation },
+				{
+					icon: "reset",
+					text: "Reiniciar",
+					weight: 2,
+					onClick: actions.resetSimulation,
+					kind: { kind: "button", variant: "outline" },
+				},
 				{
 					icon: "undo",
 					text: "",
@@ -349,7 +353,11 @@ export class VrPanel {
 					)
 				: null;
 		const weatherPage = weatherSection
-			? weatherScroller(this.theme, weatherSection, `${WEATHER_PAGE_H_PX}px`)
+			? weatherScroller(
+					this.theme,
+					weatherSection,
+					`${texturePx(WEATHER_PAGE_CSS_H)}px`,
+				)
 			: null;
 		if (weatherPage) {
 			weatherPage.isVisible = false;
@@ -367,33 +375,41 @@ export class VrPanel {
 		};
 
 		// Footer: "Volver al mapa del Perú" (staying in VR) when offered, then "Salir de VR".
-		// One row, so the panel keeps its height.
-		root.addControl(
-			this.row(
-				"",
-				panelFooter({
-					backToMap: !!actions.backToMap,
-					weather: weatherSection !== null,
-				}).map(
-					(a): ButtonSpec =>
-						a.id === "weather"
-							? {
-									icon: a.icon,
-									text: a.text,
-									onClick: () => showWeather(!this.weatherShown),
-									active: () => this.weatherShown,
-								}
-							: a.id === "backToMap"
-								? {
-										icon: a.icon,
-										text: a.text,
-										onClick: () => actions.backToMap?.(),
-										disabled: () => !(actions.mapAvailable?.() ?? true),
-									}
-								: { icon: a.icon, text: a.text, onClick: actions.exitXr },
-				),
-			),
+		const footerSpecs = panelFooter({
+			backToMap: Boolean(actions.backToMap),
+			weather: weatherSection !== null,
+		}).map(
+			(a): ButtonSpec =>
+				a.id === "weather"
+					? {
+							icon: a.icon,
+							text: a.text,
+							onClick: () => showWeather(!this.weatherShown),
+							active: () => this.weatherShown,
+						}
+					: a.id === "backToMap"
+						? {
+								icon: a.icon,
+								text: a.text,
+								onClick: () => actions.backToMap?.(),
+								disabled: () => !(actions.mapAvailable?.() ?? true),
+								// The panel's one primary action: back to the map, staying in VR.
+								kind: { kind: "button", variant: "default" },
+							}
+						: {
+								icon: a.icon,
+								text: a.text,
+								onClick: actions.exitXr,
+								kind: { kind: "button", variant: "outline" },
+							},
 		);
+		// The primary action gets its own full-width row, the others share the next one.
+		const primary = footerSpecs.filter(
+			(spec) => spec.kind?.kind === "button" && spec.kind.variant === "default",
+		);
+		const others = footerSpecs.filter((spec) => !primary.includes(spec));
+		if (primary.length) card.footer?.addControl(this.row("", primary));
+		card.footer?.addControl(this.row("", others));
 
 		this.syncers.push((s) => {
 			const sec = panelSections({ tool: s.tool, mode: s.xr.mode });
@@ -404,7 +420,7 @@ export class VrPanel {
 			liveRow.isVisible = !inResult;
 			resultBox.isVisible = inResult;
 			hint.isVisible = sec.hint !== null;
-			hint.text = sec.hint ?? "";
+			hint.show(sec.hint ?? "");
 		});
 		const sync = (s: AppState) =>
 			this.syncers.forEach((f) => {
@@ -421,79 +437,50 @@ export class VrPanel {
 	private section(parent: StackPanel): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
+		box.spacing = texturePx(CONTROL_GAP_CSS_PX);
 		parent.addControl(box);
 		return box;
 	}
 
-	/** A titled row of icon buttons. */
+	/** A titled row of controls. */
 	private row(title: string, items: ButtonSpec[]): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
-		if (title) box.addControl(themedText(this.theme, "label", title));
-		const grid = new Grid();
-		grid.height = "112px";
-		items.forEach(() => {
-			grid.addColumnDefinition(1 / items.length);
-		});
-		items.forEach((it, k) => {
-			grid.addControl(this.button(it, items.length >= 4 ? 26 : 30), 0, k);
-		});
-		box.addControl(grid);
+		box.spacing = texturePx(CARD_HEADER_GAP_CSS_PX);
+		if (title) box.addControl(mayuLabel(this.theme, title));
+		box.addControl(
+			mayuRow(
+				items.map((item) => this.button(item)),
+				items.map((item) => item.weight ?? 1),
+			),
+		);
 		return box;
 	}
 
-	private button(it: ButtonSpec, fontSize: number): Button {
-		const b = themedButton(this.theme);
-		// Fixed grid inside the button: the icon cell has a bounded size and the label clips with an
-		// ellipsis, so neither can overflow the button whatever the device font measures.
-		const content = new Grid();
-		const ICON = 56;
-		if (it.text) {
-			content.addColumnDefinition(ICON + 20, true);
-			content.addColumnDefinition(1);
-		} else {
-			content.addColumnDefinition(1);
-		}
-		const img = new Image();
-		img.width = `${ICON}px`;
-		img.height = `${ICON}px`;
-		img.stretch = Image.STRETCH_UNIFORM;
-		img.horizontalAlignment = it.text
-			? Control.HORIZONTAL_ALIGNMENT_RIGHT
-			: Control.HORIZONTAL_ALIGNMENT_CENTER;
-		content.addControl(img, 0, 0);
-		let text: TextBlock | null = null;
-		if (it.text) {
-			text = themedText(this.theme, "button", it.text, fontSize);
-			text.height = "100%";
-			text.paddingLeft = "12px";
-			text.paddingRight = "8px";
-			text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-			text.textWrapping = 2; // TextWrapping.Ellipsis (ambient const enum)
-			content.addControl(text, 0, 1);
-		}
-		b.addControl(content);
-		b.onPointerClickObservable.add(() => {
-			if (b.isEnabled) it.onClick();
-		});
-		let lastSrc = "";
+	private button(it: ButtonSpec): Control {
+		const kind: MayuControlKind =
+			it.kind ??
+			(it.active
+				? { kind: "toggle" }
+				: { kind: "button", variant: "secondary" });
+		const control = mayuControl(
+			this.theme,
+			kind,
+			{
+				icon:
+					typeof it.icon === "function" ? it.icon(this.store.get()) : it.icon,
+				text: it.text,
+			},
+			it.onClick,
+		);
 		this.syncers.push((s) => {
-			lastSrc = paintButton(
-				this.theme,
-				{
-					button: b,
-					label: text,
-					image: img,
-					icon: typeof it.icon === "function" ? it.icon(s) : it.icon,
-					source: lastSrc,
-				},
-				{
-					active: it.active?.(s) ?? false,
-					disabled: it.disabled?.(s) ?? false,
-				},
-			);
+			if (typeof it.icon === "function") control.setIcon(it.icon(s));
+			control.set({
+				on: it.active?.(s) ?? false,
+				disabled: it.disabled?.(s) ?? false,
+			});
 		});
-		return b;
+		return control.button;
 	}
 
 	private slider(
@@ -507,19 +494,12 @@ export class VrPanel {
 	): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
-		const text = themedText(this.theme, "body");
+		const text = new MayuText(this.theme, "body");
 		box.addControl(text);
-		const sl = new Slider();
+		const sl = mayuSlider(this.theme);
 		sl.minimum = min;
 		sl.maximum = max;
 		sl.step = step;
-		sl.height = "52px";
-		sl.width = "92%";
-		sl.color = this.theme.action;
-		sl.background = this.theme.control;
-		sl.thumbColor = this.theme.action;
-		sl.thumbWidth = "44px";
-		sl.isThumbCircle = true;
 		sl.onValueChangedObservable.add((v) => {
 			if (Math.abs(v - get(this.store.get())) > step / 2) set(v);
 		});
@@ -527,7 +507,7 @@ export class VrPanel {
 		this.syncers.push((s) => {
 			const v = get(s);
 			if (Math.abs(sl.value - v) > step / 2) sl.value = v;
-			text.text = `${title}: ${fmt(v)}`;
+			text.show(`${title}: ${fmt(v)}`);
 		});
 		return box;
 	}
@@ -536,16 +516,9 @@ export class VrPanel {
 	private timeSlider(ra: ResultActions): StackPanel {
 		const box = new StackPanel();
 		box.width = "100%";
-		const text = themedText(this.theme, "body");
+		const text = new MayuText(this.theme, "body");
 		box.addControl(text);
-		const sl = new Slider();
-		sl.height = "52px";
-		sl.width = "92%";
-		sl.color = this.theme.action;
-		sl.background = this.theme.control;
-		sl.thumbColor = this.theme.action;
-		sl.thumbWidth = "44px";
-		sl.isThumbCircle = true;
+		const sl = mayuSlider(this.theme);
 		sl.onValueChangedObservable.add((v) => {
 			if (Math.abs(v - this.store.get().result.time) > 0.5) ra.seek(v);
 		});
@@ -555,7 +528,9 @@ export class VrPanel {
 			sl.minimum = r.start;
 			sl.maximum = Math.max(r.end, r.start + 1);
 			if (Math.abs(sl.value - r.time) > 0.5) sl.value = r.time;
-			text.text = `Tiempo: ${r.time.toFixed(0)} / ${r.end.toFixed(0)} s (${r.frames} fotogramas)`;
+			text.show(
+				`Tiempo: ${r.time.toFixed(0)} / ${r.end.toFixed(0)} s (${r.frames} fotogramas)`,
+			);
 		});
 		return box;
 	}

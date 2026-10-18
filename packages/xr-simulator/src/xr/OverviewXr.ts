@@ -10,11 +10,7 @@ import {
 	type WebXRInputSource,
 	WebXRState,
 } from "@babylonjs/core";
-import {
-	AdvancedDynamicTexture,
-	Control,
-	type TextBlock,
-} from "@babylonjs/gui";
+import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import {
 	clampAltitude,
 	clampToBounds,
@@ -37,8 +33,14 @@ import {
 	yawAbout,
 } from "../map/rig";
 import { entryActions, pointCardContent } from "../ui/sections";
-import { readVrTheme, type VrTheme } from "../ui/vr/theme";
-import { themedSurface, themedText } from "../ui/vr/themeGui";
+import { metresOf, readVrTheme, texturePx, type VrTheme } from "../ui/vr/theme";
+import type { MayuText } from "../ui/vr/themeGui";
+import {
+	CONTROLS_CARD_CSS,
+	CREDIT_CARD_CSS,
+	controlsCard,
+	creditCard,
+} from "../ui/vr/VrInfoCards";
 import { VrPointCard } from "../ui/vr/VrPointCard";
 import { VrWeatherMenu } from "../ui/vr/VrWeatherMenu";
 import {
@@ -67,8 +69,8 @@ const STICK_DEAD_ZONE = 0.15;
 /** "Simular aquí" card: distance along the gaze and drop below it (m). */
 const CARD_DISTANCE = 0.6;
 const CARD_DROP = 0.08;
-/** Attribution label under the controls card (texture px): small print, as on the web map. */
-const CREDIT_TEXT_PX = 22;
+/** Gap between the right controller and the controls card above it / the attribution card below (m). */
+const HINT_LIFT_M = 0.06;
 /** Weather menu (X): distance along the gaze and shift to the left of it, beside the card (m). */
 const WEATHER_MENU_DISTANCE = 0.9;
 const WEATHER_MENU_LEFT = 0.45;
@@ -91,7 +93,7 @@ export class OverviewXr {
 	private snap = { armed: true };
 	private readonly buttons = new Map<string, boolean>();
 	private hint: Mesh | null = null;
-	private hintText: TextBlock | null = null;
+	private hintText: MayuText | null = null;
 	/** View currently applied to the rig and the map root (follows the app's VR state). */
 	private view: VrView = "vuelo";
 	/** After a pause (the simulator had the session) the first frame only records button states. */
@@ -110,7 +112,7 @@ export class OverviewXr {
 	/** Imagery attribution (+ prototype notice) under the hint card while Satélite is visible (S7). */
 	private credit: {
 		mesh: Mesh;
-		text: TextBlock;
+		text: MayuText;
 		shown: string;
 		theme: VrTheme;
 	} | null = null;
@@ -443,7 +445,7 @@ export class OverviewXr {
 		this.zoom = null;
 		this.tableGrab.reset();
 		this.card?.hide();
-		if (this.hintText) this.hintText.text = controlsHint(view);
+		this.hintText?.show(controlsHint(view));
 		if (view === "maqueta") {
 			// Real scale, standing at the origin: the map comes to the user, not the reverse.
 			const cam = this.xr.baseExperience.camera;
@@ -620,47 +622,60 @@ export class OverviewXr {
 	/** Small controls card above the right (flying) controller, always facing the user. */
 	private attachHint(input: WebXRInputSource): void {
 		if (!this.inXr || this.hint) return;
+		const theme = readVrTheme();
 		const plane = MeshBuilder.CreatePlane(
 			"peru-vr-hint",
-			{ width: 0.24, height: 0.1, sideOrientation: Mesh.DOUBLESIDE },
+			{
+				width: metresOf(CONTROLS_CARD_CSS.width),
+				height: metresOf(CONTROLS_CARD_CSS.height),
+				sideOrientation: Mesh.DOUBLESIDE,
+			},
 			this.host.scene,
 		);
 		plane.isPickable = false;
 		plane.parent = input.grip ?? input.pointer;
-		plane.position.set(0, 0.09, 0.02);
+		// The card's top edge sits a hand above the controller.
+		plane.position.set(
+			0,
+			HINT_LIFT_M + metresOf(CONTROLS_CARD_CSS.height) / 2,
+			0.02,
+		);
 		plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
-		const theme = readVrTheme();
-		const ui = AdvancedDynamicTexture.CreateForMesh(plane, 960, 400, false);
-		themedSurface(ui, theme);
-		const text = themedText(theme, "body", controlsHint(this.view), 34);
-		text.height = "100%";
-		text.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-		text.paddingLeft =
-			text.paddingRight =
-			text.paddingTop =
-			text.paddingBottom =
-				"20px";
-		ui.addControl(text);
+		const ui = AdvancedDynamicTexture.CreateForMesh(
+			plane,
+			texturePx(CONTROLS_CARD_CSS.width),
+			texturePx(CONTROLS_CARD_CSS.height),
+			false,
+		);
+		const text = controlsCard(ui, theme);
+		text.show(controlsHint(this.view));
 		this.hint = plane;
 		this.hintText = text;
-		// Attribution label right under the card (same controller), filled by syncCredit().
-		// Tall enough for the imagery credit and the weather attribution (S8) together.
+		// Attribution card right under the controller, filled by syncCredit().
 		const label = MeshBuilder.CreatePlane(
 			"peru-vr-credit",
-			{ width: 0.24, height: 0.07, sideOrientation: Mesh.DOUBLESIDE },
+			{
+				width: metresOf(CREDIT_CARD_CSS.width),
+				height: metresOf(CREDIT_CARD_CSS.height),
+				sideOrientation: Mesh.DOUBLESIDE,
+			},
 			this.host.scene,
 		);
 		label.isPickable = false;
 		label.parent = plane.parent;
-		label.position.set(0, 0.09 - 0.05 - 0.037, 0.02);
+		label.position.set(
+			0,
+			-HINT_LIFT_M - metresOf(CREDIT_CARD_CSS.height) / 2,
+			0.02,
+		);
 		label.billboardMode = Mesh.BILLBOARDMODE_ALL;
-		const lui = AdvancedDynamicTexture.CreateForMesh(label, 960, 280, false);
-		themedSurface(lui, theme);
-		const ltext = themedText(theme, "body", "", CREDIT_TEXT_PX);
-		ltext.height = "100%";
-		ltext.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-		ltext.paddingLeft = ltext.paddingRight = "16px";
-		lui.addControl(ltext);
+		const lui = AdvancedDynamicTexture.CreateForMesh(
+			label,
+			texturePx(CREDIT_CARD_CSS.width),
+			texturePx(CREDIT_CARD_CSS.height),
+			false,
+		);
+		const ltext = creditCard(lui, theme);
 		label.setEnabled(false);
 		this.credit = { mesh: label, text: ltext, shown: "", theme };
 	}
@@ -678,10 +693,10 @@ export class OverviewXr {
 			.join("\n");
 		if (text === this.credit.shown) return;
 		this.credit.shown = text;
-		this.credit.text.text = text;
+		this.credit.text.show(text);
 		this.credit.text.color = c?.notice
-			? this.credit.theme.error
-			: this.credit.theme.inkMuted;
+			? this.credit.theme.colors.destructive
+			: this.credit.theme.colors.mutedForeground;
 		this.credit.mesh.setEnabled(!!text);
 	}
 }

@@ -61,14 +61,14 @@ describe("weatherMenuContent (VR weather menu, S8)", () => {
 	it("offers every layer of the web panel with its badge, opacity and status", () => {
 		const menu = weatherMenuContent(snapshot(), []);
 		expect(
-			menu.layers.map((l) => [l.id, l.text, l.active, l.disabled]),
+			menu.layers.map((l) => [l.id, l.text, l.badge, l.active, l.disabled]),
 		).toEqual([
-			["wx:clouds", "Nubes · observado", true, false],
-			["wx:rain", "Lluvia · pronóstico", true, false],
-			["wx:lightning", "Rayos · observado", false, false],
-			["wx:cape", "Potencial convectivo · pronóstico", false, false],
-			["wx:wind", "Viento · pronóstico", false, false],
-			["wx:temperature", "Temperatura · pronóstico", false, false],
+			["wx:clouds", "Nubes", "observado", true, false],
+			["wx:rain", "Lluvia", "pronóstico", true, false],
+			["wx:lightning", "Rayos", "observado", false, false],
+			["wx:cape", "Potencial convectivo", "pronóstico", false, false],
+			["wx:wind", "Viento", "pronóstico", false, false],
+			["wx:temperature", "Temperatura", "pronóstico", false, false],
 		]);
 		expect(menu.layers.map((l) => l.opacity)).toEqual([
 			"80 %",

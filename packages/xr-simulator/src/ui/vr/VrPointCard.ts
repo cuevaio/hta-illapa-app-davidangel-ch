@@ -1,22 +1,16 @@
 import { Mesh, MeshBuilder, type Scene } from "@babylonjs/core";
-import {
-	AdvancedDynamicTexture,
-	type Button,
-	Control,
-	Grid,
-	Image,
-	StackPanel,
-	type TextBlock,
-} from "@babylonjs/gui";
+import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import type { VrView } from "../../xr/vrMode";
-import type { IconName } from "../icons";
 import type { CardAction, PointCardContent } from "../sections";
-import { readVrTheme } from "./theme";
+import { metresOf, readVrTheme, texturePx } from "./theme";
 import {
-	paintButton,
-	themedButton,
-	themedSurface,
-	themedText,
+	type MayuControl,
+	type MayuControlKind,
+	MayuText,
+	mayuCard,
+	mayuControl,
+	mayuLabel,
+	mayuRow,
 } from "./themeGui";
 
 export interface VrPointCardActions {
@@ -27,36 +21,24 @@ export interface VrPointCardActions {
 	openEntry?(id: string): void;
 }
 
-const CARD_W = 0.46;
-const TEX_W = 920;
-/** Texture px per metre of card (the card is CARD_W wide). */
-const PX_PER_M = TEX_W / CARD_W;
-const TEX_H = 680;
-const BUTTON_TEXT_PX = 30;
-/** Extra height of the row of the viewer's other simulators. */
-const ENTRIES_TEX_H = 112;
+/** Card size in web CSS px; the texture is the tallest it can be, the card hugs its content. */
+const CARD_CSS_W = 320;
+const CARD_CSS_H = 340;
+/** Extra height for the row of the viewer's other simulators. */
+const ENTRIES_CSS_H = 44;
 
 /**
  * VR card over the Peru map (S2): the point marked with A, "Simular aquí" / "Cancelar" and the
- * Vuelo / Maqueta switch, pressed with the trigger ray (Babylon pointer selection). Same look as
- * the simulator's VrPanel. Content comes from pointCardContent (src/ui/sections.ts).
+ * Vuelo / Maqueta switch, pressed with the trigger ray. A web Card (S12); content comes from
+ * pointCardContent (src/ui/sections.ts).
  */
 export class VrPointCard {
 	readonly mesh: Mesh;
 	private readonly ui: AdvancedDynamicTexture;
 	private readonly theme = readVrTheme();
-	private readonly coords: TextBlock;
-	private readonly status: TextBlock;
-	private readonly buttons = new Map<
-		string,
-		{
-			b: Button;
-			img: Image;
-			text: TextBlock | null;
-			icon: IconName;
-			src: string;
-		}
-	>();
+	private readonly coords: MayuText;
+	private readonly status: MayuText;
+	private readonly controls = new Map<string, MayuControl>();
 
 	/**
 	 * `entries`: a row opening the viewer's other simulators (S5). Without them the card is
@@ -67,12 +49,12 @@ export class VrPointCard {
 		private readonly actions: VrPointCardActions,
 		entries: CardAction[] = [],
 	) {
-		const texH = TEX_H + (entries.length ? ENTRIES_TEX_H : 0);
+		const heightCssPx = CARD_CSS_H + (entries.length ? ENTRIES_CSS_H : 0);
 		this.mesh = MeshBuilder.CreatePlane(
 			"peru-vr-card",
 			{
-				width: CARD_W,
-				height: texH / PX_PER_M,
+				width: metresOf(CARD_CSS_W),
+				height: metresOf(heightCssPx),
 				sideOrientation: Mesh.DOUBLESIDE,
 			},
 			scene,
@@ -82,34 +64,45 @@ export class VrPointCard {
 		this.mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
 		this.ui = AdvancedDynamicTexture.CreateForMesh(
 			this.mesh,
-			TEX_W,
-			texH,
+			texturePx(CARD_CSS_W),
+			texturePx(heightCssPx),
 			false,
 		);
-		themedSurface(this.ui, this.theme);
-		const root = new StackPanel("card");
-		root.width = "94%";
-		root.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-		root.paddingTop = "16px";
-		this.ui.addControl(root);
-		root.addControl(themedText(this.theme, "heading", "Punto marcado"));
-		this.coords = themedText(this.theme, "data");
-		root.addControl(this.coords);
-		this.status = themedText(this.theme, "body");
-		this.status.height = "84px";
-		root.addControl(this.status);
-		root.addControl(
+		const card = mayuCard(this.ui, this.theme, { title: "Punto marcado" });
+		this.coords = new MayuText(this.theme, "data");
+		card.content.addControl(this.coords);
+		this.status = new MayuText(this.theme, "body");
+		card.content.addControl(this.status);
+		card.content.addControl(
 			this.row([
-				{ id: "simulate", icon: "play", text: "Simular aquí" },
-				{ id: "cancel", icon: "close", text: "Cancelar" },
+				// The card's one primary action.
+				[
+					{ id: "simulate", icon: "play", text: "Simular aquí" },
+					{ kind: "button", variant: "default" },
+				],
+				[
+					{ id: "cancel", icon: "close", text: "Cancelar" },
+					{ kind: "button", variant: "outline" },
+				],
 			]),
 		);
-		if (entries.length) root.addControl(this.row(entries));
-		root.addControl(themedText(this.theme, "label", "Vista del mapa"));
-		root.addControl(
+		if (entries.length)
+			card.content.addControl(
+				this.row(
+					entries.map((entry) => [
+						entry,
+						{ kind: "button", variant: "secondary" },
+					]),
+				),
+			);
+		card.content.addControl(mayuLabel(this.theme, "Vista del mapa"));
+		card.content.addControl(
 			this.row([
-				{ id: "vuelo", icon: "fly", text: "Vuelo" },
-				{ id: "maqueta", icon: "maquette", text: "Maqueta" },
+				[{ id: "vuelo", icon: "fly", text: "Vuelo" }, { kind: "toggle" }],
+				[
+					{ id: "maqueta", icon: "maquette", text: "Maqueta" },
+					{ kind: "toggle" },
+				],
 			]),
 		);
 		this.mesh.setEnabled(false);
@@ -130,71 +123,42 @@ export class VrPointCard {
 	}
 
 	update(c: PointCardContent): void {
-		this.coords.text = c.coords;
-		this.status.text = c.status ?? "";
-		// Downloading (both actions off): the action colour; a failure: the error colour.
+		this.coords.show(c.coords);
+		this.status.show(c.status ?? "");
+		this.status.isVisible = c.status !== null;
+		// Downloading (both actions off): the muted ink; a failure: the destructive colour.
 		this.status.color =
-			!c.simulate && !c.cancel ? this.theme.action : this.theme.error;
-		// "Simular aquí" is the card's one primary action.
-		this.sync("simulate", true, !c.simulate);
-		this.sync("cancel", false, !c.cancel);
-		for (const v of c.views) this.sync(v.id, v.active, false);
-		for (const e of c.entries) this.sync(e.id, false, !e.enabled);
+			!c.simulate && !c.cancel
+				? this.theme.colors.mutedForeground
+				: this.theme.colors.destructive;
+		this.controls.get("simulate")?.set({ disabled: !c.simulate });
+		this.controls.get("cancel")?.set({ disabled: !c.cancel });
+		for (const v of c.views) this.controls.get(v.id)?.set({ on: v.active });
+		for (const e of c.entries)
+			this.controls.get(e.id)?.set({ disabled: !e.enabled });
 	}
 
-	private sync(id: string, active: boolean, disabled: boolean): void {
-		const e = this.buttons.get(id);
-		if (!e) return;
-		e.src = paintButton(
-			this.theme,
-			{ button: e.b, label: e.text, image: e.img, icon: e.icon, source: e.src },
-			{ active, disabled },
+	private row(items: [CardAction, MayuControlKind][]) {
+		return mayuRow(
+			items.map(([action, kind]) => {
+				const control = mayuControl(
+					this.theme,
+					kind,
+					{ icon: action.icon, text: action.text },
+					() => this.press(action.id),
+				);
+				this.controls.set(action.id, control);
+				return control.button;
+			}),
 		);
 	}
 
-	private row(items: CardAction[]): Grid {
-		const grid = new Grid();
-		grid.height = "112px";
-		items.forEach(() => {
-			grid.addColumnDefinition(1 / items.length);
-		});
-		items.forEach((it, k) => {
-			grid.addControl(this.button(it), 0, k);
-		});
-		return grid;
-	}
-
-	private button(it: CardAction): Button {
-		const b = themedButton(this.theme);
-		const content = new Grid();
-		const ICON = 56;
-		content.addColumnDefinition(ICON + 20, true);
-		content.addColumnDefinition(1);
-		const img = new Image();
-		img.width = `${ICON}px`;
-		img.height = `${ICON}px`;
-		img.stretch = Image.STRETCH_UNIFORM;
-		img.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-		content.addControl(img, 0, 0);
-		const text = themedText(this.theme, "button", it.text, BUTTON_TEXT_PX);
-		text.height = "100%";
-		text.paddingLeft = "12px";
-		text.paddingRight = "8px";
-		text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-		text.textWrapping = 2; // TextWrapping.Ellipsis (ambient const enum)
-		content.addControl(text, 0, 1);
-		b.addControl(content);
-		b.onPointerClickObservable.add(() => {
-			if (!b.isEnabled) return;
-			if (it.id === "simulate") this.actions.simulate();
-			else if (it.id === "cancel") this.actions.cancel();
-			else if (it.id.startsWith("mode:"))
-				this.actions.openEntry?.(it.id.slice("mode:".length));
-			else this.actions.setView(it.id as VrView);
-		});
-		this.buttons.set(it.id, { b, img, text, icon: it.icon, src: "" });
-		this.sync(it.id, it.id === "simulate", false);
-		return b;
+	private press(id: string): void {
+		if (id === "simulate") this.actions.simulate();
+		else if (id === "cancel") this.actions.cancel();
+		else if (id.startsWith("mode:"))
+			this.actions.openEntry?.(id.slice("mode:".length));
+		else if (id === "vuelo" || id === "maqueta") this.actions.setView(id);
 	}
 
 	dispose(): void {

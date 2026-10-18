@@ -13,6 +13,7 @@ import type {
 	WebXRExperienceHelper,
 	WebXRInput,
 } from "@babylonjs/core";
+import type { AdvancedDynamicTexture } from "@babylonjs/gui";
 
 /** 'overview' or the id of the mode on screen. */
 export type ViewerScreen = string;
@@ -136,3 +137,26 @@ export declare function createXrViewer(
 	options?: CreateXrViewerOptions,
 ): XrViewerHandle;
 export declare const TERRAIN_ATTRIBUTION: string;
+
+/** VR cards (S12): Mayu sizes are web CSS px, turned into metres and texture px by one scale. */
+export declare const VR_BUTTON_HEIGHT_CSS_PX: number;
+export declare const VR_CONTROL_GAP_CSS_PX: number;
+export declare function vrMetresOf(cssPx: number): number;
+export declare function vrTexturePx(cssPx: number): number;
+
+export interface VrButtonFace {
+	paint(state: { hovered: boolean; pressed: boolean }): void;
+}
+
+/** A Mayu button (button.tsx variant) drawn over a whole texture of the host's 3D button. */
+export declare function vrButtonFace(
+	ui: AdvancedDynamicTexture,
+	label: string,
+	variant: "default" | "secondary" | "outline" | "ghost" | "destructive",
+): VrButtonFace;
+
+/** A Mayu card holding one paragraph of body text. */
+export declare function vrTextCard(
+	ui: AdvancedDynamicTexture,
+	text: string,
+): { show(text: string): void };

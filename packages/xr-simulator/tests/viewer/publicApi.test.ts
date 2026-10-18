@@ -23,6 +23,18 @@ const contract = {
 		Internal.SiteTerrain,
 		Public.SiteTerrain
 	>,
+	buttonFace: true satisfies Assignable<
+		typeof Internal.vrButtonFace,
+		typeof Public.vrButtonFace
+	>,
+	textCard: true satisfies Assignable<
+		typeof Internal.vrTextCard,
+		typeof Public.vrTextCard
+	>,
+	scale: true satisfies Assignable<
+		typeof Internal.vrMetresOf,
+		typeof Public.vrMetresOf
+	>,
 	attribution: true satisfies Assignable<
 		typeof Internal.TERRAIN_ATTRIBUTION,
 		typeof Public.TERRAIN_ATTRIBUTION

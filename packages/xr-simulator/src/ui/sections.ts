@@ -77,6 +77,8 @@ export interface WeatherMenuContent {
 	notice: string | null;
 	/** One toggle per layer ("wx:<layer>"), with its opacity while enabled. */
 	layers: (CardAction & {
+		/** "observado" / "pronóstico", the web row's badge. */
+		badge: string;
 		active: boolean;
 		disabled: boolean;
 		/** "80 %", stepped with "wx:opacity-down:<layer>" / "wx:opacity-up:<layer>"; null while off. */
@@ -122,7 +124,8 @@ export function weatherMenuContent(
 		layers: s.layers.map((l) => ({
 			id: `wx:${l.id}`,
 			icon: WEATHER_LAYER_ICONS[l.id],
-			text: `${l.title} · ${l.kindLabel}`,
+			text: l.title,
+			badge: l.kindLabel,
 			active: l.enabled,
 			disabled: l.disabled,
 			opacity: l.enabled ? `${Math.round(l.opacity * 100)} %` : null,
