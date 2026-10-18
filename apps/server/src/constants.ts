@@ -8,7 +8,6 @@ export const SERVICE_NAME = "hack-the-andes-server";
 export const CORS_PREFLIGHT_MAX_AGE_S = 86_400;
 
 export const RPC_PREFIX = "/rpc";
-export const OPENAPI_PREFIX = "/api-reference";
 export const AUTH_PREFIX = "/api/auth";
 
 export const PUBLIC_PATHS: ReadonlySet<string> = new Set([

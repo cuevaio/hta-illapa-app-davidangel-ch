@@ -17,12 +17,9 @@ import {
 } from "@hack-the-andes-project/business/demo-account";
 import { DEMO_REQUESTS_PATH } from "@hack-the-andes-project/business/demo-request";
 import { createDb, type Database } from "@hack-the-andes-project/db";
-import { OpenAPIHandler } from "@orpc/openapi/fetch";
-import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { BatchHandlerPlugin } from "@orpc/server/plugins";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { identifyUser } from "evlog/better-auth";
 import { type EvlogVariables, evlog } from "evlog/hono";
 import { initWorkersLogger } from "evlog/workers";
@@ -32,7 +29,6 @@ import { cors } from "hono/cors";
 import {
 	AUTH_PREFIX,
 	CORS_PREFLIGHT_MAX_AGE_S,
-	OPENAPI_PREFIX,
 	PUBLIC_PATHS,
 	RPC_PREFIX,
 	SERVICE_NAME,
@@ -172,17 +168,9 @@ const rpcHandler = new RPCHandler(appRouter, {
 	],
 });
 
-const apiHandler = new OpenAPIHandler(appRouter, {
-	plugins: [
-		new OpenAPIReferencePlugin({
-			schemaConverters: [new ZodToJsonSchemaConverter()],
-		}),
-	],
-});
-
 app.use("/*", async (c, next) => {
 	const path = c.req.path;
-	if (!path.startsWith(RPC_PREFIX) && !path.startsWith(OPENAPI_PREFIX)) {
+	if (path !== RPC_PREFIX && !path.startsWith(`${RPC_PREFIX}/`)) {
 		return next();
 	}
 
@@ -202,14 +190,6 @@ app.use("/*", async (c, next) => {
 	});
 	if (rpcResult.matched) {
 		return c.newResponse(rpcResult.response.body, rpcResult.response);
-	}
-
-	const apiResult = await apiHandler.handle(c.req.raw, {
-		prefix: OPENAPI_PREFIX,
-		context,
-	});
-	if (apiResult.matched) {
-		return c.newResponse(apiResult.response.body, apiResult.response);
 	}
 
 	return next();
