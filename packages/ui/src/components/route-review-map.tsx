@@ -29,6 +29,7 @@ import {
 	FLEET_ALTERNATIVE_DASH_WIDTH_RATIOS,
 	FLEET_MAP_FIT_DURATION_MS,
 	FLEET_MAP_MAX_ZOOM_LEVEL,
+	ROUTE_REVIEW_INELIGIBLE_LINE_OPACITY_RATIO,
 } from "./map-constants";
 import {
 	Layer,
@@ -72,6 +73,9 @@ interface MapLineProperties {
 	candidateId: string;
 	color: string | undefined;
 	description: string;
+}
+interface MapRouteLineProperties extends MapLineProperties {
+	opacity: number;
 }
 interface MapHover {
 	lng: number;
@@ -179,15 +183,10 @@ function RouteReviewMapCanvas({
 	const layers = useMemo(
 		() =>
 			["illapa", "sutran"].map((source) => {
-				const routes: FeatureCollection<LineString, MapLineProperties> = {
+				const routes: FeatureCollection<LineString, MapRouteLineProperties> = {
 					type: "FeatureCollection",
 					features: candidates
-						.filter(
-							(candidate) =>
-								candidate.source === source &&
-								(candidate.eligibility.eligible ||
-									candidate.id === selectedCandidateId),
-						)
+						.filter((candidate) => candidate.source === source)
 						.map((candidate) => ({
 							type: "Feature",
 							geometry: candidate.geometry,
@@ -199,6 +198,11 @@ function RouteReviewMapCanvas({
 											? "--foreground"
 											: "--muted-foreground"
 									],
+								opacity:
+									candidate.eligibility.eligible ||
+									candidate.id === selectedCandidateId
+										? 1
+										: ROUTE_REVIEW_INELIGIBLE_LINE_OPACITY_RATIO,
 								description: candidate.name,
 							},
 						})),
@@ -293,6 +297,7 @@ function RouteReviewMapCanvas({
 								layout={{ "line-join": "round" }}
 								paint={{
 									"line-color": ["get", "color"],
+									"line-opacity": ["get", "opacity"],
 									"line-width": lineWidthPx,
 									...(source === "sutran"
 										? { "line-dasharray": FLEET_ALTERNATIVE_DASH_WIDTH_RATIOS }
