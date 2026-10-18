@@ -44,7 +44,7 @@ export function formatHazardAlert(hazard: HazardAhead): HazardAlertText {
 
 export interface StoredVehiclePosition {
 	id: string;
-	externalId: string;
+	externalId: string | null;
 	lastPositionAt: Date | null;
 }
 
@@ -65,7 +65,10 @@ export function planPositionUpdates(
 		}
 	}
 	return vehicles.flatMap((vehicle) => {
-		const position = latestByExternalId.get(vehicle.externalId);
+		const position =
+			vehicle.externalId === null
+				? undefined
+				: latestByExternalId.get(vehicle.externalId);
 		if (
 			!position ||
 			(vehicle.lastPositionAt && position.recordedAt <= vehicle.lastPositionAt)

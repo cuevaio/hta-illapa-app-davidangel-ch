@@ -78,7 +78,10 @@ export async function syncConnection({
 								routeDurationS: trip.routeDurationS,
 								destinationLat: trip.destinationLat,
 								destinationLng: trip.destinationLng,
-								createdAt: trip.createdAt,
+								createdAt:
+									sql<Date>`coalesce(${trip.startedAt}, ${trip.createdAt})`.mapWith(
+										trip.createdAt,
+									),
 							},
 						})
 						.from(vehicle)

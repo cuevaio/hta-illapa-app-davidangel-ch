@@ -230,3 +230,5 @@ export const ROUTE_REVIEW_MAP_FIT_PADDING_PX = 32;
 export const ROUTE_REVIEW_MAP_LEGEND_PADDING_PX = 144;
 export const ROUTE_REVIEW_MAP_COMPACT_LEGEND_PADDING_PX = 72;
 export const ROUTE_REVIEW_MAP_COMPACT_HEIGHT_PX = 240;
+
+export const ROUTE_REVIEW_QUERY_KEY: readonly string[] = ["route-review"];

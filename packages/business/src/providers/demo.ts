@@ -27,7 +27,7 @@ export interface DemoTrip {
 }
 
 export interface DemoFleetVehicle {
-	externalId: string;
+	externalId: string | null;
 	lastLat: number | null;
 	lastLng: number | null;
 	activeTrip: DemoTrip | null;
@@ -39,6 +39,7 @@ export function simulateDemoPositions(
 ): ProviderPosition[] {
 	return fleet.flatMap(
 		({ externalId, lastLat, lastLng, activeTrip }): ProviderPosition[] => {
+			if (externalId === null) return [];
 			if (!activeTrip) {
 				const parkedAt =
 					lastLat !== null && lastLng !== null
