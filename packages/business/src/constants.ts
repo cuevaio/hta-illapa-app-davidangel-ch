@@ -76,6 +76,9 @@ export const DETOUR_PIECE_LENGTH_M = 1_000;
 export const DETOUR_SEGMENT_MATCH_RADIUS_M = 600;
 export const DETOUR_TRAMO_MATCH_RADIUS_M = 1_000;
 export const DETOUR_TRAMO_SAMPLE_POINTS = 20;
+// About 110 m: the direct route is only compared with tramos within 1 km, so
+// it is simplified well past what the map needs before the comparison.
+export const DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG = 0.001;
 // Share of a candidate's length that may lack a current assessment for it to
 // still be recommended: a mostly unscored detour looks safe only for lack of
 // data.

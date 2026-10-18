@@ -5,11 +5,15 @@ import {
 } from "@hack-the-andes-project/db/schema/risk";
 import { incident, poi } from "@hack-the-andes-project/db/schema/scraper";
 import { bbox } from "@turf/bbox";
+import { simplify } from "@turf/simplify";
 import { and, eq, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
 import type { LineString } from "geojson";
 
-import { ROUTE_REVIEW_ROUTING_HORIZON_HOURS } from "../constants";
+import {
+	DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG,
+	ROUTE_REVIEW_ROUTING_HORIZON_HOURS,
+} from "../constants";
 import type { LatLng } from "../hazards/types";
 import {
 	type Bounds,
@@ -215,12 +219,15 @@ export async function evaluateRouteReview({
 	// route: for Lima to Huancayo, the Carretera Central's Rutas 1 to 5.
 	const directRoute = illapaRoutes[0];
 	const directLine: LineString | null = directRoute
-		? {
-				type: "LineString",
-				coordinates: directRoute.edges.flatMap(({ geometry }, index) =>
-					index === 0 ? geometry.coordinates : geometry.coordinates.slice(1),
-				),
-			}
+		? simplify(
+				{
+					type: "LineString",
+					coordinates: directRoute.edges.flatMap(({ geometry }, index) =>
+						index === 0 ? geometry.coordinates : geometry.coordinates.slice(1),
+					),
+				},
+				{ tolerance: DETOUR_TRAMO_ROUTE_SIMPLIFY_TOLERANCE_DEG },
+			)
 		: null;
 	const detours = directLine
 		? groupSutranDetours(altRoutes)

@@ -28,7 +28,8 @@
 		"ngraph.path": "catalog:",
 		"zod": "catalog:",
 		"@turf/bbox": "catalog:",
-		"@turf/distance": "catalog:"
+		"@turf/distance": "catalog:",
+		"@turf/simplify": "catalog:"
 	},
 	"devDependencies": {
 		"@hack-the-andes-project/config": "workspace:*",
