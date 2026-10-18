@@ -17,6 +17,7 @@ export {
 	Sun,
 	TriangleAlertIcon,
 	TruckIcon,
+	ViewIcon,
 } from "lucide-react";
 export {
 	EarthquakeIcon,

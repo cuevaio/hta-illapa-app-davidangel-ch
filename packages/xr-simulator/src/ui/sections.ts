@@ -1,4 +1,12 @@
 import { pointLabel } from "../map/overviewState";
+import type { WeatherLayerId } from "../map/weather/catalog";
+import { LEGEND_TITLE, legendText } from "../map/weather/legend";
+import type { PointLine } from "../map/weather/pointQuery";
+import { RAIN_SCALES } from "../map/weather/rain";
+import type {
+	WeatherController,
+	WeatherSnapshot,
+} from "../map/weather/WeatherController";
 import type { ToolId, XrViewMode } from "../state/appState";
 import type { VrView } from "../xr/vrMode";
 import type { IconName } from "./icons";
@@ -61,43 +69,122 @@ export interface PointCardContent {
 	/** The viewer's other simulators (S5), opened at their own origin: "mode:<id>". */
 	entries: (CardAction & { enabled: boolean })[];
 	views: (CardAction & { active: boolean })[];
-	/** Weather section (S8), null without a weather client. */
-	weather: WeatherCardContent | null;
 }
 
-/** Weather part of the VR card: layer toggles, forecast time step and the values at the marked point. */
-export interface WeatherCardContent {
-	toggles: { id: string; text: string; active: boolean; disabled: boolean }[];
-	/** "Pronóstico: 2026-10-18 09:00 UTC" (the ◀ ▶ step row), null without a forecast axis. */
-	time: string | null;
-	/** One line per enabled layer at the point, or the backend notice. */
+/** The VR weather menu (S8): every option of the web "Capas meteorológicas" panel. */
+export interface WeatherMenuContent {
+	/** Backend notice ("Conectando…", service down), null when none. */
+	notice: string | null;
+	/** One toggle per layer ("wx:<layer>"), with its opacity while enabled. */
+	layers: (CardAction & {
+		active: boolean;
+		disabled: boolean;
+		/** "80 %", stepped with "wx:opacity-down:<layer>" / "wx:opacity-up:<layer>"; null while off. */
+		opacity: string | null;
+	})[];
+	/** "Nubes: cargando…" for the layers with a status. */
+	status: string[];
+	/** Forecast timeline ("wx:prev", "wx:play", "wx:next") while a forecast layer is on. */
+	time: { label: string; playing: boolean } | null;
+	/** Precipitation scale ("wx:rain:<mode>") while rain is on. */
+	rain: (CardAction & { active: boolean })[] | null;
+	legends: { title: string; text: string }[];
+	provenance: string[];
+	/** Values at the marked point. */
 	values: string[];
-	/** Attribution of the enabled layers (always shown while one is on). */
 	credit: string | null;
 }
 
-export function weatherCardContent(s: {
-	backend: "loading" | "ready" | "down";
-	notice: string | null;
-	layers: { id: string; title: string; enabled: boolean; disabled: boolean }[];
-	timeLabel: string | null;
-	lines: { id?: string; label: string; text: string }[];
-	attribution: string | null;
-}): WeatherCardContent {
+export const WEATHER_LAYER_ICONS: Record<WeatherLayerId, IconName> = {
+	clouds: "cloud",
+	rain: "rain",
+	lightning: "bolt",
+	cape: "storm",
+	wind: "wind",
+	temperature: "thermo",
+};
+
+/** Opacity change of one "−" / "+" press in the VR menu (the web slider moves freely). */
+export const WEATHER_OPACITY_STEP = 0.1;
+
+export function weatherMenuContent(
+	s: WeatherSnapshot,
+	lines: PointLine[],
+): WeatherMenuContent {
+	const enabled = s.layers.filter((l) => l.enabled);
+	const forecastOn = enabled.some((l) => l.kindLabel === "pronóstico");
 	return {
-		toggles: s.layers.map((l) => ({
+		notice:
+			s.notice ??
+			(s.backend === "loading"
+				? "Conectando con el servicio meteorológico…"
+				: null),
+		layers: s.layers.map((l) => ({
 			id: `wx:${l.id}`,
-			text: l.title,
+			icon: WEATHER_LAYER_ICONS[l.id],
+			text: `${l.title} · ${l.kindLabel}`,
 			active: l.enabled,
 			disabled: l.disabled,
+			opacity: l.enabled ? `${Math.round(l.opacity * 100)} %` : null,
 		})),
+		status: s.layers
+			.filter((l) => l.statusText)
+			.map((l) => `${l.title}: ${l.statusText}`),
 		time:
-			s.backend === "ready" && s.timeLabel
-				? `Pronóstico: ${s.timeLabel}`
+			forecastOn && s.times.length && s.timeLabel
+				? {
+						label: `Válido ${s.timeLabel}${s.leadLabel ? ` · ${s.leadLabel}` : ""}`,
+						playing: s.playing,
+					}
 				: null,
-		values: s.notice ? [s.notice] : s.lines.map((l) => `${l.label}: ${l.text}`),
-		credit: s.attribution,
+		rain: enabled.some((l) => l.id === "rain")
+			? (["rate", "accum"] as const).map((mode) => ({
+					id: `wx:rain:${mode}`,
+					icon: "rain",
+					text: RAIN_SCALES[mode].label,
+					active: s.rainMode === mode,
+				}))
+			: null,
+		legends: enabled.map((l) => ({
+			title: LEGEND_TITLE[l.id],
+			text: legendText(l.id, s),
+		})),
+		provenance: s.provenance.map(
+			(p) =>
+				`${p.title} (${p.kindLabel}) · ${p.time} · Fuente: ${p.source}${p.notice ? ` · ${p.notice}` : ""}`,
+		),
+		values: lines.map((l) => `${l.label}: ${l.text}`),
+		credit: s.attribution ? `Datos meteorológicos: ${s.attribution}` : null,
 	};
+}
+
+/** The controller calls of the VR weather menu buttons, the same the web panel makes. */
+export function weatherMenuAction(
+	weather: Pick<
+		WeatherController,
+		"snapshot" | "toggle" | "step" | "setPlaying" | "setOpacity" | "setRainMode"
+	>,
+	id: string,
+): void {
+	const [, action, argument] = id.split(":");
+	if (action === "prev") weather.step(-1);
+	else if (action === "next") weather.step(1);
+	else if (action === "play") weather.setPlaying(!weather.snapshot().playing);
+	else if (action === "rain" && (argument === "rate" || argument === "accum"))
+		weather.setRainMode(argument);
+	else if (action === "opacity-up" || action === "opacity-down") {
+		const layer = weather.snapshot().layers.find((l) => l.id === argument);
+		if (!layer) return;
+		const step =
+			action === "opacity-up" ? WEATHER_OPACITY_STEP : -WEATHER_OPACITY_STEP;
+		weather.setOpacity(
+			layer.id,
+			Math.round((layer.opacity + step) * 100) / 100,
+		);
+	} else {
+		const layer = weather.snapshot().layers.find((l) => l.id === action);
+		if (layer) weather.toggle(layer.id);
+	}
 }
 
 /** Card buttons of the viewer's other simulators: "mode:<id>". */
@@ -116,7 +203,6 @@ export function pointCardContent(s: {
 	busy: boolean;
 	error: string | null;
 	view: VrView;
-	weather?: WeatherCardContent | null;
 	entries?: { id: string; label: string }[];
 	/** Label of the simulator being opened from the card, while busy. */
 	opening?: string | null;
@@ -151,14 +237,28 @@ export function pointCardContent(s: {
 				active: s.view === "maqueta",
 			},
 		],
-		weather: s.weather ?? null,
 	};
 }
 
 /** Last rows of the simulator VR panel: the way back to the Peru map (VR only) and "Salir de VR". */
-export function panelFooter(s: { backToMap: boolean }): CardAction[] {
-	const exit: CardAction = { id: "exit", icon: "exit", text: "Salir de VR" };
-	return s.backToMap
-		? [{ id: "backToMap", icon: "map", text: "Volver al mapa del Perú" }, exit]
-		: [exit];
+export function panelFooter(s: {
+	backToMap: boolean;
+	/** The weather menu page (S8), when the simulator shows weather layers. */
+	weather?: boolean;
+}): CardAction[] {
+	return [
+		...(s.weather
+			? [{ id: "weather", icon: "cloud" as const, text: "Meteorología" }]
+			: []),
+		...(s.backToMap
+			? [
+					{
+						id: "backToMap",
+						icon: "map" as const,
+						text: "Volver al mapa del Perú",
+					},
+				]
+			: []),
+		{ id: "exit", icon: "exit", text: "Salir de VR" },
+	];
 }

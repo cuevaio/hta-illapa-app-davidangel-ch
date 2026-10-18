@@ -5,7 +5,6 @@ import {
 	type WeatherApi,
 	WeatherController,
 } from "../../src/map/weather/WeatherController";
-import { pointCardContent, weatherCardContent } from "../../src/ui/sections";
 
 const BOUNDS = {
 	minX: -9295177.481238343,
@@ -152,68 +151,6 @@ describe("weather backend down", () => {
 		});
 		expect(p.notice).toMatch(/muestra de respaldo/);
 		c.dispose();
-	});
-});
-
-describe("VR card weather section", () => {
-	const P = { lon: -77.0428, lat: -12.0464, height: 154 };
-
-	it("the card without weather is exactly as before", () => {
-		const c = pointCardContent({
-			picked: P,
-			busy: false,
-			error: null,
-			view: "vuelo",
-		});
-		expect(c.weather).toBeNull();
-		expect(c.actions.map((a) => a.text)).toEqual(["Simular aquí", "Cancelar"]);
-	});
-
-	it("lists the toggles, the forecast time and the values at the marked point", () => {
-		const w = weatherCardContent({
-			backend: "ready",
-			notice: null,
-			layers: [
-				{ id: "clouds", title: "Nubes", enabled: true, disabled: false },
-				{
-					id: "temperature",
-					title: "Temperatura",
-					enabled: false,
-					disabled: false,
-				},
-			],
-			timeLabel: "2026-10-18 09:00 UTC",
-			lines: [
-				{
-					id: "temperature",
-					label: "Temperatura",
-					text: "19,6 °C (pronóstico)",
-				},
-			],
-			attribution: "Nubes: NOAA GOES-19 ABI L2",
-		});
-		expect(w.toggles.map((t) => [t.id, t.text, t.active, t.disabled])).toEqual([
-			["wx:clouds", "Nubes", true, false],
-			["wx:temperature", "Temperatura", false, false],
-		]);
-		expect(w.time).toBe("Pronóstico: 2026-10-18 09:00 UTC");
-		expect(w.values).toEqual(["Temperatura: 19,6 °C (pronóstico)"]);
-		expect(w.credit).toBe("Nubes: NOAA GOES-19 ABI L2");
-		const down = weatherCardContent({
-			backend: "down",
-			notice: "Capas meteorológicas no disponibles",
-			layers: [
-				{ id: "clouds", title: "Nubes", enabled: false, disabled: true },
-			],
-			timeLabel: null,
-			lines: [],
-			attribution: null,
-		});
-		expect(down).toMatchObject({
-			time: null,
-			values: ["Capas meteorológicas no disponibles"],
-		});
-		expect(down.toggles[0].disabled).toBe(true);
 	});
 });
 

@@ -132,6 +132,19 @@ describe("panelFooter (simulator VR panel)", () => {
 		]);
 	});
 
+	it('adds "Meteorología" first when the simulator shows weather (S8)', () => {
+		expect(
+			panelFooter({ backToMap: true, weather: true }).map((a) => [
+				a.id,
+				a.text,
+			]),
+		).toEqual([
+			["weather", "Meteorología"],
+			["backToMap", "Volver al mapa del Perú"],
+			["exit", "Salir de VR"],
+		]);
+	});
+
 	it("has icons for the new VR actions", () => {
 		for (const name of ["map", "close", "fly"] as const) {
 			expect(ICONS[name]).toBeTruthy();

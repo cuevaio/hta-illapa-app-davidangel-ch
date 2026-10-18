@@ -1,0 +1,22 @@
+url: https://staging.getillapa.com/
+name: Landing engineering section opens the engineer demo
+tags:
+  - marketing
+  - engineer
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Ingeniería"
+    timeout: 30000
+- tapOn: "Ingeniería"
+- extendedWaitUntil:
+    visible: ".*Simula huaicos.*"
+    timeout: 10000
+- assertVisible: ".*Meta Quest 3.*"
+- takeScreenshot: 01-engineering-section
+- tapOn: "Probar demo de ingeniería"
+- extendedWaitUntil:
+    visible: ".*Estás en la demo.*"
+    timeout: 40000
+- assertVisible: "Simuladores"
+- takeScreenshot: 02-engineer-demo

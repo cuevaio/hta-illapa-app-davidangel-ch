@@ -23,12 +23,6 @@ export const FLY = {
 	peruTopKm: 6.8,
 	/** VR start: eye height above the highest exaggerated relief, km of scene (= metres in the 1:1000 model). */
 	vrStartMargin: 20,
-	/**
-	 * VR map tilt: the rig is pitched down by this angle about the horizontal axis of its
-	 * heading, so the map rises toward the user like a tilted table and looking straight ahead
-	 * already shows (and flies toward) the ground ahead.
-	 */
-	vrTiltDeg: 25,
 } as const;
 
 /** Snap-turn step: 30°, the same as the XR maquette snap turn. */
@@ -202,6 +196,44 @@ export function vrStartPose(
 	};
 }
 
+/** Web overview start and reset framing (S7). */
+export const OVERVIEW_VIEW = {
+	/**
+	 * Straight down, but not exactly 0: an ArcRotateCamera at beta 0 has no defined heading, so
+	 * it keeps a hair of south offset that pins north to the top of the screen.
+	 */
+	topDownBeta: 0.01,
+	/** Room around the bbox so the coast and the borders are not cut by the viewport edge. */
+	frameMargin: 1.08,
+} as const;
+
+/**
+ * The whole bbox seen from straight above, north up, for a camera with vertical field of view
+ * `fovY` (rad) and viewport `aspect` (width / height): the radius fits whichever extent
+ * (north-south or east-west) limits that viewport.
+ */
+export function topDownView(
+	bounds: Bounds,
+	fovY: number,
+	aspect: number,
+): { target: Vec3; radius: number; alpha: number; beta: number } {
+	const halfHeight = (bounds.maxZ - bounds.minZ) / 2;
+	const halfWidth = (bounds.maxX - bounds.minX) / 2;
+	const halfTan = Math.tan(fovY / 2);
+	return {
+		target: [
+			(bounds.minX + bounds.maxX) / 2,
+			0,
+			(bounds.minZ + bounds.maxZ) / 2,
+		],
+		radius:
+			(Math.max(halfHeight, halfWidth / aspect) / halfTan) *
+			OVERVIEW_VIEW.frameMargin,
+		alpha: -Math.PI / 2,
+		beta: OVERVIEW_VIEW.topDownBeta,
+	};
+}
+
 /** "Zoom hacia ahí" (VR trigger, web double-click). */
 export const ZOOM = {
 	/** The flight ends at this fraction of the current eye→hit distance. */
@@ -322,9 +354,4 @@ export class DoubleTap {
 		this.last = t;
 		return false;
 	}
-}
-
-/** Horizontal axis to the right of a heading (yaw = atan2(x, z)), the VR tilt axis. */
-export function vrTiltAxis(yaw: number): Vec3 {
-	return [Math.cos(yaw), 0, -Math.sin(yaw)];
 }

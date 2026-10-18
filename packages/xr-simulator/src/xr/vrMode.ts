@@ -132,8 +132,8 @@ export function controlsHint(view: VrView): string {
 		? "Joystick der.: adelante / atrás según tu mirada, a los lados para desplazarte (púlsalo: turbo) · " +
 				"Grip der. (botón lateral) + joystick der.: subir / bajar y girar · Grip der. dos veces: volver a la vista inicial · " +
 				"Gatillo: acercarte al punto señalado · Joystick izq.: giro de 30° · " +
-				"A: marcar punto para «Simular aquí» · Y: maqueta · B: salir de VR"
+				"A: marcar punto para «Simular aquí» · X: capas meteorológicas · Y: maqueta · B: salir de VR"
 		: "Grip (una mano): mover y girar la maqueta · Grip con las dos manos: escalarla · " +
 				"Joystick der.: girar 30° · Grip der. dos veces: maqueta delante de ti · " +
-				"A: marcar punto para «Simular aquí» · Y: vuelo · B: salir de VR";
+				"A: marcar punto para «Simular aquí» · X: capas meteorológicas · Y: vuelo · B: salir de VR";
 }

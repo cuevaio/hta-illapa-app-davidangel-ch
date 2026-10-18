@@ -256,6 +256,10 @@ export class LodTerrain {
 		return this.sampler.heightAt(x, z);
 	}
 
+	setFogDensity(fogDensity: number): void {
+		this.renderer.setFogDensity(fogDensity);
+	}
+
 	setLook(look: TerrainLook): void {
 		this.exaggeration = look.exaggeration;
 		this.renderer.setLook(look);

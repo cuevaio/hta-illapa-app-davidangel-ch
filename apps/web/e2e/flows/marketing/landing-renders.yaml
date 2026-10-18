@@ -1,4 +1,4 @@
-url: https://staging.52-21-151-223.sslip.io/
+url: https://staging.getillapa.com/
 name: Marketing landing renders every section in light and dark
 tags:
   - marketing
@@ -53,7 +53,7 @@ tags:
     element: "Equipo Fénix · Hack the Andes"
     timeout: 20000
 - takeScreenshot: 06-footer
-- openLink: https://staging.52-21-151-223.sslip.io/
+- openLink: https://staging.getillapa.com/
 - extendedWaitUntil:
     visible: "Despacha sabiendo qué pasa en la ruta."
     timeout: 30000
