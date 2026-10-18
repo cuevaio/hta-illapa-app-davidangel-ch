@@ -19,7 +19,10 @@ import {
 	CAMERA_FOCUS_FILL_RATIO,
 	CAMERA_FOV_RAD,
 	CAMERA_FRAME_ITERATIONS_COUNT,
+	CAMERA_GROUND_CLAMP_ITERATIONS_COUNT,
+	CAMERA_GROUND_CLEARANCE_EPSILON_M,
 	CAMERA_GROUND_CLEARANCE_M,
+	CAMERA_GROUND_CLEARANCE_RATIO,
 	CAMERA_INERTIA_RATIO,
 	CAMERA_INITIAL_ALPHA_RAD,
 	CAMERA_INITIAL_BETA_RAD,
@@ -32,10 +35,13 @@ import {
 	CAMERA_NEAR_DISTANCE_RATIO,
 	CAMERA_NEAR_M,
 	CAMERA_OVERVIEW_FILL_RATIO,
+	CAMERA_SLOPED_FRAME_BETA_RAD,
+	CAMERA_SLOPED_FRAME_MIN_GRADE_RATIO,
 	CAMERA_WHEEL_PERCENTAGE_RATIO,
 	EXPOSURE_RING_SEGMENTS_COUNT,
 	HALF_RATIO,
 	INITIAL_ELEVATION_M,
+	MIN_GEOMETRY_LENGTH_M,
 } from "./constants";
 import type { StructureModel } from "./models";
 
@@ -85,11 +91,21 @@ export function framePoints(
 		maximum.maximizeInPlace(point);
 	}
 	const target = minimum.add(maximum).scaleInPlace(HALF_RATIO);
+	const horizontalExtentM = Math.hypot(
+		maximum.x - minimum.x,
+		maximum.z - minimum.z,
+	);
+	const betaRad =
+		(maximum.y - minimum.y) /
+			Math.max(MIN_GEOMETRY_LENGTH_M, horizontalExtentM) >=
+		CAMERA_SLOPED_FRAME_MIN_GRADE_RATIO
+			? CAMERA_SLOPED_FRAME_BETA_RAD
+			: CAMERA_INITIAL_BETA_RAD;
 	const direction = new Vector3(
-		1,
-		Math.cos(CAMERA_INITIAL_BETA_RAD),
-		1,
-	).normalize();
+		Math.sin(betaRad) * Math.cos(CAMERA_INITIAL_ALPHA_RAD),
+		Math.cos(betaRad),
+		Math.sin(betaRad) * Math.sin(CAMERA_INITIAL_ALPHA_RAD),
+	);
 	const viewport = new Viewport(0, 0, widthPx, heightPx);
 	const projection = Matrix.PerspectiveFovRH(
 		CAMERA_FOV_RAD,
@@ -315,6 +331,35 @@ export class SceneCamera {
 					};
 			}
 		}
+		this.constrainToTerrain();
+	}
+
+	private constrainToTerrain() {
+		for (
+			let iteration = 0;
+			iteration < CAMERA_GROUND_CLAMP_ITERATIONS_COUNT;
+			iteration++
+		) {
+			this.camera.getViewMatrix(true);
+			const groundM = this.terrain.heightAt(this.camera.position);
+			if (groundM === null) return;
+			const scaledClearanceM =
+				this.camera.radius * CAMERA_GROUND_CLEARANCE_RATIO;
+			const clearanceM = Math.max(CAMERA_GROUND_CLEARANCE_M, scaledClearanceM);
+			if (this.camera.position.y >= groundM + clearanceM) return;
+			// Raising the camera increases its radius, so the lift must also cover that added clearance.
+			const liftM = Math.max(
+				groundM + CAMERA_GROUND_CLEARANCE_M - this.camera.position.y,
+				(groundM + scaledClearanceM - this.camera.position.y) /
+					(1 - CAMERA_GROUND_CLEARANCE_RATIO),
+			);
+			this.nextPosition.copyFrom(this.camera.position);
+			this.nextPosition.y += liftM + CAMERA_GROUND_CLEARANCE_EPSILON_M;
+			this.camera.setPosition(this.nextPosition);
+			this.camera.inertialBetaOffset = 0;
+			this.camera.inertialRadiusOffset = 0;
+		}
+		this.camera.getViewMatrix(true);
 	}
 
 	tick(insets: SceneInsets, presenting: boolean) {
@@ -346,15 +391,7 @@ export class SceneCamera {
 			this.camera.setPosition(this.nextPosition);
 			if (progress === 1) this.flight = null;
 		}
-		const groundM = this.terrain.heightAt(this.camera.position);
-		if (
-			groundM !== null &&
-			this.camera.position.y < groundM + CAMERA_GROUND_CLEARANCE_M
-		) {
-			this.nextPosition.copyFrom(this.camera.position);
-			this.nextPosition.y = groundM + CAMERA_GROUND_CLEARANCE_M;
-			this.camera.setPosition(this.nextPosition);
-		}
+		this.constrainToTerrain();
 		this.camera.minZ = Math.max(
 			CAMERA_NEAR_M,
 			this.camera.radius * CAMERA_NEAR_DISTANCE_RATIO,
