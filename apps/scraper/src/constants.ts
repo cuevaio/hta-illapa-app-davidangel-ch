@@ -43,7 +43,10 @@ export const ARCGIS_MAX_ALLOWABLE_OFFSET_DEG = 0.01;
 export const EARTHQUAKE_WARNING_MAGNITUDE = 4.5;
 export const EARTHQUAKE_CRITICAL_MAGNITUDE = 5.5;
 
-export const RPP_LATEST_NEWS_URL = "https://rpp.pe/ultimas-noticias";
+// /ultimas-noticias is the archive of the current Lima day: it is empty right
+// after midnight and the previous day's last hour drops off it before the next
+// run. The RSS feed is a rolling list of the latest 60 articles across days.
+export const RPP_FEED_URL = "https://rpp.pe/rss";
 export const RPP_FETCH_CONCURRENCY = 5;
 export const NEWS_RELEVANCE_THRESHOLD = 0.6;
 export const NEWS_IN_PERU_THRESHOLD = 0.5;
