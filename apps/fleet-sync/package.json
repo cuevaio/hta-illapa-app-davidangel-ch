@@ -4,6 +4,8 @@
 	"main": "src/index.ts",
 	"scripts": {
 		"build": "tsc -b ../../packages/business && tsdown",
+		"build:node": "tsdown -c tsdown.node.config.ts",
+		"start:node": "node dist-node/node.mjs",
 		"check-types": "tsc -b ../../packages/business && tsc --noEmit",
 		"dev": "pnpm --filter @hack-the-andes-project/infra dev",
 		"env:generate": "varlock codegen",
@@ -12,6 +14,7 @@
 	"dependencies": {
 		"@hack-the-andes-project/business": "workspace:*",
 		"@hack-the-andes-project/db": "workspace:*",
+		"@hack-the-andes-project/node-runtime": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"evlog": "catalog:"
 	},

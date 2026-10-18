@@ -4,6 +4,8 @@
 	"main": "src/index.ts",
 	"scripts": {
 		"build": "tsc -b ../../packages/api && tsdown",
+		"build:node": "tsdown -c tsdown.node.config.ts",
+		"start:node": "node dist-node/node.mjs",
 		"check-types": "tsc -b ../../packages/api && tsc --noEmit",
 		"dev": "pnpm --filter @hack-the-andes-project/infra dev",
 		"env:generate": "varlock codegen"
@@ -13,6 +15,7 @@
 		"@hack-the-andes-project/auth": "workspace:*",
 		"@hack-the-andes-project/business": "workspace:*",
 		"@hack-the-andes-project/db": "workspace:*",
+		"@hack-the-andes-project/node-runtime": "workspace:*",
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
