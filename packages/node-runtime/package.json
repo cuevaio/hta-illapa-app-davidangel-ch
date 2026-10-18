@@ -1,0 +1,25 @@
+{
+	"name": "@hack-the-andes-project/node-runtime",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./*": "./src/*.ts"
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"@hack-the-andes-project/config": "workspace:*",
+		"@types/node": "^26.6.5",
+		"typescript": "^6.0.3",
+		"vitest": "catalog:"
+	},
+	"dependencies": {
+		"@hack-the-andes-project/db": "workspace:*",
+		"@hono/node-server": "^2.1.5",
+		"croner": "^10.0.1",
+		"evlog": "catalog:"
+	}
+}

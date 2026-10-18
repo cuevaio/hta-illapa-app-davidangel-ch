@@ -1,0 +1,82 @@
+# Node services (Dokploy)
+
+`server`, `scraper` and `fleet-sync` are Cloudflare Workers that Alchemy deploys from `packages/infra`. The same code also runs as a plain Node 24 process. Each app gets its own Docker image, built from `deploy/node-service.Dockerfile`, and Dokploy serves it behind Traefik. The Workers build and deploy are unchanged.
+
+## How the Node build works
+
+- `apps/<app>/src/node.ts` serves the Worker's default export through `@hack-the-andes-project/node-runtime`, using `@hono/node-server` for HTTP and `croner` for the cron triggers.
+- `apps/<app>/tsdown.node.config.ts` bundles the app and all of its dependencies into `dist-node/`. The bundle swaps three Workers-only modules for Node versions (`packages/node-runtime/src/bundle-aliases.ts`):
+  - `cloudflare:workers`: `env` is `process.env`. `HYPERDRIVE` is parsed from `DATABASE_URL`. The scraper's `SELF` binding calls back into the same process on `127.0.0.1:$PORT`.
+  - `evlog/workers`: one JSON line per event on stdout.
+  - `createDb`: closes the per-request MySQL connection when its request or cron run finishes. workerd does this on its own; Node does not.
+- The image does not run varlock, so `.env.schema` defaults do not apply. Set every variable below. Only `DATABASE_URL` is checked at boot; any other missing variable fails the first request that needs it.
+
+## Build and run
+
+| | |
+| --- | --- |
+| Dockerfile | `deploy/node-service.Dockerfile`, with the repository root as build context |
+| Build arg | `APP=server`, `APP=scraper` or `APP=fleet-sync` |
+| Start command | the image `CMD`, `node node.mjs` in `/app` |
+| Port | `3000`, set as `PORT` and exposed by the image |
+| Health check | `GET /` answers `OK` |
+
+```sh
+docker build -f deploy/node-service.Dockerfile --build-arg APP=server -t illapa-server .
+```
+
+To run without Docker, use `pnpm --filter <app> build:node`, then `pnpm --filter <app> start:node` with the variables below exported. `PORT` defaults to 3000.
+
+## Environment
+
+Use the same values as the Workers (`apps/<app>/.env`, `apps/server/.env.production`). `DATABASE_URL` replaces the Hyperdrive binding: `mysql://user:password@host:3306/fierros`, with any special characters in the user or password percent-encoded. `SERVICE_VERSION` is optional. When set (to the commit, for example), it is the build identity on every log event.
+
+### server
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | see above |
+| `APP_ENV` | yes | `production` |
+| `BETTER_AUTH_URL` | yes | public URL of this service, e.g. `https://api.illapa.app` |
+| `BETTER_AUTH_SECRET` | yes | at least 32 characters |
+| `ALLOWED_ORIGINS` | yes | comma-separated browser origins; `*` matches inside one host label |
+| `CREDENTIALS_ENCRYPTION_KEY` | yes | the same key as fleet-sync and the Workers |
+| `OSRM_BASE_URL` | yes | `https://router.project-osrm.org` |
+| `CLIENT_IP_HEADER` | yes | `x-real-ip` behind Traefik (the Workers keep the default `cf-connecting-ip`) |
+| `DEMO_RESET_SECRET` | no | at least 32 characters; leave it unset to keep `POST /api/demo/reset` off |
+| `SERVICE_VERSION` | no | |
+
+### scraper
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | see above |
+| `APP_ENV` | yes | `production` |
+| `SCRAPER_RUN_SECRET` | yes | at least 32 characters; the `x-scraper-secret` header of `POST /run` and `POST /risk` |
+| `JEV_API_KEY` | yes | TypeSafe (Jev) key that classifies the news |
+| `B2_MEDIA_KEY_ID` | yes | Backblaze B2 key for the `illapa-media` bucket |
+| `B2_MEDIA_APPLICATION_KEY` | yes | Backblaze B2 key for the `illapa-media` bucket |
+| `SERVICE_VERSION` | no | |
+
+Crons, in UTC: `*/5 * * * *`, `0 * * * *` and `0 9 * * *` (from `packages/infra/constants.ts`).
+
+### fleet-sync
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | see above |
+| `APP_ENV` | yes | `production` |
+| `FLEET_SYNC_RUN_SECRET` | yes | at least 32 characters; the `x-fleet-sync-secret` header of `POST /run` |
+| `CREDENTIALS_ENCRYPTION_KEY` | yes | 44-character base64 key, the same one as the server |
+| `OSRM_BASE_URL` | yes | `https://router.project-osrm.org` |
+| `SERVICE_VERSION` | no | |
+
+Cron, in UTC: `*/2 * * * *`.
+
+## Operations
+
+- Every instance runs the crons. Run exactly one replica of scraper and of fleet-sync. Keep their Cloudflare cron Workers off while the Node services use the same database.
+- If a cron tick arrives while the previous run of that cron is still busy, it is skipped and logged as a `cron_skipped` warning. Runs never overlap and missed ticks are not caught up.
+- On SIGTERM a service stops its crons and stops accepting requests. It then waits up to 8 s for in-flight requests, cron runs and `waitUntil` work before it exits. Docker's default 10 s stop grace period covers that.
+- `x-real-ip` holds the TCP peer that Traefik sees. If Cloudflare proxies in front of Traefik, set `CLIENT_IP_HEADER=cf-connecting-ip` and only accept origin traffic from Cloudflare. Otherwise a client that reaches Traefik directly could spoof that header.
+- Node keeps idle keep-alive connections open for 95 s, longer than Traefik's 90 s idle timeout. Traefik therefore never reuses a connection that Node has already closed.

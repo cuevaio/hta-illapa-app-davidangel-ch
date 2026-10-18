@@ -4,6 +4,8 @@
 	"main": "src/index.ts",
 	"scripts": {
 		"build": "tsc -b ../../packages/business && tsdown",
+		"build:node": "tsdown -c tsdown.node.config.ts",
+		"start:node": "node dist-node/node.mjs",
 		"check-types": "tsc -b ../../packages/business && tsc --noEmit",
 		"test": "vitest run",
 		"dev": "pnpm --filter @hack-the-andes-project/infra dev",
@@ -13,6 +15,7 @@
 		"@ai-sdk/typesafe-ai": "catalog:",
 		"@hack-the-andes-project/business": "workspace:*",
 		"@hack-the-andes-project/db": "workspace:*",
+		"@hack-the-andes-project/node-runtime": "workspace:*",
 		"@turf/centroid": "catalog:",
 		"@turf/helpers": "catalog:",
 		"ai": "catalog:",

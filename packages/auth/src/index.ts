@@ -26,12 +26,13 @@ import { ensurePersonalOrganization } from "./organization";
 import { parseAllowedOrigins } from "./origins";
 import { hashPassword, verifyPassword } from "./password";
 
-export { parseAllowedOrigins } from "./origins";
+export { createOriginMatcher, parseAllowedOrigins } from "./origins";
 
 export interface AuthConfig {
 	BETTER_AUTH_URL: string;
 	BETTER_AUTH_SECRET: string;
 	ALLOWED_ORIGINS: string;
+	CLIENT_IP_HEADER: string;
 }
 
 export function createAuth(env: AuthConfig, database: Database) {
@@ -159,9 +160,10 @@ export function createAuth(env: AuthConfig, database: Database) {
 			},
 			// better-auth defaults to x-forwarded-for and drops multi-hop values,
 			// which would collapse every client into one shared rate-limit bucket.
-			// Cloudflare sets cf-connecting-ip itself and clients cannot spoof it.
+			// CLIENT_IP_HEADER is set by the edge proxy itself (Cloudflare's
+			// cf-connecting-ip, Traefik's x-real-ip), so clients cannot spoof it.
 			ipAddress: {
-				ipAddressHeaders: ["cf-connecting-ip"],
+				ipAddressHeaders: [env.CLIENT_IP_HEADER],
 			},
 		},
 		plugins: [expo(), organization(), demoAccess],

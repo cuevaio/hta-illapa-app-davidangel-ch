@@ -1,0 +1,19 @@
+**/node_modules
+**/dist
+**/dist-node
+**/*.tsbuildinfo
+**/.alchemy
+**/.wrangler
+.git
+
+# Secrets only. Every .env.schema and .env.production stays in the context:
+# the root postinstall runs varlock codegen over them.
+**/.env
+**/.env.local
+**/.env.*.local
+
+apps/native/android
+apps/native/ios
+**/.expo
+tools/risk-pipeline/output
+tools/risk-pipeline/.venv

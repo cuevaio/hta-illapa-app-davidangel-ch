@@ -40,6 +40,7 @@ const auth = createAuth(
 		BETTER_AUTH_URL: "https://api.example.com",
 		BETTER_AUTH_SECRET: "demo-auth-test-secret-long-enough-for-auth",
 		ALLOWED_ORIGINS: "https://app.example.com",
+		CLIENT_IP_HEADER: "cf-connecting-ip",
 	},
 	database,
 );
