@@ -227,12 +227,21 @@ export function splitIntoPseudoEdges(
 			),
 	);
 	const totalLengthM = lengths.reduce((total, lengthM) => total + lengthM, 0);
+	// Bands one match radius tall: a piece only measures the segments in its
+	// own band and the two next to it, not every segment the detours cross.
+	const bandDeg = DETOUR_SEGMENT_MATCH_RADIUS_M / METERS_PER_DEGREE_LATITUDE;
+	const segmentsByBand = Map.groupBy(segments, (segment) =>
+		Math.floor(segment.lat / bandDeg),
+	);
 
 	return pieces.map((coordinates, index) => {
 		const middle = coordinates[Math.floor(coordinates.length / 2)] ?? [0, 0];
+		const band = Math.floor((middle[1] ?? 0) / bandDeg);
 		let segmentId: string | null = null;
 		let nearestM = DETOUR_SEGMENT_MATCH_RADIUS_M;
-		for (const segment of segments) {
+		for (const segment of [band - 1, band, band + 1].flatMap(
+			(nearbyBand) => segmentsByBand.get(nearbyBand) ?? [],
+		)) {
 			const segmentDistanceM = distanceM(middle, [segment.lng, segment.lat]);
 			if (segmentDistanceM <= nearestM) {
 				nearestM = segmentDistanceM;
