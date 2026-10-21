@@ -65,7 +65,7 @@ export function RouteNotePanel({
 	if (!state || state.status === "off") return null;
 	return (
 		<RouteNoteCard
-			key={`${originPlaceId}:${destinationPlaceId}`}
+			key={JSON.stringify(queryKey)}
 			state={state}
 			maxLength={MAX_ROUTE_NOTE_LENGTH_CHARS}
 			isSaving={saveMutation.isPending}
